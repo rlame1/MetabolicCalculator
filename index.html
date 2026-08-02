@@ -1080,7 +1080,7 @@
             paivitaKumulatiivinenYhteenveto();
         }
 
-        function tallennaKayttajaParametrit() {
+        function tallennaKayttajaParametrit(triggerSync = true) {
             if (isDemoMode) return; 
             const params = {
                 gender: document.getElementById('gender').value,
@@ -1095,7 +1095,7 @@
                 customCalorieDelta: document.getElementById('customCalorieDelta').value
             };
             localStorage.setItem('metabolic_v20_userParams', JSON.stringify(params));
-            if (window.triggerAutoSyncToDrive) window.triggerAutoSyncToDrive();
+            if (triggerSync && window.triggerAutoSyncToDrive) window.triggerAutoSyncToDrive();
         }
 
         function lataaKayttajaParametrit() {
@@ -1604,7 +1604,7 @@
         }
 
         function haeVarmuuskopioPayload() {
-            tallennaKayttajaParametrit();
+            tallennaKayttajaParametrit(false);
             return {
                 app: "metabolic_calculator_v20",
                 version: "1.0",
@@ -2171,9 +2171,13 @@
                         if (window.palautaVarmuuskopioPayload) {
                             window.palautaVarmuuskopioPayload(driveData);
                         }
+                        const lang = document.getElementById('langSelect')?.value || 'fi';
+                        const nowStr = new Date().toLocaleTimeString(lang === 'en' ? 'en-US' : 'fi-FI', { hour: '2-digit', minute: '2-digit' });
+                        setDriveStatusUI('success', lang === 'en' ? `🟢 Synced from Google Drive (${nowStr})` : `🟢 Ladattu Google Drivestä (${nowStr})`);
                     }
+                } else {
+                    await tallennaGoogleDriveen();
                 }
-                await tallennaGoogleDriveen();
             } catch (e) {
                 console.warn('Initial sync error:', e);
             }
