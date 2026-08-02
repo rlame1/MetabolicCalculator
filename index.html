@@ -1445,10 +1445,34 @@
                         const parts = m.time.split(':');
                         const mealTime = parseInt(parts[0], 10) + (parseInt(parts[1] || '0', 10) / 60);
                         const dt = t - mealTime;
-                        if (dt >= 0 && dt <= 5.0) {
+                        if (dt >= 0) {
+                            const totalM = m.c + m.p + m.f;
+                            const carbRatio = totalM > 0 ? (m.c / totalM) : 0;
                             const buf = 1.0 + ((m.p * 0.01) + (m.f * 0.02));
                             const insLoad = ((m.c * 1.0) + (m.p * 0.56) + (m.f * 0.10)) / buf;
-                            insulin += insLoad * Math.max(0, 1 - (dt * 0.20));
+
+                            // Latency and peak timing:
+                            // High-carb: rise starts ~10 min (0.167h), peak ~37.5 min (0.625h)
+                            // Low-carb / High P&F: rise starts ~15 min (0.25h), peak ~60 min (1.0h)
+                            const tStart = 0.25 - (carbRatio * 0.0833);
+                            const tPeak = 1.0 - (carbRatio * 0.375);
+
+                            if (dt >= tStart) {
+                                let factor = 0;
+                                if (dt <= tPeak) {
+                                    // Smooth sigmoidal up-slope (gastric emptying & pancreatic secretion)
+                                    const u = (dt - tStart) / (tPeak - tStart);
+                                    factor = (3 * u * u) - (2 * u * u * u);
+                                } else {
+                                    // Smooth tail decay extended by protein & fat buffer (buf)
+                                    const tau = dt - tPeak;
+                                    const decayScale = 1.8 * buf;
+                                    factor = Math.exp(-Math.pow(tau / decayScale, 1.4));
+                                }
+                                if (factor > 0) {
+                                    insulin += insLoad * factor;
+                                }
+                            }
                         }
                     }
                 });
@@ -1462,16 +1486,41 @@
                         const parts = m.time.split(':');
                         const mealTime = parseInt(parts[0], 10) + (parseInt(parts[1] || '0', 10) / 60);
                         const dt = t - mealTime;
-                        if (dt >= 0 && dt <= 3.0) {
+                        if (dt >= 0) {
+                            const totalM = m.c + m.p + m.f;
+                            const carbRatio = totalM > 0 ? (m.c / totalM) : 0;
+                            const buf = 1.0 + ((m.p * 0.01) + (m.f * 0.02));
                             const glLoad = m.c * 0.6;
-                            gl += glLoad * Math.max(0, 1 - (dt * 0.3333));
+
+                            // GL Latency and peak timing:
+                            // High-carb: rise starts ~10 min (0.167h), peak ~30 min (0.5h)
+                            // Low-carb: rise starts ~15 min (0.25h), peak ~45 min (0.75h)
+                            const tStart = 0.25 - (carbRatio * 0.0833);
+                            const tPeak = 0.75 - (carbRatio * 0.25);
+
+                            if (dt >= tStart && glLoad > 0) {
+                                let factor = 0;
+                                if (dt <= tPeak) {
+                                    // Smooth sigmoidal up-slope
+                                    const u = (dt - tStart) / (tPeak - tStart);
+                                    factor = (3 * u * u) - (2 * u * u * u);
+                                } else {
+                                    // Smooth tail decay
+                                    const tau = dt - tPeak;
+                                    const decayScale = 1.1 * buf;
+                                    factor = Math.exp(-Math.pow(tau / decayScale, 1.4));
+                                }
+                                if (factor > 0) {
+                                    gl += glLoad * factor;
+                                }
+                            }
                         }
                     }
                 });
                 return gl;
             }
 
-            const STEPS = 96;
+            const STEPS = 288;
             let insulinSamples = [];
             let glSamples = [];
             for (let s = 0; s <= STEPS; s++) {
