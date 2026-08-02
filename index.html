@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>METABOLIC CALCULATOR v1.0 — Interactive Chart & i18n</title>
+    <style>
+        body { background-color: #050505; color: #00ff00; font-family: 'Courier New', monospace; padding: 15px; max-width: 760px; margin: 0 auto; line-height: 1.5; }
+        h1, h2, h3 { text-align: center; border-bottom: 2px solid #00ff00; padding-bottom: 10px; text-transform: uppercase; }
+        
+        details.box, details.cum-box, details.date-box { border: 1px solid #00ff00; margin: 15px 0; background-color: #000; }
+        details.cum-box { border: 2px double #00ff00; background-color: #041204; }
+        details.date-box { border-color: #ffff00; background-color: #0a0a00; }
+        
+        summary { background: #111; color: #fff; padding: 12px; font-weight: bold; cursor: pointer; text-transform: uppercase; border-bottom: 1px solid #00ff00; user-select: none; font-family: inherit; }
+        summary:hover { background: #1a2a1a; color: #00ff00; }
+        details[open] summary { border-bottom: 2px solid #00ff00; background-color: #0a1f0a; }
+        
+        .details-content { padding: 15px; }
+
+        .top-controls-box { border: 2px solid #00ff00; background-color: #111; padding: 10px 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .btn-options-toggle { background: #222; color: #ff00ff; border: 2px solid #ff00ff; padding: 8px 14px; font-weight: bold; cursor: pointer; font-family: inherit; font-size: 13px; text-transform: uppercase; width: auto; margin: 0; }
+        .btn-options-toggle:hover { background: #ff00ff; color: #000; }
+        
+        label { display: block; margin-top: 10px; font-weight: bold; }
+        input, select { width: 100%; background: #111; border: 1px solid #00ff00; color: #00ff00; padding: 10px; margin-top: 5px; box-sizing: border-box; font-family: inherit; font-size: 16px; }
+        
+        input::placeholder { color: #ffff00; font-weight: bold; opacity: 1; text-transform: uppercase; background-color: #222000; padding: 2px 4px; border: 1px dashed #ffff00; }
+        
+        button { width: 100%; background: #00ff00; color: #000; border: none; padding: 14px; margin-top: 20px; font-weight: bold; cursor: pointer; font-family: inherit; text-transform: uppercase; font-size: 15px; }
+        button:hover { background: #00aa00; }
+        .btn-danger { background: #ff0000; color: #fff; margin-top: 10px; }
+        .btn-danger:hover { background: #aa0000; }
+        .btn-master-reset { background: #330000; color: #ff3333; border: 2px solid #ff0000; font-weight: bold; padding: 12px; margin-top: 10px; font-size: 13px; width: 100%; }
+        .btn-master-reset:hover { background: #ff0000; color: #fff; }
+        .btn-demo { background: #ff00ff; color: #000; font-weight: bold; border: 2px solid #ff00ff; margin-top: 0; width: 100%; padding: 12px; cursor: pointer; font-family: inherit; }
+        .btn-demo:hover { background: #cc00cc; color: #fff; }
+        
+        .demo-nav-btn { width: 32%; display: inline-block; margin: 4px 0.5%; background: #330033; color: #ff88ff; border: 1px solid #ff00ff; padding: 8px; font-size: 11px; cursor: pointer; text-align: center; box-sizing: border-box; }
+        .demo-nav-btn.active { background: #ff00ff; color: #000; font-weight: bold; }
+
+        .result-title { color: #fff; font-weight: bold; }
+        .alert-red { color: #ff0000; font-weight: bold; }
+        .alert-orange { color: #ffaa00; font-weight: bold; }
+        .alert-green { color: #00ff00; font-weight: bold; }
+        .alert-yellow { color: #ffff00; font-weight: bold; font-size: 13px; line-height: 1.4; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #00ff00; padding: 8px; text-align: left; }
+        th { color: #fff; background-color: #111; }
+        .meal-log-item { font-size: 12px; border-bottom: 1px dashed #00ff00; padding: 8px 0; line-height: 1.6; }
+        
+        .chart-scroll-wrapper { width: 100%; overflow: hidden; margin-top: 15px; border: 1px solid #00ff00; background-color: #000; box-sizing: border-box; }
+        .chart-container { width: 100%; padding: 10px; text-align: center; box-sizing: border-box; }
+        canvas { background-color: #000; display: block; margin: 0 auto; width: 100%; max-width: 100%; height: auto; box-sizing: border-box; }
+        
+        .chart-legend { font-size: 11px; margin-top: 8px; display: flex; justify-content: space-around; flex-wrap: wrap; gap: 5px; border: 1px solid #00ff00; padding: 8px; background: #111; }
+        
+        .options-panel { border: 2px solid #ff00ff; background-color: #0d000d; padding: 15px; margin-bottom: 20px; display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="top-controls-box">
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <label for="langSelect" style="margin:0; font-size:13px; color:#fff;" data-i18n="langLabel">🌐 KIELI:</label>
+            <select id="langSelect" onchange="switchLanguage(this.value)" style="width: auto; padding: 6px; margin:0; font-size: 13px;">
+                <option value="fi" selected>Suomi</option>
+                <option value="en">English</option>
+            </select>
+        </div>
+        <button class="btn-options-toggle" onclick="toggleOptionsPanel()" data-i18n="optionsBtn">⚙️ ASETUKSET</button>
+    </div>
+
+    <div id="optionsPanel" class="options-panel">
+        <h3 style="color: #ff00ff; border-color: #ff00ff; margin-top: 0; padding-bottom: 6px; font-size: 14px;" data-i18n="optionsTitle">⚙️ LISÄASETUKSET JA HALLINTA</h3>
+        
+        <div style="margin-bottom: 15px;">
+            <button id="demoBtn" class="btn-demo" onclick="toggleDemoMode()" data-i18n="demoBtnOn">🎭 KÄYNNISTÄ ESITTELYTILA (DEMO)</button>
+            <div id="demoControls" style="display:none; margin-top: 10px;">
+                <p style="color: #ff88ff; font-size: 12px; font-weight: bold; margin-bottom: 6px;" data-i18n="demoSelectLabel">VALITSE DEMO-PÄIVÄ:</p>
+                <div style="display: flex; justify-content: space-between;">
+                    <button id="demoDayBtn1" class="demo-nav-btn active" onclick="valitseDemoPaiva(1)" data-i18n="demoDay1">1: ARKI</button>
+                    <button id="demoDayBtn2" class="demo-nav-btn" onclick="valitseDemoPaiva(2)" data-i18n="demoDay2">2: PE (TV)</button>
+                    <button id="demoDayBtn3" class="demo-nav-btn" onclick="valitseDemoPaiva(3)" data-i18n="demoDay3">3: LA (HERKKU)</button>
+                </div>
+            </div>
+        </div>
+
+        <div style="border-top: 1px dashed #ff0000; padding-top: 12px; margin-top: 15px;">
+            <p style="font-size: 11px; color: #ff8888; margin-bottom: 8px;" data-i18n="masterResetDesc">Tyhjennä laskurin koko muisti (kaikki tallennetut päivät ja profiilitiedot).</p>
+            <button class="btn-master-reset" onclick="nollaaKaikkiTiedot()" data-i18n="masterResetBtn">⚠️ NOLLAA KAIKKI TIEDOT (MASTER RESET)</button>
+        </div>
+    </div>
+
+    <h1 data-i18n="mainTitle">🧬 METABOLINEN LASKURI v1.0</h1>
+    <p style="text-align: center; font-size: 11px; color: #888;" data-i18n="mainSub">Käytä yläkulman "ASETUKSET"-painiketta esittelytilan tai nollauksen avaamiseen.</p>
+    
+    <details class="date-box" open>
+        <summary style="color:#ffff00; border-color:#ffff00;" data-i18n="dateSummary">📅 VALITSE PÄIVÄMÄÄRÄ</summary>
+        <div class="details-content">
+            <label style="color:#ffff00; margin-top:0;" data-i18n="dateLabel">Päivämäärä:</label>
+            <input type="date" id="selectedDate" style="border-color:#ffff00; color:#ffff00;" onchange="vaihdaPaivaa()">
+        </div>
+    </details>
+
+    <details class="cum-box" id="cumSummaryBox" open>
+        <summary data-i18n="cumSummary">📊 KUMULATIIVINEN HISTORIAYHTEENVETO</summary>
+        <div class="details-content">
+            <div style="margin-bottom: 12px; display: flex; gap: 10px; flex-wrap: wrap; background: #001a00; padding: 10px; border: 1px dashed #00ff00;">
+                <div style="flex: 1; min-width: 140px;">
+                    <label style="font-size: 11px; margin-top:0; color:#00ff00;" data-i18n="cumStartLabel">📅 ALKUPÄIVÄMÄÄRÄ:</label>
+                    <input type="date" id="cumStartDate" onchange="paivitaKumulatiivinenYhteenveto()" style="font-size: 12px; padding: 6px; background: #000; color: #00ff00;">
+                </div>
+                <div style="flex: 1; min-width: 140px;">
+                    <label style="font-size: 11px; margin-top:0; color:#00ff00;" data-i18n="cumEndLabel">📅 LOPPUPÄIVÄMÄÄRÄ:</label>
+                    <input type="date" id="cumEndDate" onchange="paivitaKumulatiivinenYhteenveto()" style="font-size: 12px; padding: 6px; background: #000; color: #00ff00;">
+                </div>
+            </div>
+
+            <p><span class="result-title" data-i18n="cumDays">Seurattuja päiviä yhteensä:</span> <span id="cumDaysCount" class="alert-green">0</span></p>
+            <p><span class="result-title" data-i18n="cumEnergy">Nautittu kokonaisenergia:</span> <span id="cumEnergyTotal" class="alert-orange">0</span> kcal</p>
+            <p><span id="cumDeficitTitle" class="result-title" data-i18n="cumDeficit">Kertynyt kalorivaje:</span> <span id="cumDeficitTotal" class="alert-green" style="font-weight:bold;">0</span> kcal (<span id="cumFatBurnedKg">0.00</span> kg / <span id="cumFatBurnedLiters">0.00</span> litraa rasvaa)</p>
+            <p><span class="result-title" data-i18n="cumMtor">Lihassuoja (mTOR) aktivoitu:</span> <span id="cumMtorDays" class="alert-yellow">0</span> päiviä</p>
+        </div>
+    </details>
+
+    <details class="box" open>
+        <summary data-i18n="sec1Title">1. BIOLOGISET PARAMETRIT</summary>
+        <div class="details-content">
+            <label data-i18n="genderLabel">Sukupuoli:</label>
+            <select id="gender" onchange="tarkistaSukupuoli(); tallennaKayttajaParametrit(); paivitaLaskelmat();">
+                <option value="male" selected>Mies</option>
+                <option value="female">Nainen</option>
+            </select>
+            
+            <label data-i18n="ageLabel">Ikä (vuotta) [Vapaaehtoinen]:</label> 
+            <input type="number" id="age" inputmode="numeric" data-i18n-placeholder="phAge" placeholder="👉 SYÖTÄ TIETO (IKÄ)" oninput="tallennaKayttajaParametrit(); paivitaLaskelmat();">
+            
+            <label data-i18n="heightLabel">Pituus (cm) [Vapaaehtoinen]:</label> 
+            <input type="number" id="height" inputmode="decimal" step="any" data-i18n-placeholder="phHeight" placeholder="👉 SYÖTÄ TIETO (PITUUS CM)" oninput="tallennaKayttajaParametrit(); paivitaLaskelmat();">
+            
+            <label data-i18n="weightLabel">Nykyinen Paino (kg):</label> 
+            <input type="number" id="weight" inputmode="decimal" step="any" data-i18n-placeholder="phWeight" placeholder="👉 SYÖTÄ TIETO (PAINO KG)" oninput="tallennaKayttajaParametrit(); paivitaLaskelmat();">
+            
+            <label data-i18n="waistLabel">Vyötärön ympärys (cm) [Vapaaehtoinen]:</label> 
+            <input type="number" id="waist" inputmode="decimal" step="any" data-i18n-placeholder="phWaist" placeholder="👉 SYÖTÄ TIETO (VYÖTÄRÖ CM)" oninput="tallennaKayttajaParametrit(); paivitaLaskelmat();">
+            
+            <label data-i18n="neckLabel">Niskan ympärys (cm) [Vapaaehtoinen]:</label> 
+            <input type="number" id="neck" inputmode="decimal" step="any" data-i18n-placeholder="phNeck" placeholder="👉 SYÖTÄ TIETO (NISKA CM)" oninput="tallennaKayttajaParametrit(); paivitaLaskelmat();">
+            
+            <div id="hipContainer" style="display:none;">
+                <label data-i18n="hipLabel">Lantion ympärys (cm) [Naisilla vapaaehtoinen]:</label> 
+                <input type="number" id="hip" inputmode="decimal" step="any" data-i18n-placeholder="phHip" placeholder="👉 SYÖTÄ TIETO (LANTIO CM)" oninput="tallennaKayttajaParametrit(); paivitaLaskelmat();">
+            </div>
+
+            <label data-i18n="activityLabel">Aktiivisuustason kerroin:</label>
+            <select id="activityLevel" onchange="tallennaKayttajaParametrit(); paivitaLaskelmat();">
+                <option value="1.2">Passiivinen (istumatyö, vähän/ei liikuntaa) [1.2]</option>
+                <option value="1.25" selected>Perusaktiivinen (vakio oletus) [1.25]</option>
+                <option value="1.375">Kevyt aktiivisuus (liikuntaa 1–3 krt/vko) [1.375]</option>
+                <option value="1.55">Kohtalainen aktiivisuus (liikuntaa 3–5 krt/vko) [1.55]</option>
+                <option value="1.725">Erittäin aktiivinen (liikuntaa 6–7 krt/vko) [1.725]</option>
+                <option value="1.9">Äärimmäisen aktiivinen (fyysinen työ + kova urheilu) [1.9]</option>
+            </select>
+            
+            <label data-i18n="strategyLabel">Strateginen tavoite / Viikkovauhti:</label>
+            <select id="strategyGoal" onchange="tarkistaCustomTavoite(); tallennaKayttajaParametrit(); paivitaLaskelmat();">
+                <option value="lose_1pct" selected>Maksimaalinen 1% / viikko (Dynaaminen)</option>
+                <option value="lose_075pct">Kova 0,75% / viikko (Dynaaminen)</option>
+                <option value="lose_05pct">Ikääntyneet max 0,5% / viikko (Dynaaminen)</option>
+                <option value="lose_025pct">Ikääntynyt turvallinen 0,25% / viikko (Dynaaminen)</option>
+                <option value="maintain">Pidä nykyinen paino</option>
+                <option value="custom">Mukautettu kalorimuutos (Vaje/Ylitys)</option>
+            </select>
+
+            <div id="customGoalContainer" style="display:none;">
+                <label data-i18n="customDeltaLabel">Oma mukautettu kalorimuutos (kcal/pvä):</label>
+                <input type="number" id="customCalorieDelta" inputmode="decimal" value="-500" step="50" data-i18n-placeholder="phCustomDelta" placeholder="👉 SYÖTÄ VAJE (-) TAI YLITYS (+)" oninput="tallennaKayttajaParametrit(); paivitaLaskelmat();">
+            </div>
+        </div>
+    </details>
+
+    <details class="box" open>
+        <summary data-i18n="sec2Title">2. POLTTOAINEEN LISÄYS</summary>
+        <div class="details-content">
+            <label data-i18n="mealTimeLabel">Aterian aika (HH:MM) [Vapaaehtoinen, oletus: Nyt]:</label> 
+            <input type="time" id="mealTime">
+
+            <label data-i18n="carbsLabel">Hiilihydraatit (g):</label> <input type="number" id="carbs" inputmode="decimal" data-i18n-placeholder="phCarbs" placeholder="👉 SYÖTÄ TIETO (HIILIHYDRAATIT G)">
+            <label data-i18n="proteinLabel">Proteiini (g):</label> <input type="number" id="protein" inputmode="decimal" data-i18n-placeholder="phProtein" placeholder="👉 SYÖTÄ TIETO (PROTEIINI G)">
+            <label data-i18n="fatLabel">Rasva (g):</label> <input type="number" id="fat" inputmode="decimal" data-i18n-placeholder="phFat" placeholder="👉 SYÖTÄ TIETO (RASVA G)">
+            <button onclick="lisaaAnnosV20()" data-i18n="logMealBtn">Kirjaa ja laske tase 📥</button>
+        </div>
+    </details>
+
+    <details class="box" id="logBox" style="display:none;" open>
+        <summary data-i18n="sec3Title">3. PÄIVÄN AIKALEIMATUT ANNOKSET</summary>
+        <div class="details-content">
+            <div id="mealTimeline"></div>
+            <p style="margin-top:15px;"><span class="result-title" data-i18n="logMacrosLabel">Kirjatut kokonaismakrot tänään:</span> <span id="logMacros"></span></p>
+            <button class="btn-danger" onclick="nollaaValittuPaiva()" data-i18n="resetDayBtn">Nollaa valitun päivän loki ❌</button>
+        </div>
+    </details>
+
+    <details class="box" id="outputBox" style="display:none;" open>
+        <summary data-i18n="sec4Title">4. LAHJOMATON TASE &amp; ANALYTIIKKA</summary>
+        <div class="details-content">
+            <div>
+                <p><span class="result-title" data-i18n="fatPctLabel">Rasvaprosentti:</span> <span id="resFatPct" class="alert-orange"></span> %</p>
+                <p><span class="result-title" data-i18n="leanLabel">Rasvaton moottorisi (Lean Mass):</span> <span id="resLean"></span> kg</p>
+                <p><span class="result-title" data-i18n="fatVolLabel">Kudosrasvasi (KG / litraa):</span> <span id="resFatVolCombined" class="alert-green" style="font-weight:bold;"></span></p>
+                <p><span class="result-title" data-i18n="weeklyTargetLabel">Valittu viikkotavoite:</span> <span id="resWeeklyTarget"></span> kg/wk (<span id="resWeeklyVol"></span> litraa)</p>
+                <hr style="border-color:#00ff00;">
+            </div>
+
+            <h3 data-i18n="ledgerTitle">📊 KALORIBUDJETIN TILIOTE</h3>
+            <table>
+                <tr><th data-i18n="ledgerHeader1">TILAVUUSMUUTTUJA</th><th data-i18n="ledgerHeader2">KILOKALORIT (kcal)</th></tr>
+                <tr><td data-i18n="ledgerBudgetLabel">Syöntibudjetti (Tavoite)</td><td id="ledgerBudget" style="color:#fff;font-weight:bold;">-</td></tr>
+                <tr><td data-i18n="ledgerUsedLabel">Käytetty (Nielty kuorma)</td><td id="ledgerUsed" class="alert-orange">-</td></tr>
+                <tr><td data-i18n="ledgerLeftLabel">Jäljellä (Focus-kapasiteetti)</td><td id="ledgerLeft" class="alert-green" style="font-weight:bold;">-</td></tr>
+            </table>
+
+            <h3 style="margin-top:20px;" data-i18n="mtorTitle">🛡️ PROTEIINI JA LIHASSUOJA (mTOR)</h3>
+            <p><span class="result-title" data-i18n="mtorThresholdLabel">Kerta-aterian mTOR-kynnys:</span> <span id="resMtorG" class="alert-green" style="font-weight:bold;"></span></p>
+            <p><span class="result-title" data-i18n="dailyProtLabel">Päivittäinen kokonaisproteiini:</span> <span id="resDailyProt" class="alert-green"></span></p>
+
+            <h3 style="margin-top:20px;" data-i18n="insulinTitle">🧬 PÄIVÄN INSULIINI- JA GLYKEEMINEN KUORMA</h3>
+            <p><span class="result-title" data-i18n="glLabel">Päivän Glykeeminen Kuorma (GL):</span> <span id="resGlycemicLoad" class="alert-yellow" style="font-weight:bold;"></span></p>
+            <p><span class="result-title" data-i18n="iTotLabel">Päivän Kokonaisinsuliinituotanto (I-Tot):</span> <span id="resInsulinTotal"></span></p>
+            <p><span class="result-title" data-i18n="bufferLabel">Ruoansulatuksen Puskurikerroin (D):</span> <span id="resInsulinBuffer"></span>x</p>
+            <p><span class="result-title" data-i18n="iPeakLabel">Kumulatiivinen insuliinipiikki (I-Peak):</span> <span id="resInsulinPeak" style="font-size:18px; font-weight:bold;"></span></p>
+            <p><span class="result-title" data-i18n="statusLabel">POMO-INSULIININ STATUSVASTE:</span> <br><span id="resInsulinStatus"></span></p>
+
+            <div class="chart-scroll-wrapper">
+                <div class="chart-container">
+                    <h4 style="color:#fff; margin-bottom:5px;" data-i18n="chartTitle">📈 ARVIOITU 24H JATKUVA INSULIINI- JA GL-VASTE</h4>
+                    <canvas id="dynamicsChart" width="850" height="260"></canvas>
+                    
+                    <div class="chart-legend">
+                        <span>🟢 <strong data-i18n="legendInsulin">Insuliinivaste (uIU/ml)</strong></span>
+                        <span>🟡 <strong data-i18n="legendGL">Glykeeminen Kuorma (GL)</strong></span>
+                        <span>🔴 <strong data-i18n="legendThreshold">-- Rasvanpolton kynnystaso (35 uIU/ml)</strong></span>
+                        <span>🔵 <strong data-i18n="legendNow">| Tämänhetkinen aika (NYT)</strong></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </details>
+
+   <footer style="text-align: center; margin-top: 30px; margin-bottom: 20px; font-size: 11px; color: #666; border-top: 1px solid #111; padding-top: 15px; line-height: 1.5; max-width: 680px; margin-left: auto; margin-right: auto;">
+    <p data-i18n="disclaimerText" style="margin-bottom: 8px; color: #777;"></p>
+    <p data-i18n="copyrightText" style="margin-top: 4px; color: #888;"></p>
+</footer>
+
+    <script>
+        const translations = {
+            fi: {
+                langLabel: "🌐 KIELI:",
+                optionsBtn: "⚙️ ASETUKSET",
+                optionsTitle: "⚙️ LISÄASETUKSET JA HALLINTA",
+                demoBtnOn: "🎭 KÄYNNISTÄ ESITTELYTILA (DEMO)",
+                demoBtnOff: "❌ SULJE ESITTELYTILA (PALAA OMIIN)",
+                demoSelectLabel: "VALITSE DEMO-PÄIVÄ:",
+                demoDay1: "1: ARKI",
+                demoDay2: "2: PE (TV)",
+                demoDay3: "3: LA (HERKKU)",
+                masterResetDesc: "Tyhjennä laskurin koko muisti (kaikki tallennetut päivät ja profiilitiedot).",
+                masterResetBtn: "⚠️ NOLLAA KAIKKI TIEDOT (MASTER RESET)",
+                mainTitle: "🧬 METABOLINEN LASKURI v1.0",
+                mainSub: "Käytä yläkulman \"ASETUKSET\"-painiketta esittelytilan tai nollauksen avaamiseen.",
+                dateSummary: "📅 VALITSE PÄIVÄMÄÄRÄ",
+                dateLabel: "Päivämäärä:",
+                cumSummary: "📊 KUMULATIIVINEN HISTORIAYHTEENVETO",
+                cumStartLabel: "📅 ALKUPÄIVÄMÄÄRÄ:",
+                cumEndLabel: "📅 LOPPUPÄIVÄMÄÄRÄ:",
+                cumDays: "Seurattuja päiviä yhteensä:",
+                cumEnergy: "Nautittu kokonaisenergia:",
+                cumDeficit: "Kertynyt kalorivaje:",
+                cumSurplus: "Kertynyt kaloriylitys",
+                cumMtor: "Lihassuoja (mTOR) aktivoitu:",
+                sec1Title: "1. BIOLOGISET PARAMETRIT",
+                genderLabel: "Sukupuoli:",
+                genderMale: "Mies",
+                genderFemale: "Nainen",
+                ageLabel: "Ikä (vuotta) [Vapaaehtoinen]:",
+                heightLabel: "Pituus (cm) [Vapaaehtoinen]:",
+                weightLabel: "Nykyinen Paino (kg):",
+                waistLabel: "Vyötärön ympärys (cm) [Vapaaehtoinen]:",
+                neckLabel: "Niskan ympärys (cm) [Vapaaehtoinen]:",
+                hipLabel: "Lantion ympärys (cm) [Naisilla vapaaehtoinen]:",
+                activityLabel: "Aktiivisuustason kerroin:",
+                act1: "Passiivinen (istumatyö, vähän/ei liikuntaa) [1.2]",
+                act2: "Perusaktiivinen (vakio oletus) [1.25]",
+                act3: "Kevyt aktiivisuus (liikuntaa 1–3 krt/vko) [1.375]",
+                act4: "Kohtalainen aktiivisuus (liikuntaa 3–5 krt/vko) [1.55]",
+                act5: "Erittäin aktiivinen (liikuntaa 6–7 krt/vko) [1.725]",
+                act6: "Äärimmäisen aktiivinen (fyysinen työ + kova urheilu) [1.9]",
+                strategyLabel: "Strateginen tavoite / Viikkovauhti:",
+                strat1: "Maksimaalinen 1% / viikko (Dynaaminen)",
+                strat2: "Kova 0,75% / viikko (Dynaaminen)",
+                strat3: "Ikääntyneet max 0,5% / viikko (Dynaaminen)",
+                strat4: "Ikääntynyt turvallinen 0,25% / viikko (Dynaaminen)",
+                strat5: "Pidä nykyinen paino",
+                strat6: "Mukautettu kalorimuutos (Vaje/Ylitys)",
+                customDeltaLabel: "Oma mukautettu kalorimuutos (kcal/pvä):",
+                sec2Title: "2. POLTTOAINEEN LISÄYS",
+                mealTimeLabel: "Aterian aika (HH:MM) [Vapaaehtoinen, oletus: Nyt]:",
+                carbsLabel: "Hiilihydraatit (g):",
+                proteinLabel: "Proteiini (g):",
+                fatLabel: "Rasva (g):",
+                logMealBtn: "Kirjaa ja laske tase 📥",
+                sec3Title: "3. PÄIVÄN AIKALEIMATUT ANNOKSET",
+                logMacrosLabel: "Kirjatut kokonaismakrot tänään:",
+                resetDayBtn: "Nollaa valitun päivän loki ❌",
+                sec4Title: "4. LAHJOMATON TASE & ANALYTIIKKA",
+                fatPctLabel: "Rasvaprosentti:",
+                leanLabel: "Rasvaton moottorisi (Lean Mass):",
+                fatVolLabel: "Kudosrasvasi (KG / litraa):",
+                weeklyTargetLabel: "Valittu viikkotavoite:",
+                ledgerTitle: "📊 KALORIBUDJETIN TILIOTE",
+                ledgerHeader1: "TILAVUUSMUUTTUJA",
+                ledgerHeader2: "KILOKALORIT (kcal)",
+                ledgerBudgetLabel: "Syöntibudjetti (Tavoite)",
+                ledgerUsedLabel: "Käytetty (Nielty kuorma)",
+                ledgerLeftLabel: "Jäljellä (Focus-kapasiteetti)",
+                mtorTitle: "🛡️ PROTEIINI JA LIHASSUOJA (mTOR)",
+                mtorThresholdLabel: "Kerta-aterian mTOR-kynnys:",
+                dailyProtLabel: "Päivittäinen kokonaisproteiini:",
+                insulinTitle: "🧬 PÄIVÄN INSULIINI- JA GLYKEEMINEN KUORMA",
+                glLabel: "Päivän Glykeeminen Kuorma (GL):",
+                iTotLabel: "Päivän Kokonaisinsuliinituotanto (I-Tot):",
+                bufferLabel: "Ruoansulatuksen Puskurikerroin (D):",
+                iPeakLabel: "Kumulatiivinen insuliinipiikki (I-Peak):",
+                statusLabel: "POMO-INSULIININ STATUSVASTE:",
+                chartTitle: "📈 ARVIOITU 24H JATKUVA INSULIINI- JA GL-VASTE",
+                legendInsulin: "Insuliinivaste (uIU/ml)",
+                legendGL: "Glykeeminen Kuorma (GL)",
+                legendThreshold: "-- Rasvanpolton kynnystaso (35 uIU/ml)",
+                legendNow: "| Tämänhetkinen aika (NYT)",
+                phAge: "👉 SYÖTÄ TIETO (IKÄ)",
+                phHeight: "👉 SYÖTÄ TIETO (PITUUS CM)",
+                phWeight: "👉 SYÖTÄ TIETO (PAINO KG)",
+                phWaist: "👉 SYÖTÄ TIETO (VYÖTÄRÖ CM)",
+                phNeck: "👉 SYÖTÄ TIETO (NISKA CM)",
+                phHip: "👉 SYÖTÄ TIETO (LANTIO CM)",
+                disclaimerText: "Vastuuvapauslauseke: Tämä työkalu on tarkoitettu vain koulutus- ja opetustarkoituksiin eikä se korvaa ammatillista lääketieteellistä neuvontaa, diagnoosia tai hoitoa. Kehittäjä ei ota mitään vastuuta tai korvausvelvollisuutta tämän työkalun käytöstä tai sen laskelmista.",
+                copyrightText: "© 2026 HVA2026. Julkaistu GNU General Public License v3.0 (GPLv3) -lisenssillä.",
+                phCustomDelta: "👉 SYÖTÄ VAJE (-) TAI YLITYS (+)",
+                phCarbs: "👉 SYÖTÄ TIETO (HIILIHYDRAATIT G)",
+                phProtein: "👉 SYÖTÄ TIETO (PROTEIINI G)",
+                phFat: "👉 SYÖTÄ TIETO (RASVA G)"
+            },
+            en: {
+                langLabel: "🌐 LANGUAGE:",
+                optionsBtn: "⚙️ OPTIONS",
+                optionsTitle: "⚙️ ADVANCED SETTINGS & MANAGEMENT",
+                demoBtnOn: "🎭 START DEMO MODE",
+                demoBtnOff: "❌ CLOSE DEMO MODE",
+                demoSelectLabel: "SELECT DEMO DAY:",
+                demoDay1: "1: WEEKDAY",
+                demoDay2: "2: FRIDAY (TV)",
+                demoDay3: "3: SATURDAY (TREAT)",
+                disclaimerText: "Disclaimer: This tool is for educational and informational purposes only and does not constitute professional medical advice, diagnosis, or treatment. The developer assumes no responsibility or liability for the use of this tool or its calculations.",
+                copyrightText: "© 2026 HVA2026. Released under the GNU General Public License v3.0 (GPLv3).",
+                masterResetDesc: "Clear all calculator memory (all saved days and profile data).",
+                masterResetBtn: "⚠️ MASTER RESET (CLEAR ALL DATA)",
+                mainTitle: "🧬 METABOLIC CALCULATOR v1.0",
+                mainSub: "Use the top-right \"OPTIONS\" button to open demo mode or reset.",
+                dateSummary: "📅 SELECT DATE",
+                dateLabel: "Date:",
+                cumSummary: "📊 CUMULATIVE HISTORY SUMMARY",
+                cumStartLabel: "📅 START DATE:",
+                cumEndLabel: "📅 END DATE:",
+                cumDays: "Total tracked days:",
+                cumEnergy: "Total energy consumed:",
+                cumDeficit: "Accumulated calorie deficit:",
+                cumSurplus: "Accumulated calorie surplus",
+                cumMtor: "Muscle protection (mTOR) activated:",
+                sec1Title: "1. BIOLOGICAL PARAMETERS",
+                genderLabel: "Gender:",
+                genderMale: "Male",
+                genderFemale: "Female",
+                ageLabel: "Age (years) [Optional]:",
+                heightLabel: "Height (cm) [Optional]:",
+                weightLabel: "Current Weight (kg):",
+                waistLabel: "Waist circumference (cm) [Optional]:",
+                neckLabel: "Neck circumference (cm) [Optional]:",
+                hipLabel: "Hip circumference (cm) [Female optional]:",
+                activityLabel: "Activity level multiplier:",
+                act1: "Sedentary (desk job, little/no exercise) [1.2]",
+                act2: "Basal active (default) [1.25]",
+                act3: "Light activity (exercise 1–3x/wk) [1.375]",
+                act4: "Moderate activity (exercise 3–5x/wk) [1.55]",
+                act5: "Very active (exercise 6–7x/wk) [1.725]",
+                act6: "Extreme active (physical job + heavy sport) [1.9]",
+                strategyLabel: "Strategic Goal / Weekly Pace:",
+                strat1: "Maximum 1% / week (Dynamic)",
+                strat2: "Hard 0.75% / week (Dynamic)",
+                strat3: "Seniors max 0.5% / week (Dynamic)",
+                strat4: "Seniors safe 0.25% / week (Dynamic)",
+                strat5: "Maintain current weight",
+                strat6: "Custom calorie delta (Deficit/Surplus)",
+                customDeltaLabel: "Custom calorie change (kcal/day):",
+                sec2Title: "2. FUEL ADDITION",
+                mealTimeLabel: "Meal time (HH:MM) [Optional, default: Now]:",
+                carbsLabel: "Carbohydrates (g):",
+                proteinLabel: "Protein (g):",
+                fatLabel: "Fat (g):",
+                logMealBtn: "Log and calculate balance 📥",
+                sec3Title: "3. DAILY TIMESTAMPED MEALS",
+                logMacrosLabel: "Logged total macros today:",
+                resetDayBtn: "Reset selected day log ❌",
+                sec4Title: "4. INCORRUPTIBLE BALANCE & ANALYTICS",
+                fatPctLabel: "Body fat percentage:",
+                leanLabel: "Lean Mass engine:",
+                fatVolLabel: "Body fat tissue (KG / liters):",
+                weeklyTargetLabel: "Selected weekly target:",
+                ledgerTitle: "📊 CALORIE BUDGET LEDGER",
+                ledgerHeader1: "VOLUME VARIABLE",
+                ledgerHeader2: "KILOCALORIES (kcal)",
+                ledgerBudgetLabel: "Eating Budget (Target)",
+                ledgerUsedLabel: "Consumed (Ingested load)",
+                ledgerLeftLabel: "Remaining (Focus capacity)",
+                mtorTitle: "🛡️ PROTEIN & MUSCLE PROTECTION (mTOR)",
+                mtorThresholdLabel: "Single meal mTOR threshold:",
+                dailyProtLabel: "Daily total protein:",
+                insulinTitle: "🧬 DAILY INSULIN & GLYCEMIC LOAD",
+                glLabel: "Daily Glycemic Load (GL):",
+                iTotLabel: "Daily Total Insulin Production (I-Tot):",
+                bufferLabel: "Digestion Buffer Factor (D):",
+                iPeakLabel: "Cumulative Insulin Peak (I-Peak):",
+                statusLabel: "BOSS INSULIN STATUS RESPONSE:",
+                chartTitle: "📈 ESTIMATED 24H CONTINUOUS INSULIN & GL RESPONSE",
+                legendInsulin: "Insulin Response (uIU/ml)",
+                legendGL: "Glycemic Load (GL)",
+                legendThreshold: "-- Fat burning threshold (35 uIU/ml)",
+                legendNow: "| Current time (NOW)",
+                phAge: "👉 ENTER DATA (AGE)",
+                phHeight: "👉 ENTER DATA (HEIGHT CM)",
+                phWeight: "👉 ENTER DATA (WEIGHT KG)",
+                phWaist: "👉 ENTER DATA (WAIST CM)",
+                phNeck: "👉 ENTER DATA (NECK CM)",
+                phHip: "👉 ENTER DATA (HIP CM)",
+                phCustomDelta: "👉 ENTER DEFICIT (-) OR SURPLUS (+)",
+                phCarbs: "👉 ENTER DATA (CARBS G)",
+                phProtein: "👉 ENTER DATA (PROTEIN G)",
+                phFat: "👉 ENTER DATA (FAT G)"
+            }
+        };
+
+        let historyDB = JSON.parse(localStorage.getItem('metabolic_v20_historyDB')) || {};
+        let activeDateStr = getTodayStr();
+        let isDemoMode = false;
+        let demoDates = {};
+
+        window.onload = function() { 
+            const savedLang = localStorage.getItem('metabolic_v20_lang') || 'fi';
+            document.getElementById('langSelect').value = savedLang;
+            switchLanguage(savedLang);
+
+            document.getElementById('selectedDate').value = activeDateStr;
+            lataaKayttajaParametrit();
+            lataaAktiivisenPaivanTiedot();
+            tarkistaSukupuoli(); 
+            tarkistaCustomTavoite();
+            alustaKumulatiivisetPaivaykset();
+        };
+
+        function switchLanguage(lang) {
+            localStorage.setItem('metabolic_v20_lang', lang);
+            const t = translations[lang] || translations.fi;
+            
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (t[key]) {
+                    el.innerText = t[key];
+                }
+            });
+
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                const key = el.getAttribute('data-i18n-placeholder');
+                if (t[key]) {
+                    el.placeholder = t[key];
+                }
+            });
+
+            const gSelect = document.getElementById('gender');
+            if (gSelect) {
+                gSelect.options[0].text = t.genderMale;
+                gSelect.options[1].text = t.genderFemale;
+            }
+
+            const actSelect = document.getElementById('activityLevel');
+            if (actSelect) {
+                actSelect.options[0].text = t.act1;
+                actSelect.options[1].text = t.act2;
+                actSelect.options[2].text = t.act3;
+                actSelect.options[3].text = t.act4;
+                actSelect.options[4].text = t.act5;
+                actSelect.options[5].text = t.act6;
+            }
+
+            const stratSelect = document.getElementById('strategyGoal');
+            if (stratSelect) {
+                stratSelect.options[0].text = t.strat1;
+                stratSelect.options[1].text = t.strat2;
+                stratSelect.options[2].text = t.strat3;
+                stratSelect.options[3].text = t.strat4;
+                stratSelect.options[4].text = t.strat5;
+                stratSelect.options[5].text = t.strat6;
+            }
+
+            paivitaLaskelmat();
+            paivitaKumulatiivinenYhteenveto();
+        }
+
+        function toggleOptionsPanel() {
+            const panel = document.getElementById('optionsPanel');
+            panel.style.display = (panel.style.display === 'block') ? 'none' : 'block';
+        }
+
+        function getTodayStr() {
+            const now = new Date();
+            const y = now.getFullYear(), m = String(now.getMonth() + 1).padStart(2, '0'), d = String(now.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        function getOffsetDateStr(daysOffset) {
+            const d = new Date();
+            d.setDate(d.getDate() + daysOffset);
+            const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), date = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${date}`;
+        }
+
+        function alustaKumulatiivisetPaivaykset() {
+            const keys = Object.keys(historyDB).sort();
+            if (keys.length > 0) {
+                if (!document.getElementById('cumStartDate').value) {
+                    document.getElementById('cumStartDate').value = keys[0];
+                }
+                if (!document.getElementById('cumEndDate').value) {
+                    document.getElementById('cumEndDate').value = keys[keys.length - 1];
+                }
+            } else {
+                const today = getTodayStr();
+                if (!document.getElementById('cumStartDate').value) document.getElementById('cumStartDate').value = today;
+                if (!document.getElementById('cumEndDate').value) document.getElementById('cumEndDate').value = today;
+            }
+        }
+
+        function toggleDemoMode() {
+            isDemoMode = !isDemoMode;
+            const btn = document.getElementById('demoBtn');
+            const controls = document.getElementById('demoControls');
+            const lang = document.getElementById('langSelect').value;
+            const t = translations[lang] || translations.fi;
+
+            if (isDemoMode) {
+                btn.innerText = (lang === 'en') ? "❌ CLOSE DEMO MODE" : "❌ SULJE ESITTELYTILA (PALAA OMIIN)";
+                btn.style.background = "#ff3333";
+                btn.style.color = "#fff";
+                controls.style.display = "block";
+
+                demoDates = {
+                    1: getOffsetDateStr(-2),
+                    2: getOffsetDateStr(-1),
+                    3: getOffsetDateStr(0)
+                };
+
+                document.getElementById('gender').value = "male";
+                document.getElementById('age').value = "45";
+                document.getElementById('height').value = "180";
+                document.getElementById('weight').value = "110";
+                document.getElementById('waist').value = "112";
+                document.getElementById('neck').value = "43";
+                document.getElementById('hip').value = "118"; 
+                document.getElementById('activityLevel').value = "1.25";
+                document.getElementById('strategyGoal').value = "lose_1pct";
+
+                historyDB = {};
+
+                historyDB[demoDates[1]] = {
+                    macros: { carbs: 300, protein: 98, fat: 72 },
+                    meals: [
+                        { time: "08:00", c: 65, p: 18, f: 12 },
+                        { time: "11:30", c: 35, p: 8,  f: 4  },
+                        { time: "14:00", c: 85, p: 35, f: 22 },
+                        { time: "16:30", c: 45, p: 7,  f: 14 },
+                        { time: "19:30", c: 70, p: 30, f: 20 }
+                    ],
+                    calculated: null
+                };
+
+                historyDB[demoDates[2]] = {
+                    macros: { carbs: 410, protein: 106, fat: 114 },
+                    meals: [
+                        { time: "08:00", c: 65, p: 18, f: 12 },
+                        { time: "11:30", c: 35, p: 8,  f: 4  },
+                        { time: "14:00", c: 85, p: 35, f: 22 },
+                        { time: "16:30", c: 45, p: 7,  f: 14 },
+                        { time: "19:30", c: 70, p: 30, f: 20 },
+                        { time: "21:30", c: 110, p: 8, f: 42 }
+                    ],
+                    calculated: null
+                };
+
+                historyDB[demoDates[3]] = {
+                    macros: { carbs: 540, protein: 140, fat: 150 },
+                    meals: [
+                        { time: "09:30", c: 90,  p: 25, f: 25 },
+                        { time: "13:30", c: 180, p: 55, f: 65 },
+                        { time: "17:00", c: 70,  p: 10, f: 20 },
+                        { time: "20:30", c: 200, p: 50, f: 40 }
+                    ],
+                    calculated: null
+                };
+
+                const w = 110, actMult = 1.25, rMoor = 110 - (110 * 0.32), tdee = (370 + (21.6 * rMoor)) * actMult;
+                [1, 2, 3].forEach(num => {
+                    const dKey = demoDates[num];
+                    const dayObj = historyDB[dKey];
+                    const kCals = (dayObj.macros.carbs * 4) + (dayObj.macros.protein * 4) + (dayObj.macros.fat * 9);
+                    dayObj.calculated = { weight: w, tdee: tdee, consumedKcal: kCals };
+                });
+
+                document.getElementById('cumStartDate').value = demoDates[1];
+                document.getElementById('cumEndDate').value = demoDates[3];
+
+                tarkistaSukupuoli();
+                tarkistaCustomTavoite();
+                valitseDemoPaiva(1);
+            } else {
+                btn.innerText = t.demoBtnOn;
+                btn.style.background = "#ff00ff";
+                btn.style.color = "#000";
+                controls.style.display = "none";
+
+                historyDB = JSON.parse(localStorage.getItem('metabolic_v20_historyDB')) || {};
+                activeDateStr = getTodayStr();
+                document.getElementById('selectedDate').value = activeDateStr;
+                lataaKayttajaParametrit();
+                lataaAktiivisenPaivanTiedot();
+                tarkistaSukupuoli();
+                tarkistaCustomTavoite();
+                alustaKumulatiivisetPaivaykset();
+                paivitaKumulatiivinenYhteenveto();
+            }
+        }
+
+        function valitseDemoPaiva(num) {
+            if (!isDemoMode) return;
+            
+            [1, 2, 3].forEach(n => {
+                const b = document.getElementById(`demoDayBtn${n}`);
+                if (n === num) b.classList.add('active');
+                else b.classList.remove('active');
+            });
+
+            activeDateStr = demoDates[num];
+            document.getElementById('selectedDate').value = activeDateStr;
+            lataaAktiivisenPaivanTiedot();
+        }
+
+        function tarkistaSukupuoli() { 
+            const g = document.getElementById('gender').value;
+            document.getElementById('hipContainer').style.display = (g === "female") ? "block" : "none"; 
+            
+            if (isDemoMode) {
+                if (g === "female" && document.getElementById('weight').value === "110") {
+                    document.getElementById('height').value = "170";
+                    document.getElementById('weight').value = "100";
+                    document.getElementById('waist').value = "104";
+                    document.getElementById('neck').value = "38";
+                    document.getElementById('hip').value = "118";
+                } else if (g === "male" && document.getElementById('weight').value === "100") {
+                    document.getElementById('height').value = "180";
+                    document.getElementById('weight').value = "110";
+                    document.getElementById('waist').value = "112";
+                    document.getElementById('neck').value = "43";
+                }
+            }
+        }
+
+        function tallennaKayttajaParametrit() {
+            if (isDemoMode) return; 
+            const params = {
+                gender: document.getElementById('gender').value,
+                age: document.getElementById('age').value,
+                height: document.getElementById('height').value,
+                weight: document.getElementById('weight').value,
+                waist: document.getElementById('waist').value,
+                neck: document.getElementById('neck').value,
+                hip: document.getElementById('hip').value,
+                activityLevel: document.getElementById('activityLevel').value,
+                strategyGoal: document.getElementById('strategyGoal').value,
+                customCalorieDelta: document.getElementById('customCalorieDelta').value
+            };
+            localStorage.setItem('metabolic_v20_userParams', JSON.stringify(params));
+        }
+
+        function lataaKayttajaParametrit() {
+            const saved = localStorage.getItem('metabolic_v20_userParams');
+            if (saved) {
+                const p = JSON.parse(saved);
+                ['gender','age','height','weight','waist','neck','hip','activityLevel','strategyGoal','customCalorieDelta'].forEach(k => {
+                    if (p[k] !== undefined && document.getElementById(k)) document.getElementById(k).value = p[k];
+                });
+            }
+        }
+
+        function vaihdaPaivaa() {
+            const inputVal = document.getElementById('selectedDate').value;
+            if (inputVal) {
+                activeDateStr = inputVal;
+                lataaAktiivisenPaivanTiedot();
+            }
+        }
+
+        function sailytaPaivaDB() {
+            if (isDemoMode) return; 
+            localStorage.setItem('metabolic_v20_historyDB', JSON.stringify(historyDB));
+            paivitaKumulatiivinenYhteenveto();
+        }
+
+        function lataaAktiivisenPaivanTiedot() {
+            if (!historyDB[activeDateStr]) {
+                historyDB[activeDateStr] = { macros: { carbs: 0, protein: 0, fat: 0 }, meals: [], calculated: null };
+            }
+
+            if (historyDB[activeDateStr].calculated && historyDB[activeDateStr].calculated.weight) {
+                document.getElementById('weight').value = historyDB[activeDateStr].calculated.weight;
+            } else {
+                const savedParams = localStorage.getItem('metabolic_v20_userParams');
+                if (savedParams) {
+                    const p = JSON.parse(savedParams);
+                    if (p.weight) document.getElementById('weight').value = p.weight;
+                }
+            }
+
+            paivitaLogiNaytto();
+            alustaKumulatiivisetPaivaykset();
+            paivitaKumulatiivinenYhteenveto();
+
+            if (historyDB[activeDateStr].meals.length > 0) {
+                lisaaAnnosV20(true);
+            } else {
+                paivitaLaskelmat();
+            }
+        }
+
+        function paivitaKumulatiivinenYhteenveto() {
+            let totalDays = 0, totalEnergyKcal = 0, totalDeficitKcal = 0, mtorActiveDaysCount = 0;
+
+            const startDate = document.getElementById('cumStartDate').value;
+            const endDate = document.getElementById('cumEndDate').value;
+            const lang = document.getElementById('langSelect').value;
+
+            Object.keys(historyDB).forEach(dKey => {
+                if (startDate && dKey < startDate) return;
+                if (endDate && dKey > endDate) return;
+
+                const dayObj = historyDB[dKey];
+                if (dayObj && dayObj.meals && dayObj.meals.length > 0) {
+                    totalDays++;
+                    const dayKcal = (dayObj.macros.carbs * 4) + (dayObj.macros.protein * 4) + (dayObj.macros.fat * 9);
+                    totalEnergyKcal += dayKcal;
+
+                    let dayTdee = 0;
+                    let lbm = 0;
+                    let age = parseInt(document.getElementById('age')?.value) || 45;
+
+                    if (dayObj.calculated && dayObj.calculated.tdee) {
+                        dayTdee = dayObj.calculated.tdee;
+                        lbm = dayObj.calculated.lbm || (dayObj.calculated.weight ? dayObj.calculated.weight * 0.8 : 70);
+                        if (dayObj.calculated.age) age = dayObj.calculated.age;
+                    } else {
+                        const w = dayObj.calculated?.weight || parseFloat(document.getElementById('weight').value) || 70;
+                        const h = parseFloat(document.getElementById('height').value) || 175;
+                        const waist = parseFloat(document.getElementById('waist').value) || 0;
+                        const neck = parseFloat(document.getElementById('neck').value) || 0;
+                        const hip = parseFloat(document.getElementById('hip').value) || 0;
+                        const gender = document.getElementById('gender').value;
+                        const actMult = parseFloat(document.getElementById('activityLevel').value) || 1.25;
+
+                        let rPct = (gender === "male") ? 32.0 : 42.0;
+                        if ((gender === "male" && h > 0 && waist > neck && neck > 0) || (gender === "female" && h > 0 && (waist + hip) > neck && neck > 0 && hip > 0)) {
+                            const pT = h / 2.54, nT = neck / 2.54, vT = waist / 2.54;
+                            rPct = (gender === "male") ? (86.010 * log10(vT - nT)) - (70.041 * log10(pT)) + 36.76 : (163.205 * log10(vT + (hip/2.54) - nT)) - (97.684 * log10(pT)) - 78.387;
+                            if (rPct < 3) rPct = 3;
+                        }
+                        lbm = w - (w * (rPct / 100)); 
+                        dayTdee = (370 + (21.6 * lbm)) * actMult;
+                        dayObj.calculated = { weight: w, tdee: dayTdee, consumedKcal: dayKcal, lbm: lbm, age: age };
+                    }
+
+                    totalDeficitKcal += (dayTdee - dayKcal);
+
+                    let ageMultiplier = 1.0;
+                    let minThreshold = 30.0;
+                    if (age >= 60) {
+                        ageMultiplier = 1.15;
+                        minThreshold = 35.0;
+                    } else if (age >= 50) {
+                        ageMultiplier = 1.08;
+                        minThreshold = 32.0;
+                    }
+
+                    const mtorThreshold = Math.max(minThreshold, lbm * 0.4 * ageMultiplier);
+                    if (dayObj.meals.some(m => m.p >= mtorThreshold)) mtorActiveDaysCount++;
+                }
+            });
+
+            document.getElementById('cumDaysCount').innerText = totalDays;
+            document.getElementById('cumEnergyTotal').innerText = Math.round(totalEnergyKcal);
+            
+            const deficitTitle = document.getElementById('cumDeficitTitle');
+            const deficitEl = document.getElementById('cumDeficitTotal');
+            const fatKgEl = document.getElementById('cumFatBurnedKg');
+            const fatLitersEl = document.getElementById('cumFatBurnedLiters');
+
+            let absVal = Math.abs(totalDeficitKcal);
+            let fatKgVal = absVal / 7700;
+            let fatLitersVal = fatKgVal / 0.90;
+
+            deficitEl.innerText = Math.round(totalDeficitKcal);
+            fatKgEl.innerText = fatKgVal.toFixed(2);
+            fatLitersEl.innerText = fatLitersVal.toFixed(2);
+
+            if (totalDeficitKcal < 0) {
+                const surplusText = lang === 'en' ? "⚠️ Accumulated calorie surplus (<span class='alert-red'>weight gained</span>):" : "⚠️ Kertynyt kaloriylitys (<span class='alert-red'>painoa tullut lisää</span>):";
+                deficitTitle.innerHTML = surplusText;
+                deficitEl.className = "alert-red";
+                fatKgEl.className = "alert-red";
+                fatLitersEl.className = "alert-red";
+            } else {
+                deficitTitle.innerText = lang === 'en' ? "Accumulated calorie deficit:" : "Kertynyt kalorivaje:";
+                deficitEl.className = "alert-green";
+                fatKgEl.className = "";
+                fatLitersEl.className = "";
+            }
+
+            document.getElementById('cumMtorDays').innerText = mtorActiveDaysCount;
+        }
+
+        function log10(val) { return Math.log(val) / Math.LN10; }
+        function tarkistaCustomTavoite() { document.getElementById('customGoalContainer').style.display = (document.getElementById('strategyGoal').value === "custom") ? "block" : "none"; }
+
+        function paivitaLaskelmat() {
+            const w = parseFloat(document.getElementById('weight').value) || 0;
+            if (w > 0 && historyDB[activeDateStr]) {
+                lisaaAnnosV20(true);
+            }
+        }
+
+        function lisaaAnnosV20(isRefreshOnly = false) {
+            const w = parseFloat(document.getElementById('weight').value) || 0;
+            const h = parseFloat(document.getElementById('height').value) || 0;
+            const waist = parseFloat(document.getElementById('waist').value) || 0;
+            const neck = parseFloat(document.getElementById('neck').value) || 0;
+            const hip = parseFloat(document.getElementById('hip').value) || 0;
+            const gender = document.getElementById('gender').value;
+
+            const c = parseFloat(document.getElementById('carbs').value) || 0;
+            const p = parseFloat(document.getElementById('protein').value) || 0;
+            const f = parseFloat(document.getElementById('fat').value) || 0;
+
+            const lang = document.getElementById('langSelect').value;
+
+            if (isNaN(w) || w <= 0) { 
+                if (!isRefreshOnly) alert(lang === 'en' ? "Enter current weight (kg) to continue!" : "Syötä nykyinen paino (kg) jatkaaksesi!"); 
+                return; 
+            }
+
+            if (!historyDB[activeDateStr]) historyDB[activeDateStr] = { macros: { carbs: 0, protein: 0, fat: 0 }, meals: [], calculated: null };
+
+            if (!isRefreshOnly && (c > 0 || p > 0 || f > 0)) {
+                const mealTimeInput = document.getElementById('mealTime').value;
+                let timeStr = mealTimeInput;
+                if (!timeStr) {
+                    const now = new Date();
+                    timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+                }
+
+                historyDB[activeDateStr].macros.carbs += c;
+                historyDB[activeDateStr].macros.protein += p;
+                historyDB[activeDateStr].macros.fat += f;
+                historyDB[activeDateStr].meals.push({ c: c, p: p, f: f, time: timeStr });
+
+                document.getElementById('carbs').value = ""; document.getElementById('protein').value = ""; document.getElementById('fat').value = ""; document.getElementById('mealTime').value = "";
+            }
+
+            let rPct = (gender === "male") ? 32.0 : 42.0;
+            if ((gender === "male" && h > 0 && waist > neck && neck > 0) || (gender === "female" && h > 0 && (waist + hip) > neck && neck > 0 && hip > 0)) {
+                const pT = h / 2.54, nT = neck / 2.54, vT = waist / 2.54;
+                rPct = (gender === "male") ? (86.010 * log10(vT - nT)) - (70.041 * log10(pT)) + 36.76 : (163.205 * log10(vT + (hip/2.54) - nT)) - (97.684 * log10(pT)) - 78.387;
+                if (rPct < 3) rPct = 3;
+            }
+
+            const actMult = parseFloat(document.getElementById('activityLevel').value) || 1.25;
+            const rMoor = w - (w * (rPct / 100)); 
+            const tdee = (370 + (21.6 * rMoor)) * actMult;
+
+            document.getElementById('resFatPct').innerText = rPct.toFixed(1);
+            document.getElementById('resLean').innerText = rMoor.toFixed(1);
+
+            const fatKg = w * (rPct / 100);
+            const fatLiters = fatKg / 0.90;
+            document.getElementById('resFatVolCombined').innerText = `${fatKg.toFixed(1)} kg (${fatLiters.toFixed(1)} ${lang === 'en' ? 'liters' : 'litraa'})`;
+
+            const strat = document.getElementById('strategyGoal').value;
+            let wkKg = 0;
+            let dailyDeficit = 0;
+
+            if (strat === 'lose_1pct') { wkKg = w * 0.01; dailyDeficit = (wkKg * 7700) / 7; }
+            else if (strat === 'lose_075pct') { wkKg = w * 0.0075; dailyDeficit = (wkKg * 7700) / 7; }
+            else if (strat === 'lose_05pct') { wkKg = w * 0.005; dailyDeficit = (wkKg * 7700) / 7; }
+            else if (strat === 'lose_025pct') { wkKg = w * 0.0025; dailyDeficit = (wkKg * 7700) / 7; }
+            else if (strat === 'maintain') { wkKg = 0; dailyDeficit = 0; }
+            else if (strat === 'custom') {
+                const delta = parseFloat(document.getElementById('customCalorieDelta').value) || 0;
+                dailyDeficit = -delta;
+                wkKg = Math.abs(delta * 7 / 7700);
+            }
+
+            document.getElementById('resWeeklyTarget').innerText = wkKg.toFixed(2);
+            document.getElementById('resWeeklyVol').innerText = (wkKg / 0.90).toFixed(2);
+
+            const totalCarbs = historyDB[activeDateStr].macros.carbs;
+            const totalProt = historyDB[activeDateStr].macros.protein;
+            const totalFat = historyDB[activeDateStr].macros.fat;
+
+            const targetBudget = Math.max(0, tdee - dailyDeficit);
+            const kCals = (totalCarbs * 4) + (totalProt * 4) + (totalFat * 9);
+
+            document.getElementById('ledgerBudget').innerText = `${Math.round(targetBudget)} (${lang === 'en' ? 'Burn' : 'Kulutus'}: ${Math.round(tdee)})`;
+            document.getElementById('ledgerUsed').innerText = Math.round(kCals);
+            document.getElementById('ledgerLeft').innerText = Math.round(targetBudget - kCals);
+            const age = parseInt(document.getElementById('age').value) || 45;
+            const lbm = rMoor; // Rasvaton massa lasketaan koodissa nimellä rMoor
+
+            let ageMultiplier = 1.0;
+            let minThreshold = 30.0;
+            if (age >= 60) {
+            ageMultiplier = 1.15;
+            minThreshold = 35.0;
+            } else if (age >= 50) {
+            ageMultiplier = 1.08;
+            minThreshold = 32.0;
+    }
+
+
+            const mtorThreshold = Math.max(minThreshold, lbm * 0.4 * ageMultiplier);
+            document.getElementById('resMtorG').innerText = `${mtorThreshold.toFixed(1)} g ${lang === 'en' ? 'protein / meal' : 'proteiinia / ateria'}`;
+            document.getElementById('resDailyProt').innerText = `${totalProt.toFixed(1)} g`;
+
+            const totalGL = totalCarbs * 0.6;
+            const iTot = (totalCarbs * 1.0) + (totalProt * 0.56) + (totalFat * 0.10);
+            const bufferD = 1.0 + ((totalProt * 0.01) + (totalFat * 0.02));
+            const iPeak = (iTot / bufferD).toFixed(1);
+
+            document.getElementById('resGlycemicLoad').innerText = totalGL.toFixed(1);
+            document.getElementById('resInsulinTotal').innerText = `${iTot.toFixed(1)} iAUC`;
+            document.getElementById('resInsulinBuffer').innerText = bufferD.toFixed(2);
+            document.getElementById('resInsulinPeak').innerText = `${iPeak} uIU/ml`;
+
+            let insulinStatus = lang === 'en' ? "🟢 LOW (Ketosis / Efficient fat burning active)" : "🟢 MATALA (Ketoosi / Tehokas rasvanpoltto käynnissä)";
+            if (iPeak > 80) insulinStatus = lang === 'en' ? "🔴 HIGH (Elevated insulin buffers fat burning)" : "🔴 KORKEA (Kohonnut insuliini puskuroi rasvanpolton)";
+            else if (iPeak > 35) insulinStatus = lang === 'en' ? "🟡 MODERATELY ACTIVE (Digestion active)" : "🟡 KOHTALAISEN AKTIIVINEN (Ruoansulattelu aktiivinen)";
+            document.getElementById('resInsulinStatus').innerText = insulinStatus;
+
+            historyDB[activeDateStr].calculated = { weight: w, tdee: tdee, consumedKcal: kCals, lbm: rMoor, age: age };
+            sailytaPaivaDB();
+            paivitaLogiNaytto();
+            document.getElementById('outputBox').style.display = "block";
+            piirraKuvaaja24H();
+        }
+
+        function paivitaLogiNaytto() {
+            const tl = document.getElementById('mealTimeline'); 
+            tl.innerHTML = "";
+            const curData = historyDB[activeDateStr];
+            const lang = document.getElementById('langSelect').value;
+
+            if (curData && curData.meals && curData.meals.length > 0) {
+                document.getElementById('logBox').style.display = "block";
+                curData.meals.forEach((m, idx) => {
+                    const gl = m.c * 0.6;
+                    const buf = 1.0 + ((m.p * 0.01) + (m.f * 0.02));
+                    const iTot = (m.c * 1.0) + (m.p * 0.56) + (m.f * 0.10);
+                    const iPeak = iTot / buf;
+
+                    const mealWord = lang === 'en' ? 'Meal' : 'Ateria';
+                    const d = document.createElement('div'); 
+                    d.className = 'meal-log-item';
+                    d.innerHTML = `<strong>${mealWord} ${idx + 1} (${m.time})</strong> — C: ${m.c}g | P: ${m.p}g | F: ${m.f}g &nbsp;|&nbsp; <span style="color:#ffff00;">GL: ${gl.toFixed(1)}</span> | <span style="color:#88ffff;">D: ${buf.toFixed(2)}x</span> | <span style="color:#ff88ff;">Peak: ${iPeak.toFixed(1)} uIU/ml</span>`;
+                    tl.appendChild(d);
+                });
+                document.getElementById('logMacros').innerText = `C: ${curData.macros.carbs.toFixed(1)}g | P: ${curData.macros.protein.toFixed(1)}g | F: ${curData.macros.fat.toFixed(1)}g`;
+            } else { 
+                document.getElementById('logBox').style.display = "none"; 
+            }
+        }
+
+        function piirraKuvaaja24H() {
+            const canvas = document.getElementById('dynamicsChart');
+            if (!canvas || !canvas.getContext) return;
+            const ctx = canvas.getContext('2d');
+            const W = canvas.width, H = canvas.height;
+            const lang = document.getElementById('langSelect').value;
+            ctx.clearRect(0, 0, W, H);
+
+            ctx.strokeStyle = '#003300';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < W; x += W / 24) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H - 25); ctx.stroke();
+            }
+            for (let y = 0; y < H - 25; y += 35) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+            }
+
+            ctx.fillStyle = '#00ff00';
+            ctx.font = '10px Courier New';
+            for (let i = 0; i <= 24; i += 2) {
+                const xPos = (i / 24) * W;
+                if (i < 24) {
+                    ctx.fillText(`${String(i).padStart(2, '0')}:00`, xPos + 4, H - 8);
+                }
+            }
+
+            const meals = historyDB[activeDateStr]?.meals || [];
+            let hourlyInsulin = new Array(24).fill(5); 
+            let hourlyGL = new Array(24).fill(0);
+
+            meals.forEach(m => {
+                if (m.time) {
+                    const hour = parseInt(m.time.split(':')[0], 10);
+                    const buf = 1.0 + ((m.p * 0.01) + (m.f * 0.02));
+                    const insLoad = ((m.c * 1.0) + (m.p * 0.56) + (m.f * 0.10)) / buf;
+                    const glLoad = m.c * 0.6;
+
+                    for (let h = 0; h < 3; h++) {
+                        const idx = (hour + h) % 24;
+                        hourlyGL[idx] += glLoad * Math.max(0, 1 - (h * 0.4));
+                    }
+
+                    for (let h = 0; h < 5; h++) {
+                        const idx = (hour + h) % 24;
+                        hourlyInsulin[idx] += insLoad * Math.max(0, 1 - (h * 0.22));
+                    }
+                }
+            });
+
+            const maxVal = Math.max(90, ...hourlyInsulin, ...hourlyGL);
+
+            const thresholdY = (H - 30) - ((35 / maxVal) * (H - 60));
+            ctx.beginPath();
+            ctx.strokeStyle = '#ff0000';
+            ctx.setLineDash([5, 5]);
+            ctx.lineWidth = 1.5;
+            ctx.moveTo(0, thresholdY);
+            ctx.lineTo(W, thresholdY);
+            ctx.stroke();
+            ctx.setLineDash([]); 
+            ctx.fillStyle = '#ff5555';
+            ctx.fillText(lang === 'en' ? 'THRESHOLD (35 uIU/ml)' : 'KYNNSYSTASO (35 uIU/ml)', W - 180, thresholdY - 4);
+
+            if (activeDateStr === getTodayStr()) {
+                const now = new Date();
+                const currentFraction = now.getHours() + (now.getMinutes() / 60);
+                const currentX = (currentFraction / 24) * W;
+
+                ctx.beginPath();
+                ctx.strokeStyle = '#00ffff';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([3, 3]);
+                ctx.moveTo(currentX, 0);
+                ctx.lineTo(currentX, H - 25);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                ctx.fillStyle = '#00ffff';
+                ctx.font = 'bold 10px Courier New';
+                ctx.fillText(lang === 'en' ? '◀ NOW' : '◀ NYT', currentX + 4, 15);
+            }
+
+            ctx.beginPath();
+            ctx.strokeStyle = '#ffff00';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < 24; i++) {
+                const x = (i / 23) * W;
+                const y = (H - 30) - ((hourlyGL[i] / maxVal) * (H - 60));
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 2.5;
+            for (let i = 0; i < 24; i++) {
+                const x = (i / 23) * W;
+                const y = (H - 30) - ((hourlyInsulin[i] / maxVal) * (H - 60));
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            ctx.lineTo(W, H - 25);
+            ctx.lineTo(0, H - 25);
+            ctx.fillStyle = 'rgba(0, 255, 0, 0.12)';
+            ctx.fill();
+        }
+
+        function nollaaValittuPaiva() {
+            historyDB[activeDateStr] = { macros: { carbs: 0, protein: 0, fat: 0 }, meals: [], calculated: null };
+            sailytaPaivaDB();
+            paivitaLogiNaytto();
+            document.getElementById('outputBox').style.display = "none";
+        }
+
+        function nollaaKaikkiTiedot() {
+            const lang = document.getElementById('langSelect').value;
+            const vahvistus = confirm(
+                lang === 'en' ? 
+                "⚠️ WARNING!\n\nAll saved data (profile, settings, meals, and history) will be completely deleted.\n\nThis is an IRREVERSIBLE ACTION!\n\nDo you still want to proceed?" :
+                "⚠️ VAROITUS!\n\nKaikki tallennetut tiedot (profiili, asetukset, ateriat ja historia) poistetaan kokonaan.\n\nTämä on PERUUTTAMATON TAPAHTUMA!\n\nHaluatko tehdä sen siitä huolimatta?"
+            );
+            
+            if (vahvistus) {
+                localStorage.clear();
+                alert(lang === 'en' ? "System successfully reset!" : "Järjestelmä nollattu onnistuneesti!");
+                location.reload();
+            }
+        }
+    </script>
+</body>
+</html>
