@@ -232,6 +232,10 @@
     <details class="cum-box" id="cumSummaryBox" open>
         <summary data-i18n="cumSummary">📊 KUMULATIIVINEN HISTORIAYHTEENVETO</summary>
         <div class="details-content">
+            <div style="margin-bottom: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
+                <button type="button" onclick="asetKumuJakso(7)" style="flex: 1; min-width: 140px; padding: 8px 10px; font-size: 11px; font-weight: bold; font-family: inherit; background: #002200; border: 1px solid #00ff00; color: #00ff00; cursor: pointer; border-radius: 3px;" data-i18n="btnLast7Days">🗓️ VIIMEISET 7 PÄIVÄÄ (KULUNEET)</button>
+                <button type="button" onclick="asetKumuJakso(30)" style="flex: 1; min-width: 140px; padding: 8px 10px; font-size: 11px; font-weight: bold; font-family: inherit; background: #002200; border: 1px solid #00ff00; color: #00ff00; cursor: pointer; border-radius: 3px;" data-i18n="btnLast30Days">🗓️ VIIMEISET 30 PÄIVÄÄ (KULUNEET)</button>
+            </div>
             <div style="margin-bottom: 12px; display: flex; gap: 10px; flex-wrap: wrap; background: #001a00; padding: 10px; border: 1px dashed #00ff00;">
                 <div style="flex: 1; min-width: 140px;">
                     <label style="font-size: 11px; margin-top:0; color:#00ff00;" data-i18n="cumStartLabel">📅 ALKUPÄIVÄMÄÄRÄ:</label>
@@ -409,12 +413,14 @@
                 dateSummary: "📅 VALITSE PÄIVÄMÄÄRÄ",
                 dateLabel: "Päivämäärä:",
                 cumSummary: "📊 KUMULATIIVINEN HISTORIAYHTEENVETO",
+                btnLast7Days: "🗓️ VIIMEISET 7 PÄIVÄÄ (KULUNEET)",
+                btnLast30Days: "🗓️ VIIMEISET 30 PÄIVÄÄ (KULUNEET)",
                 cumStartLabel: "📅 ALKUPÄIVÄMÄÄRÄ:",
                 cumEndLabel: "📅 LOPPUPÄIVÄMÄÄRÄ:",
                 cumDays: "Seurattuja päiviä yhteensä:",
                 cumEnergy: "Nautittu kokonaisenergia:",
                 cumDeficit: "Kertynyt kalorisaldo:",
-                cumSaldoExpl: "(Plussalla [+] = Syöty yli kulutuksen, painoa tullut lisää | Negatiivinen [-] = Syöty alle kulutuksen, laihduttu)",
+                cumSaldoExpl: "(Plussalla [+] = Syöty yli kulutuksen, painoa tullut lisää | Negatiivinen [-] = Syöty alle kulutuksen, laihduttu. Laskelma sisältää vain päättyneet kuluneet päiväjaksot.)",
                 cumSurplus: "Kertynyt kaloriylitys",
                 cumMtor: "Lihassuoja (mTOR) aktivoitu:",
                 sec1Title: "1. BIOLOGISET PARAMETRIT",
@@ -525,12 +531,14 @@
                 dateSummary: "📅 SELECT DATE",
                 dateLabel: "Date:",
                 cumSummary: "📊 CUMULATIVE HISTORY SUMMARY",
+                btnLast7Days: "🗓️ LAST 7 DAYS (COMPLETED)",
+                btnLast30Days: "🗓️ LAST 30 DAYS (COMPLETED)",
                 cumStartLabel: "📅 START DATE:",
                 cumEndLabel: "📅 END DATE:",
                 cumDays: "Total tracked days:",
                 cumEnergy: "Total energy consumed:",
                 cumDeficit: "Accumulated calorie balance:",
-                cumSaldoExpl: "(Positive [+] = Consumed over expenditure, weight gained | Negative [-] = Consumed under expenditure, weight lost)",
+                cumSaldoExpl: "(Positive [+] = Consumed over expenditure, weight gained | Negative [-] = Consumed under expenditure, weight lost. Calculation includes completed past days only.)",
                 cumSurplus: "Accumulated calorie surplus",
                 cumMtor: "Muscle protection (mTOR) activated:",
                 sec1Title: "1. BIOLOGICAL PARAMETERS",
@@ -753,19 +761,36 @@
             return `${y}-${m}-${date}`;
         }
 
+        function asetKumuJakso(daysCount) {
+            const todayStr = (isDemoMode && demoDates[30]) ? demoDates[30] : getTodayStr();
+            const refDate = new Date(todayStr + "T00:00:00");
+            
+            // End date: yesterday (-1 day from today, last completed day)
+            const endDateObj = new Date(refDate.getTime());
+            endDateObj.setDate(endDateObj.getDate() - 1);
+            
+            // Start date: daysCount completed days back
+            const startDateObj = new Date(refDate.getTime());
+            startDateObj.setDate(startDateObj.getDate() - daysCount);
+            
+            const formatDate = (d) => {
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${y}-${m}-${day}`;
+            };
+            
+            document.getElementById('cumStartDate').value = formatDate(startDateObj);
+            document.getElementById('cumEndDate').value = formatDate(endDateObj);
+            
+            paivitaKumulatiivinenYhteenveto();
+        }
+
+        window.asetKumuJakso = asetKumuJakso;
+
         function alustaKumulatiivisetPaivaykset() {
-            const keys = Object.keys(historyDB).sort();
-            if (keys.length > 0) {
-                if (!document.getElementById('cumStartDate').value) {
-                    document.getElementById('cumStartDate').value = keys[0];
-                }
-                if (!document.getElementById('cumEndDate').value) {
-                    document.getElementById('cumEndDate').value = keys[keys.length - 1];
-                }
-            } else {
-                const today = getTodayStr();
-                if (!document.getElementById('cumStartDate').value) document.getElementById('cumStartDate').value = today;
-                if (!document.getElementById('cumEndDate').value) document.getElementById('cumEndDate').value = today;
+            if (!document.getElementById('cumStartDate').value || !document.getElementById('cumEndDate').value) {
+                asetKumuJakso(7);
             }
         }
 
@@ -891,8 +916,7 @@
 
                 pivitaDemoSelectOptions();
 
-                document.getElementById('cumStartDate').value = demoDates[1];
-                document.getElementById('cumEndDate').value = demoDates[30];
+                asetKumuJakso(30);
 
                 tarkistaSukupuoli();
                 tarkistaCustomTavoite();
@@ -1154,8 +1178,12 @@
             const startDate = document.getElementById('cumStartDate').value;
             const endDate = document.getElementById('cumEndDate').value;
             const lang = document.getElementById('langSelect').value;
+            const todayStr = (isDemoMode && demoDates[30]) ? demoDates[30] : getTodayStr();
 
             Object.keys(historyDB).forEach(dKey => {
+                // Ignore ongoing incomplete day
+                if (dKey >= todayStr) return;
+
                 if (startDate && dKey < startDate) return;
                 if (endDate && dKey > endDate) return;
 
