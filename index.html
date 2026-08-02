@@ -1120,7 +1120,6 @@
             if (isDemoMode) return; 
             localStorage.setItem('metabolic_v20_historyDB', JSON.stringify(historyDB));
             paivitaKumulatiivinenYhteenveto();
-            if (window.triggerAutoSyncToDrive) window.triggerAutoSyncToDrive();
         }
 
         function lataaAktiivisenPaivanTiedot() {
@@ -1297,6 +1296,7 @@
                 historyDB[activeDateStr].meals.push({ c: c, p: p, f: f, time: timeStr });
 
                 document.getElementById('carbs').value = ""; document.getElementById('protein').value = ""; document.getElementById('fat').value = ""; document.getElementById('mealTime').value = "";
+                if (window.triggerAutoSyncToDrive) window.triggerAutoSyncToDrive();
             }
 
             let rPct = (gender === "male") ? 32.0 : 42.0;
@@ -1600,6 +1600,7 @@
             sailytaPaivaDB();
             paivitaLogiNaytto();
             document.getElementById('outputBox').style.display = "none";
+            if (window.triggerAutoSyncToDrive) window.triggerAutoSyncToDrive();
         }
 
         function haeVarmuuskopioPayload() {
@@ -2179,7 +2180,7 @@
         }
 
         function debouncedAutoSyncToDrive() {
-            if (!currentUser) return;
+            if (!currentUser && !cachedAccessToken) return;
             if (driveFileSyncTimeout) clearTimeout(driveFileSyncTimeout);
             driveFileSyncTimeout = setTimeout(() => {
                 tallennaGoogleDriveen().catch(err => console.warn('Auto sync error:', err));
