@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>METABOLIC CALCULATOR v1.0 — Interactive Chart & i18n</title>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://apis.google.com/js/api.js"></script>
     <style>
         body { background-color: #050505; color: #00ff00; font-family: 'Courier New', monospace; padding: 15px; max-width: 760px; margin: 0 auto; line-height: 1.5; }
         h1, h2, h3 { text-align: center; border-bottom: 2px solid #00ff00; padding-bottom: 10px; text-transform: uppercase; }
@@ -1720,12 +1721,14 @@
 
         const DRIVE_FOLDER_NAME = 'Metabolic Calculator Backups';
         const DRIVE_FILE_NAME = 'metabolic_calculator_backup.json';
+        const DEFAULT_CLIENT_ID = '859528638907-30p83takq9j1a1k44urmd5oq9jbbuep8.apps.googleusercontent.com';
 
         function setupGisOAuth(clientId) {
+            const activeClientId = clientId || DEFAULT_CLIENT_ID;
             if (window.google && window.google.accounts && window.google.accounts.oauth2) {
                 gisTokenClient = window.google.accounts.oauth2.initTokenClient({
-                    client_id: clientId,
-                    scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email',
+                    client_id: activeClientId,
+                    scope: 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email',
                     callback: async (tokenResponse) => {
                         if (tokenResponse.error) {
                             console.warn('GIS Token error:', tokenResponse);
@@ -1759,6 +1762,8 @@
                         }
                     }
                 });
+            } else {
+                setTimeout(() => setupGisOAuth(activeClientId), 500);
             }
         }
 
@@ -1790,32 +1795,38 @@
         }
 
         async function initGoogleDriveSync() {
+            let clientId = DEFAULT_CLIENT_ID;
             try {
                 const res = await fetch('/firebase-applet-config.json');
-                if (!res.ok) return;
-                const config = await res.json();
-                const app = initializeApp(config);
-                auth = getAuth(app);
-                
-                googleAuthProvider = new GoogleAuthProvider();
-                googleAuthProvider.addScope('https://www.googleapis.com/auth/drive.file');
-
-                // Initialize Google Identity Services token client
-                if (config.oAuthClientId) {
-                    setupGisOAuth(config.oAuthClientId);
+                if (res.ok) {
+                    const config = await res.json();
+                    if (config && config.apiKey) {
+                        const app = initializeApp(config);
+                        auth = getAuth(app);
+                        googleAuthProvider = new GoogleAuthProvider();
+                        googleAuthProvider.addScope('https://www.googleapis.com/auth/drive.file');
+                    }
+                    if (config && config.oAuthClientId) {
+                        clientId = config.oAuthClientId;
+                    }
                 }
+            } catch (e) {
+                console.warn('Config fetch notice:', e);
+            }
 
-                // Show new tab button and Brave notice if in an iframe or if Brave is detected
-                const isInIframe = window.self !== window.top;
-                const bn = document.getElementById('braveNotice');
-                const tb = document.getElementById('openInNewTabBtn');
+            setupGisOAuth(clientId);
 
-                if (isInIframe || (navigator.brave && typeof navigator.brave.isBrave === 'function')) {
-                    if (bn) bn.style.display = 'block';
-                    if (tb) tb.style.display = 'block';
-                }
+            // Show new tab button and Brave notice if in an iframe or if Brave is detected
+            const isInIframe = window.self !== window.top;
+            const bn = document.getElementById('braveNotice');
+            const tb = document.getElementById('openInNewTabBtn');
 
-                // Handle sign-in result from redirect flow (essential for Brave & popup blockers)
+            if (isInIframe || (navigator.brave && typeof navigator.brave.isBrave === 'function')) {
+                if (bn) bn.style.display = 'block';
+                if (tb) tb.style.display = 'block';
+            }
+
+            if (auth) {
                 getRedirectResult(auth).then(async (result) => {
                     if (result) {
                         const credential = GoogleAuthProvider.credentialFromResult(result);
@@ -1831,24 +1842,26 @@
                 }).catch((err) => {
                     console.warn('Redirect sign-in error:', err);
                 });
+            }
 
-                const signBtn = document.getElementById('googleSignInBtn');
-                if (signBtn) {
-                    signBtn.addEventListener('click', async () => {
-                        const lang = document.getElementById('langSelect')?.value || 'fi';
-                        setDriveStatusUI('loading', lang === 'en' ? 'Signing in to Google...' : 'Kirjaudutaan Google-tilille...');
+            const signBtn = document.getElementById('googleSignInBtn');
+            if (signBtn) {
+                signBtn.addEventListener('click', async () => {
+                    const lang = document.getElementById('langSelect')?.value || 'fi';
+                    setDriveStatusUI('loading', lang === 'en' ? 'Signing in to Google...' : 'Kirjaudutaan Google-tilille...');
 
-                        // 1. Try GIS token client first (direct Google OAuth popup)
-                        if (gisTokenClient) {
-                            try {
-                                gisTokenClient.requestAccessToken({ prompt: 'consent' });
-                                return;
-                            } catch (gisErr) {
-                                console.warn('GIS token request failed, trying Firebase popup:', gisErr);
-                            }
+                    // 1. Primary: GIS token client (google.accounts.oauth2.initTokenClient)
+                    if (gisTokenClient) {
+                        try {
+                            gisTokenClient.requestAccessToken({ prompt: 'consent' });
+                            return;
+                        } catch (gisErr) {
+                            console.warn('GIS token request failed, trying fallback:', gisErr);
                         }
+                    }
 
-                        // 2. Try Firebase signInWithPopup
+                    // 2. Fallback: Firebase popup
+                    if (auth) {
                         try {
                             const result = await signInWithPopup(auth, googleAuthProvider);
                             const credential = GoogleAuthProvider.credentialFromResult(result);
@@ -1863,14 +1876,12 @@
                             if (bn) bn.style.display = 'block';
                             if (tb) tb.style.display = 'block';
 
-                            // If running in an iframe, redirect is blocked by Google X-Frame-Options
                             if (window.self !== window.top) {
                                 setDriveStatusUI('warning', lang === 'en' ? 'Sign-in requires a top-level window. Opening new tab...' : 'Kirjautuminen vaatii pääikkunan. Avataan uusi välilehti...');
                                 window.open(window.location.href, '_blank');
                                 return;
                             }
 
-                            // 3. Fallback to redirect mode if at top level
                             try {
                                 await signInWithRedirect(auth, googleAuthProvider);
                             } catch (redirectErr) {
@@ -1878,8 +1889,9 @@
                                 setDriveStatusUI('error', (lang === 'en' ? 'Sign-in failed: ' : 'Kirjautuminen epäonnistui: ') + err.message);
                             }
                         }
-                    });
-                }
+                    }
+                });
+            }
 
                 onAuthStateChanged(auth, async (user) => {
                     currentUser = user;
