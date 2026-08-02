@@ -1437,29 +1437,50 @@
             }
 
             const meals = historyDB[activeDateStr]?.meals || [];
-            let hourlyInsulin = new Array(24).fill(5); 
-            let hourlyGL = new Array(24).fill(0);
 
-            meals.forEach(m => {
-                if (m.time) {
-                    const hour = parseInt(m.time.split(':')[0], 10);
-                    const buf = 1.0 + ((m.p * 0.01) + (m.f * 0.02));
-                    const insLoad = ((m.c * 1.0) + (m.p * 0.56) + (m.f * 0.10)) / buf;
-                    const glLoad = m.c * 0.6;
-
-                    for (let h = 0; h < 3; h++) {
-                        const idx = (hour + h) % 24;
-                        hourlyGL[idx] += glLoad * Math.max(0, 1 - (h * 0.4));
+            function getInsulinAtTime(t) {
+                let insulin = 5.0; 
+                meals.forEach(m => {
+                    if (m.time) {
+                        const parts = m.time.split(':');
+                        const mealTime = parseInt(parts[0], 10) + (parseInt(parts[1] || '0', 10) / 60);
+                        const dt = t - mealTime;
+                        if (dt >= 0 && dt <= 5.0) {
+                            const buf = 1.0 + ((m.p * 0.01) + (m.f * 0.02));
+                            const insLoad = ((m.c * 1.0) + (m.p * 0.56) + (m.f * 0.10)) / buf;
+                            insulin += insLoad * Math.max(0, 1 - (dt * 0.20));
+                        }
                     }
+                });
+                return insulin;
+            }
 
-                    for (let h = 0; h < 5; h++) {
-                        const idx = (hour + h) % 24;
-                        hourlyInsulin[idx] += insLoad * Math.max(0, 1 - (h * 0.22));
+            function getGLAtTime(t) {
+                let gl = 0.0;
+                meals.forEach(m => {
+                    if (m.time) {
+                        const parts = m.time.split(':');
+                        const mealTime = parseInt(parts[0], 10) + (parseInt(parts[1] || '0', 10) / 60);
+                        const dt = t - mealTime;
+                        if (dt >= 0 && dt <= 3.0) {
+                            const glLoad = m.c * 0.6;
+                            gl += glLoad * Math.max(0, 1 - (dt * 0.3333));
+                        }
                     }
-                }
-            });
+                });
+                return gl;
+            }
 
-            const maxVal = Math.max(90, ...hourlyInsulin, ...hourlyGL);
+            const STEPS = 96;
+            let insulinSamples = [];
+            let glSamples = [];
+            for (let s = 0; s <= STEPS; s++) {
+                const t = (s / STEPS) * 24;
+                insulinSamples.push(getInsulinAtTime(t));
+                glSamples.push(getGLAtTime(t));
+            }
+
+            const maxVal = Math.max(90, ...insulinSamples, ...glSamples);
 
             const thresholdY = (H - 30) - ((35 / maxVal) * (H - 60));
             ctx.beginPath();
@@ -1495,10 +1516,12 @@
             ctx.beginPath();
             ctx.strokeStyle = '#ffff00';
             ctx.lineWidth = 2;
-            for (let i = 0; i < 24; i++) {
-                const x = (i / 23) * W;
-                const y = (H - 30) - ((hourlyGL[i] / maxVal) * (H - 60));
-                if (i === 0) ctx.moveTo(x, y);
+            for (let s = 0; s <= STEPS; s++) {
+                const t = (s / STEPS) * 24;
+                const x = (t / 24) * W;
+                const gl = glSamples[s];
+                const y = (H - 30) - ((gl / maxVal) * (H - 60));
+                if (s === 0) ctx.moveTo(x, y);
                 else ctx.lineTo(x, y);
             }
             ctx.stroke();
@@ -1506,10 +1529,12 @@
             ctx.beginPath();
             ctx.strokeStyle = '#00ff00';
             ctx.lineWidth = 2.5;
-            for (let i = 0; i < 24; i++) {
-                const x = (i / 23) * W;
-                const y = (H - 30) - ((hourlyInsulin[i] / maxVal) * (H - 60));
-                if (i === 0) ctx.moveTo(x, y);
+            for (let s = 0; s <= STEPS; s++) {
+                const t = (s / STEPS) * 24;
+                const x = (t / 24) * W;
+                const ins = insulinSamples[s];
+                const y = (H - 30) - ((ins / maxVal) * (H - 60));
+                if (s === 0) ctx.moveTo(x, y);
                 else ctx.lineTo(x, y);
             }
             ctx.stroke();
