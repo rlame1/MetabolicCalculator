@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>METABOLIC CALCULATOR v1.0 — Interactive Chart & i18n</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         body { background-color: #050505; color: #00ff00; font-family: 'Courier New', monospace; padding: 15px; max-width: 760px; margin: 0 auto; line-height: 1.5; }
         h1, h2, h3 { text-align: center; border-bottom: 2px solid #00ff00; padding-bottom: 10px; text-transform: uppercase; }
@@ -175,8 +176,11 @@
                     <span class="gsi-material-button-contents" data-i18n="signInWithGoogle">Kirjaudu sisään Googlella</span>
                   </div>
                 </button>
+                <button id="openInNewTabBtn" type="button" onclick="window.open(window.location.href, '_blank')" style="display: none; width: 100%; background: #112233; color: #00ffff; border: 1px solid #00ffff; padding: 10px; margin-top: 8px; font-size: 12px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-family: inherit;">
+                    🔗 AVAA SOVELLUS UUTEEN VÄLILEHTEEN ↗
+                </button>
                 <p id="braveNotice" style="display: none; font-size: 11px; color: #ffaa00; margin-top: 8px; line-height: 1.4; background: #221100; border: 1px solid #ffaa00; padding: 6px 10px; border-radius: 4px;" data-i18n="braveNoticeText">
-                    🦁 <strong>Brave-selain:</strong> Jos kirjautumisikkuna ei aukea, kytke osoitekentän Brave Shields (leijona-ikoni) pois päältä tälle sivustolle tai salli ponnahdusikkunat.
+                    🦁 <strong>Brave / Ikkuna-ohje:</strong><br>1) Jos sovellus on kehyssivulla (iframe), <a href="javascript:void(0)" onclick="window.open(window.location.href,'_blank')" style="color:#00ffff; text-decoration:underline; font-weight:bold;">Avaa uuteen välilehteen ↗</a>.<br>2) Brave-asetus: <em>Asetukset ➔ Yksityisyys ja turvallisuus ➔ Salli Google-kirjautumispainikkeet kolmannen osapuolen sivustoilla</em>.
                 </p>
             </div>
 
@@ -488,7 +492,7 @@
                 phCarbs: "👉 SYÖTÄ TIETO (HIILIHYDRAATIT G)",
                 phProtein: "👉 SYÖTÄ TIETO (PROTEIINI G)",
                 phFat: "👉 SYÖTÄ TIETO (RASVA G)",
-                braveNoticeText: "🦁 <strong>Brave-selain:</strong> Jos kirjautumisikkuna ei aukea, kytke osoitekentän Brave Shields (leijona-ikoni) pois päältä tälle sivustolle tai salli ponnahdusikkunat."
+                braveNoticeText: "🦁 <strong>Brave / Ikkuna-ohje:</strong><br>1) Jos sovellus on kehyssivulla (iframe), <a href=\"javascript:void(0)\" onclick=\"window.open(window.location.href,'_blank')\" style=\"color:#00ffff; text-decoration:underline; font-weight:bold;\">Avaa uuteen välilehteen ↗</a>.<br>2) Brave-asetus: <em>Asetukset ➔ Yksityisyys ja turvallisuus ➔ Salli Google-kirjautumispainikkeet kolmannen osapuolen sivustoilla</em>."
             },
             en: {
                 langLabel: "🌐 LANGUAGE:",
@@ -597,7 +601,7 @@
                 phCarbs: "👉 ENTER DATA (CARBS G)",
                 phProtein: "👉 ENTER DATA (PROTEIN G)",
                 phFat: "👉 ENTER DATA (FAT G)",
-                braveNoticeText: "🦁 <strong>Brave browser:</strong> If the sign-in window does not open, disable Brave Shields (lion icon) for this site or allow popups."
+                braveNoticeText: "🦁 <strong>Brave / Frame note:</strong><br>1) If app is inside an iframe, <a href=\"javascript:void(0)\" onclick=\"window.open(window.location.href,'_blank')\" style=\"color:#00ffff; text-decoration:underline; font-weight:bold;\">Open in a new tab ↗</a>.<br>2) Brave setting: <em>Settings ➔ Privacy & security ➔ Allow Google login buttons on third-party sites</em>."
             }
         };
 
@@ -1635,12 +1639,54 @@
 
         let auth = null;
         let googleAuthProvider = null;
+        let gisTokenClient = null;
         let cachedAccessToken = null;
         let currentUser = null;
         let driveFileSyncTimeout = null;
 
         const DRIVE_FOLDER_NAME = 'Metabolic Calculator Backups';
         const DRIVE_FILE_NAME = 'metabolic_calculator_backup.json';
+
+        function setupGisOAuth(clientId) {
+            if (window.google && window.google.accounts && window.google.accounts.oauth2) {
+                gisTokenClient = window.google.accounts.oauth2.initTokenClient({
+                    client_id: clientId,
+                    scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email',
+                    callback: async (tokenResponse) => {
+                        if (tokenResponse.error) {
+                            console.warn('GIS Token error:', tokenResponse);
+                            const lang = document.getElementById('langSelect')?.value || 'fi';
+                            setDriveStatusUI('error', (lang === 'en' ? 'Sign-in notice: ' : 'Kirjautumisilmoitus: ') + (tokenResponse.error_description || tokenResponse.error));
+                            const bn = document.getElementById('braveNotice');
+                            const tb = document.getElementById('openInNewTabBtn');
+                            if (bn) bn.style.display = 'block';
+                            if (tb) tb.style.display = 'block';
+                            return;
+                        }
+                        if (tokenResponse.access_token) {
+                            cachedAccessToken = tokenResponse.access_token;
+                            try {
+                                const uRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                                    headers: { 'Authorization': `Bearer ${cachedAccessToken}` }
+                                });
+                                if (uRes.ok) {
+                                    const uInfo = await uRes.json();
+                                    currentUser = {
+                                        displayName: uInfo.name || uInfo.email || 'Google User',
+                                        email: uInfo.email || '',
+                                        photoURL: uInfo.picture || ''
+                                    };
+                                }
+                            } catch (e) {
+                                currentUser = { displayName: 'Google User', email: '' };
+                            }
+                            updateUIForUser(currentUser);
+                            await synkkaaOnSignIn();
+                        }
+                    }
+                });
+            }
+        }
 
         async function getOrCreateDriveFolder(token) {
             const q = encodeURIComponent(`name = '${DRIVE_FOLDER_NAME}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`);
@@ -1680,14 +1726,19 @@
                 googleAuthProvider = new GoogleAuthProvider();
                 googleAuthProvider.addScope('https://www.googleapis.com/auth/drive.file');
 
-                // Check for Brave browser and display helpful notice
-                if (navigator.brave && typeof navigator.brave.isBrave === 'function') {
-                    navigator.brave.isBrave().then(isBrave => {
-                        if (isBrave) {
-                            const bn = document.getElementById('braveNotice');
-                            if (bn) bn.style.display = 'block';
-                        }
-                    }).catch(() => {});
+                // Initialize Google Identity Services token client
+                if (config.oAuthClientId) {
+                    setupGisOAuth(config.oAuthClientId);
+                }
+
+                // Show new tab button and Brave notice if in an iframe or if Brave is detected
+                const isInIframe = window.self !== window.top;
+                const bn = document.getElementById('braveNotice');
+                const tb = document.getElementById('openInNewTabBtn');
+
+                if (isInIframe || (navigator.brave && typeof navigator.brave.isBrave === 'function')) {
+                    if (bn) bn.style.display = 'block';
+                    if (tb) tb.style.display = 'block';
                 }
 
                 // Handle sign-in result from redirect flow (essential for Brave & popup blockers)
@@ -1711,8 +1762,20 @@
                 if (signBtn) {
                     signBtn.addEventListener('click', async () => {
                         const lang = document.getElementById('langSelect')?.value || 'fi';
+                        setDriveStatusUI('loading', lang === 'en' ? 'Signing in to Google...' : 'Kirjaudutaan Google-tilille...');
+
+                        // 1. Try GIS token client first (direct Google OAuth popup)
+                        if (gisTokenClient) {
+                            try {
+                                gisTokenClient.requestAccessToken({ prompt: 'consent' });
+                                return;
+                            } catch (gisErr) {
+                                console.warn('GIS token request failed, trying Firebase popup:', gisErr);
+                            }
+                        }
+
+                        // 2. Try Firebase signInWithPopup
                         try {
-                            setDriveStatusUI('loading', lang === 'en' ? 'Signing in to Google...' : 'Kirjaudutaan Google-tilille...');
                             const result = await signInWithPopup(auth, googleAuthProvider);
                             const credential = GoogleAuthProvider.credentialFromResult(result);
                             if (credential && credential.accessToken) {
@@ -1722,11 +1785,18 @@
                             updateUIForUser(currentUser);
                             await synkkaaOnSignIn();
                         } catch (err) {
-                            console.warn('Google Sign-in popup failed, attempting fallback redirect:', err);
-                            const bn = document.getElementById('braveNotice');
+                            console.warn('Google Sign-in popup failed:', err);
                             if (bn) bn.style.display = 'block';
+                            if (tb) tb.style.display = 'block';
 
-                            // Fallback to redirect mode if popup is blocked by Brave or browser shields
+                            // If running in an iframe, redirect is blocked by Google X-Frame-Options
+                            if (window.self !== window.top) {
+                                setDriveStatusUI('warning', lang === 'en' ? 'Sign-in requires a top-level window. Opening new tab...' : 'Kirjautuminen vaatii pääikkunan. Avataan uusi välilehti...');
+                                window.open(window.location.href, '_blank');
+                                return;
+                            }
+
+                            // 3. Fallback to redirect mode if at top level
                             try {
                                 await signInWithRedirect(auth, googleAuthProvider);
                             } catch (redirectErr) {
@@ -1835,6 +1905,27 @@
 
         async function ensureAccessToken() {
             if (cachedAccessToken) return cachedAccessToken;
+
+            // Try GIS token client first
+            if (gisTokenClient) {
+                return new Promise((resolve, reject) => {
+                    const originalCallback = gisTokenClient.callback;
+                    gisTokenClient.callback = (res) => {
+                        if (originalCallback) originalCallback(res);
+                        if (res && res.access_token) {
+                            resolve(res.access_token);
+                        } else {
+                            reject(new Error('Access token request was cancelled or blocked.'));
+                        }
+                    };
+                    try {
+                        gisTokenClient.requestAccessToken({ prompt: '' });
+                    } catch (e) {
+                        reject(e);
+                    }
+                });
+            }
+
             if (!auth) throw new Error('Auth not initialized');
             try {
                 const result = await signInWithPopup(auth, googleAuthProvider);
@@ -1846,9 +1937,16 @@
                     return cachedAccessToken;
                 }
             } catch (err) {
-                console.warn('Popup blocked in ensureAccessToken, falling back to redirect:', err);
+                console.warn('Popup blocked in ensureAccessToken:', err);
                 const bn = document.getElementById('braveNotice');
+                const tb = document.getElementById('openInNewTabBtn');
                 if (bn) bn.style.display = 'block';
+                if (tb) tb.style.display = 'block';
+
+                if (window.self !== window.top) {
+                    window.open(window.location.href, '_blank');
+                    throw new Error('Opened in new tab for authentication.');
+                }
                 await signInWithRedirect(auth, googleAuthProvider);
                 throw new Error(document.getElementById('langSelect')?.value === 'en' ? 'Redirecting to Google Sign-in...' : 'Siirrytään Google-kirjautumiseen...');
             }
