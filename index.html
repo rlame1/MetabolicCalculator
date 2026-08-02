@@ -1893,6 +1893,7 @@
                 });
             }
 
+            if (auth) {
                 onAuthStateChanged(auth, async (user) => {
                     currentUser = user;
                     if (user) {
@@ -1908,8 +1909,6 @@
                         updateUIForLoggedOut();
                     }
                 });
-            } catch (e) {
-                console.warn('Firebase init error:', e);
             }
         }
 
