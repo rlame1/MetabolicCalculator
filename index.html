@@ -36,6 +36,69 @@
         .btn-demo { background: #ff00ff; color: #000; font-weight: bold; border: 2px solid #ff00ff; margin-top: 0; width: 100%; padding: 12px; cursor: pointer; font-family: inherit; }
         .btn-demo:hover { background: #cc00cc; color: #fff; }
         
+        .btn-backup { background: #003366; color: #00ffff; border: 2px solid #00ffff; font-weight: bold; padding: 10px; margin-top: 5px; font-size: 12px; flex: 1; min-width: 140px; cursor: pointer; text-transform: uppercase; font-family: inherit; }
+        .btn-backup:hover { background: #00ffff; color: #000; }
+        
+        /* Official Google Sign-in Button Styles */
+        .gsi-material-button {
+          -moz-user-select: none;
+          -webkit-user-select: none;
+          -ms-user-select: none;
+          background-color: WHITE;
+          background-image: none;
+          border: 1px solid #747775;
+          border-radius: 4px;
+          box-sizing: border-box;
+          color: #1f1f1f;
+          cursor: pointer;
+          font-family: 'Roboto', arial, sans-serif;
+          font-size: 14px;
+          height: 40px;
+          letter-spacing: 0.25px;
+          outline: none;
+          overflow: hidden;
+          padding: 0 12px;
+          position: relative;
+          text-align: center;
+          transition: background-color .218s, border-color .218s, box-shadow .218s;
+          vertical-align: middle;
+          white-space: nowrap;
+          width: 100%;
+          max-width: 320px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          margin-top: 6px;
+        }
+        .gsi-material-button .gsi-material-button-icon {
+          height: 20px;
+          margin-right: 12px;
+          min-width: 20px;
+          width: 20px;
+        }
+        .gsi-material-button .gsi-material-button-content-wrapper {
+          align-items: center;
+          display: flex;
+          flex-direction: row;
+          flex-wrap: nowrap;
+          height: 100%;
+          justify-content: center;
+          position: relative;
+          width: 100%;
+        }
+        .gsi-material-button .gsi-material-button-contents {
+          flex-grow: 1;
+          font-family: 'Roboto', arial, sans-serif;
+          font-weight: 500;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          vertical-align: top;
+        }
+        .gsi-material-button:hover {
+          box-shadow: 0 1px 2px 0 rgba(60,64,67,0.30), 0 1px 3px 1px rgba(60,64,67,0.15);
+          background-color: #f8fafd;
+        }
+        
         .demo-nav-btn { width: 32%; display: inline-block; margin: 4px 0.5%; background: #330033; color: #ff88ff; border: 1px solid #ff00ff; padding: 8px; font-size: 11px; cursor: pointer; text-align: center; box-sizing: border-box; }
         .demo-nav-btn.active { background: #ff00ff; color: #000; font-weight: bold; }
 
@@ -68,6 +131,9 @@
                 <option value="en">English</option>
             </select>
         </div>
+        <div id="headerDriveBadge" style="font-size: 11px; color: #888; background: #000; border: 1px solid #333; padding: 5px 10px; border-radius: 4px; display: flex; align-items: center; gap: 6px; cursor: pointer;" onclick="toggleOptionsPanel();">
+            ☁️ Drive: <span id="headerDriveStatusText">Ei kirjauduttu</span>
+        </div>
         <button class="btn-options-toggle" onclick="toggleOptionsPanel()" data-i18n="optionsBtn">⚙️ ASETUKSET</button>
     </div>
 
@@ -77,12 +143,64 @@
         <div style="margin-bottom: 15px;">
             <button id="demoBtn" class="btn-demo" onclick="toggleDemoMode()" data-i18n="demoBtnOn">🎭 KÄYNNISTÄ ESITTELYTILA (DEMO)</button>
             <div id="demoControls" style="display:none; margin-top: 10px;">
-                <p style="color: #ff88ff; font-size: 12px; font-weight: bold; margin-bottom: 6px;" data-i18n="demoSelectLabel">VALITSE DEMO-PÄIVÄ:</p>
-                <div style="display: flex; justify-content: space-between;">
-                    <button id="demoDayBtn1" class="demo-nav-btn active" onclick="valitseDemoPaiva(1)" data-i18n="demoDay1">1: ARKI</button>
-                    <button id="demoDayBtn2" class="demo-nav-btn" onclick="valitseDemoPaiva(2)" data-i18n="demoDay2">2: PE (TV)</button>
-                    <button id="demoDayBtn3" class="demo-nav-btn" onclick="valitseDemoPaiva(3)" data-i18n="demoDay3">3: LA (HERKKU)</button>
+                <p style="color: #ff88ff; font-size: 12px; font-weight: bold; margin-bottom: 6px;" data-i18n="demoSelectLabel">VALITSE DEMO-PÄIVÄ (30 PÄIVÄN HISTORIA):</p>
+                <select id="demoDaySelect" onchange="valitseDemoPaivaByDate(this.value)" style="width: 100%; font-size: 12px; padding: 6px; background: #000; color: #ff00ff; border: 1px solid #ff00ff; margin-bottom: 8px;">
+                </select>
+                <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                    <button class="demo-nav-btn" style="flex:1; min-width:70px; font-size:11px;" onclick="valitseDemoPaiva(30)" data-i18n="demoBtnToday">📅 TÄNÄÄN</button>
+                    <button class="demo-nav-btn" style="flex:1; min-width:70px; font-size:11px;" onclick="valitseDemoPe()" data-i18n="demoBtnPe">📺 PE (TV-SIPSIT)</button>
+                    <button class="demo-nav-btn" style="flex:1; min-width:70px; font-size:11px;" onclick="valitseDemoLa()" data-i18n="demoBtnLa">🍕 LA (HERKKU)</button>
+                    <button class="demo-nav-btn" style="flex:1; min-width:70px; font-size:11px;" onclick="valitseDemoArki()" data-i18n="demoBtnArki">🥗 ARKI (NORMAALI)</button>
                 </div>
+            </div>
+        </div>
+
+        <div style="border-top: 1px dashed #4285F4; padding-top: 12px; margin-top: 15px;">
+            <p style="color: #4285F4; font-size: 12px; font-weight: bold; margin-bottom: 4px;" data-i18n="driveTitle">🌐 GOOGLE DRIVE AUTOMAATTISYNKRONOINTI</p>
+            <p style="font-size: 11px; color: #aaa; margin-bottom: 8px;" data-i18n="driveDesc">Kirjaudu sisään Google-tililläsi tallentaaksesi ja synkronoidaksesi laskurin tiedot automaattisesti eri laitteidesi välillä.</p>
+            
+            <div id="driveLoggedOutUI">
+                <button id="googleSignInBtn" class="gsi-material-button" type="button">
+                  <div class="gsi-material-button-state"></div>
+                  <div class="gsi-material-button-content-wrapper">
+                    <div class="gsi-material-button-icon">
+                      <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" style="display: block;">
+                        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
+                        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
+                        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
+                        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
+                        <path fill="none" d="M0 0h48v48H0z"></path>
+                      </svg>
+                    </div>
+                    <span class="gsi-material-button-contents" data-i18n="signInWithGoogle">Kirjaudu sisään Googlella</span>
+                  </div>
+                </button>
+            </div>
+
+            <div id="driveLoggedInUI" style="display: none; background: #001122; border: 1px solid #0088ff; padding: 10px; margin-top: 8px;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                    <img id="userAvatar" src="" style="width: 36px; height: 36px; border-radius: 50%; border: 1px solid #00ffff; display: none;" alt="User">
+                    <div>
+                        <p id="userName" style="font-weight: bold; color: #fff; font-size: 13px; margin: 0;"></p>
+                        <p id="userEmail" style="color: #88ccff; font-size: 11px; margin: 0;"></p>
+                    </div>
+                </div>
+                <p id="driveSyncStatus" style="font-size: 11px; color: #00ff00; margin: 6px 0; font-weight: bold;">🟢 Synkronoitu Google Driveen</p>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px;">
+                    <button class="btn-backup" style="background:#004488; border-color:#00aaff; color:#fff;" onclick="synkkaaGoogleDriveManuaalisesti()" data-i18n="syncNowBtn">🔄 SYNKRONOI NYT</button>
+                    <button class="btn-backup" style="background:#003344; border-color:#00ffff; color:#00ffff;" onclick="lataaGoogleDrivesta()" data-i18n="loadFromDriveBtn">📥 LATAA DRIVESTÄ</button>
+                    <button class="btn-backup" style="background:#440000; border-color:#ff4444; color:#ffaaaa;" onclick="kirjauduUlosGoogle()" data-i18n="logoutBtn">🚪 KIRJAUDU ULOS</button>
+                </div>
+            </div>
+        </div>
+
+        <div style="border-top: 1px dashed #00ffff; padding-top: 12px; margin-top: 15px;">
+            <p style="color: #00ffff; font-size: 12px; font-weight: bold; margin-bottom: 4px;" data-i18n="backupTitle">💾 DATAN VARMUUSKOPIOINTI JA TUONTI</p>
+            <p style="font-size: 11px; color: #aaa; margin-bottom: 8px;" data-i18n="backupDesc">Lataa kaikki tallennetut päivä- ja profiilitiedot talteen JSON-tiedostona tai palauta aiemmin varmuuskopioitu data.</p>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn-backup" onclick="vieVarmuuskopioData()" data-i18n="exportBackupBtn">💾 LATAA VARMUUSKOPIO (EXPORT)</button>
+                <button class="btn-backup" onclick="document.getElementById('importFileInput').click()" data-i18n="importBackupBtn">📥 TUO VARMUUSKOPIO (IMPORT)</button>
+                <input type="file" id="importFileInput" accept=".json" style="display:none;" onchange="tuoVarmuuskopioData(event)">
             </div>
         </div>
 
@@ -119,7 +237,8 @@
 
             <p><span class="result-title" data-i18n="cumDays">Seurattuja päiviä yhteensä:</span> <span id="cumDaysCount" class="alert-green">0</span></p>
             <p><span class="result-title" data-i18n="cumEnergy">Nautittu kokonaisenergia:</span> <span id="cumEnergyTotal" class="alert-orange">0</span> kcal</p>
-            <p><span id="cumDeficitTitle" class="result-title" data-i18n="cumDeficit">Kertynyt kalorivaje:</span> <span id="cumDeficitTotal" class="alert-green" style="font-weight:bold;">0</span> kcal (<span id="cumFatBurnedKg">0.00</span> kg / <span id="cumFatBurnedLiters">0.00</span> litraa rasvaa)</p>
+            <p><span id="cumDeficitTitle" class="result-title" data-i18n="cumDeficit">Kertynyt kalorisaldo:</span> <span id="cumDeficitTotal" style="font-weight:bold;">0</span> kcal (<span id="cumFatBurnedKg">0.00</span> kg / <span id="cumFatBurnedLiters">0.00</span> litraa rasvaa)</p>
+            <p style="font-size: 11px; color: #888; margin-top: -6px; margin-bottom: 10px;" data-i18n="cumSaldoExpl">(Plussalla [+] = Syöty yli kulutuksen, painoa tullut lisää | Negatiivinen [-] = Syöty alle kulutuksen, laihduttu)</p>
             <p><span class="result-title" data-i18n="cumMtor">Lihassuoja (mTOR) aktivoitu:</span> <span id="cumMtorDays" class="alert-yellow">0</span> päiviä</p>
         </div>
     </details>
@@ -128,33 +247,33 @@
         <summary data-i18n="sec1Title">1. BIOLOGISET PARAMETRIT</summary>
         <div class="details-content">
             <label data-i18n="genderLabel">Sukupuoli:</label>
-            <select id="gender" onchange="tarkistaSukupuoli(); tallennaKayttajaParametrit(); paivitaLaskelmat();">
+            <select id="gender" onchange="tarkistaSukupuoli(); tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();">
                 <option value="male" selected>Mies</option>
                 <option value="female">Nainen</option>
             </select>
             
             <label data-i18n="ageLabel">Ikä (vuotta) [Vapaaehtoinen]:</label> 
-            <input type="number" id="age" inputmode="numeric" data-i18n-placeholder="phAge" placeholder="👉 SYÖTÄ TIETO (IKÄ)" oninput="tallennaKayttajaParametrit(); paivitaLaskelmat();">
+            <input type="number" id="age" inputmode="numeric" data-i18n-placeholder="phAge" placeholder="👉 SYÖTÄ TIETO (IKÄ)" oninput="tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();">
             
             <label data-i18n="heightLabel">Pituus (cm) [Vapaaehtoinen]:</label> 
-            <input type="number" id="height" inputmode="decimal" step="any" data-i18n-placeholder="phHeight" placeholder="👉 SYÖTÄ TIETO (PITUUS CM)" oninput="tallennaKayttajaParametrit(); paivitaLaskelmat();">
+            <input type="number" id="height" inputmode="decimal" step="any" data-i18n-placeholder="phHeight" placeholder="👉 SYÖTÄ TIETO (PITUUS CM)" oninput="tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();">
             
             <label data-i18n="weightLabel">Nykyinen Paino (kg):</label> 
             <input type="number" id="weight" inputmode="decimal" step="any" data-i18n-placeholder="phWeight" placeholder="👉 SYÖTÄ TIETO (PAINO KG)" oninput="tallennaKayttajaParametrit(); paivitaLaskelmat();">
             
             <label data-i18n="waistLabel">Vyötärön ympärys (cm) [Vapaaehtoinen]:</label> 
-            <input type="number" id="waist" inputmode="decimal" step="any" data-i18n-placeholder="phWaist" placeholder="👉 SYÖTÄ TIETO (VYÖTÄRÖ CM)" oninput="tallennaKayttajaParametrit(); paivitaLaskelmat();">
+            <input type="number" id="waist" inputmode="decimal" step="any" data-i18n-placeholder="phWaist" placeholder="👉 SYÖTÄ TIETO (VYÖTÄRÖ CM)" oninput="tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();">
             
             <label data-i18n="neckLabel">Niskan ympärys (cm) [Vapaaehtoinen]:</label> 
-            <input type="number" id="neck" inputmode="decimal" step="any" data-i18n-placeholder="phNeck" placeholder="👉 SYÖTÄ TIETO (NISKA CM)" oninput="tallennaKayttajaParametrit(); paivitaLaskelmat();">
+            <input type="number" id="neck" inputmode="decimal" step="any" data-i18n-placeholder="phNeck" placeholder="👉 SYÖTÄ TIETO (NISKA CM)" oninput="tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();">
             
             <div id="hipContainer" style="display:none;">
                 <label data-i18n="hipLabel">Lantion ympärys (cm) [Naisilla vapaaehtoinen]:</label> 
-                <input type="number" id="hip" inputmode="decimal" step="any" data-i18n-placeholder="phHip" placeholder="👉 SYÖTÄ TIETO (LANTIO CM)" oninput="tallennaKayttajaParametrit(); paivitaLaskelmat();">
+                <input type="number" id="hip" inputmode="decimal" step="any" data-i18n-placeholder="phHip" placeholder="👉 SYÖTÄ TIETO (LANTIO CM)" oninput="tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();">
             </div>
 
             <label data-i18n="activityLabel">Aktiivisuustason kerroin:</label>
-            <select id="activityLevel" onchange="tallennaKayttajaParametrit(); paivitaLaskelmat();">
+            <select id="activityLevel" onchange="tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();">
                 <option value="1.2">Passiivinen (istumatyö, vähän/ei liikuntaa) [1.2]</option>
                 <option value="1.25" selected>Perusaktiivinen (vakio oletus) [1.25]</option>
                 <option value="1.375">Kevyt aktiivisuus (liikuntaa 1–3 krt/vko) [1.375]</option>
@@ -265,6 +384,16 @@
                 demoDay1: "1: ARKI",
                 demoDay2: "2: PE (TV)",
                 demoDay3: "3: LA (HERKKU)",
+                backupTitle: "💾 DATAN VARMUUSKOPIOINTI JA TUONTI",
+                backupDesc: "Lataa kaikki tallennetut päivä- ja profiilitiedot talteen JSON-tiedostona tai palauta aiemmin varmuuskopioitu data.",
+                exportBackupBtn: "💾 LATAA VARMUUSKOPIO (EXPORT)",
+                importBackupBtn: "📥 TUO VARMUUSKOPIO (IMPORT)",
+                driveTitle: "🌐 GOOGLE DRIVE AUTOMAATTISYNKRONOINTI",
+                driveDesc: "Kirjaudu sisään Google-tililläsi tallentaaksesi ja synkronoidaksesi laskurin tiedot automaattisesti eri laitteidesi välillä.",
+                signInWithGoogle: "Kirjaudu sisään Googlella",
+                syncNowBtn: "🔄 SYNKRONOI NYT",
+                loadFromDriveBtn: "📥 LATAA DRIVESTÄ",
+                logoutBtn: "🚪 KIRJAUDU ULOS",
                 masterResetDesc: "Tyhjennä laskurin koko muisti (kaikki tallennetut päivät ja profiilitiedot).",
                 masterResetBtn: "⚠️ NOLLAA KAIKKI TIEDOT (MASTER RESET)",
                 mainTitle: "🧬 METABOLINEN LASKURI v1.0",
@@ -276,7 +405,8 @@
                 cumEndLabel: "📅 LOPPUPÄIVÄMÄÄRÄ:",
                 cumDays: "Seurattuja päiviä yhteensä:",
                 cumEnergy: "Nautittu kokonaisenergia:",
-                cumDeficit: "Kertynyt kalorivaje:",
+                cumDeficit: "Kertynyt kalorisaldo:",
+                cumSaldoExpl: "(Plussalla [+] = Syöty yli kulutuksen, painoa tullut lisää | Negatiivinen [-] = Syöty alle kulutuksen, laihduttu)",
                 cumSurplus: "Kertynyt kaloriylitys",
                 cumMtor: "Lihassuoja (mTOR) aktivoitu:",
                 sec1Title: "1. BIOLOGISET PARAMETRIT",
@@ -346,6 +476,11 @@
                 phHip: "👉 SYÖTÄ TIETO (LANTIO CM)",
                 disclaimerText: "Vastuuvapauslauseke: Tämä työkalu on tarkoitettu vain koulutus- ja opetustarkoituksiin eikä se korvaa ammatillista lääketieteellistä neuvontaa, diagnoosia tai hoitoa. Kehittäjä ei ota mitään vastuuta tai korvausvelvollisuutta tämän työkalun käytöstä tai sen laskelmista.",
                 copyrightText: "© 2026 HVA2026. Julkaistu GNU General Public License v3.0 (GPLv3) -lisenssillä.",
+                demoSelectLabel: "VALITSE DEMO-PÄIVÄ (30 PÄIVÄN HISTORIA):",
+                demoBtnToday: "📅 TÄNÄÄN",
+                demoBtnPe: "📺 PE (TV-SIPSIT)",
+                demoBtnLa: "🍕 LA (HERKKU)",
+                demoBtnArki: "🥗 ARKI (NORMAALI)",
                 phCustomDelta: "👉 SYÖTÄ VAJE (-) TAI YLITYS (+)",
                 phCarbs: "👉 SYÖTÄ TIETO (HIILIHYDRAATIT G)",
                 phProtein: "👉 SYÖTÄ TIETO (PROTEIINI G)",
@@ -357,12 +492,23 @@
                 optionsTitle: "⚙️ ADVANCED SETTINGS & MANAGEMENT",
                 demoBtnOn: "🎭 START DEMO MODE",
                 demoBtnOff: "❌ CLOSE DEMO MODE",
-                demoSelectLabel: "SELECT DEMO DAY:",
-                demoDay1: "1: WEEKDAY",
-                demoDay2: "2: FRIDAY (TV)",
-                demoDay3: "3: SATURDAY (TREAT)",
+                demoSelectLabel: "SELECT DEMO DAY (30-DAY HISTORY):",
+                demoBtnToday: "📅 TODAY",
+                demoBtnPe: "📺 FRI (TV CHIPS)",
+                demoBtnLa: "🍕 SAT (TREAT DAY)",
+                demoBtnArki: "🥗 WEEKDAY (REGULAR)",
                 disclaimerText: "Disclaimer: This tool is for educational and informational purposes only and does not constitute professional medical advice, diagnosis, or treatment. The developer assumes no responsibility or liability for the use of this tool or its calculations.",
                 copyrightText: "© 2026 HVA2026. Released under the GNU General Public License v3.0 (GPLv3).",
+                backupTitle: "💾 DATA BACKUP & IMPORT",
+                backupDesc: "Export all saved log and profile data as a JSON file, or restore previously backed-up data.",
+                exportBackupBtn: "💾 DOWNLOAD BACKUP (EXPORT)",
+                importBackupBtn: "📥 IMPORT BACKUP (IMPORT)",
+                driveTitle: "🌐 GOOGLE DRIVE AUTO-SYNC",
+                driveDesc: "Sign in with your Google account to automatically save and sync calculator data across your devices.",
+                signInWithGoogle: "Sign in with Google",
+                syncNowBtn: "🔄 SYNC NOW",
+                loadFromDriveBtn: "📥 FETCH FROM DRIVE",
+                logoutBtn: "🚪 LOG OUT",
                 masterResetDesc: "Clear all calculator memory (all saved days and profile data).",
                 masterResetBtn: "⚠️ MASTER RESET (CLEAR ALL DATA)",
                 mainTitle: "🧬 METABOLIC CALCULATOR v1.0",
@@ -374,7 +520,8 @@
                 cumEndLabel: "📅 END DATE:",
                 cumDays: "Total tracked days:",
                 cumEnergy: "Total energy consumed:",
-                cumDeficit: "Accumulated calorie deficit:",
+                cumDeficit: "Accumulated calorie balance:",
+                cumSaldoExpl: "(Positive [+] = Consumed over expenditure, weight gained | Negative [-] = Consumed under expenditure, weight lost)",
                 cumSurplus: "Accumulated calorie surplus",
                 cumMtor: "Muscle protection (mTOR) activated:",
                 sec1Title: "1. BIOLOGICAL PARAMETERS",
@@ -455,9 +602,14 @@
         let demoDates = {};
 
         window.onload = function() { 
-            const savedLang = localStorage.getItem('metabolic_v20_lang') || 'fi';
+            const savedLang = detectInitialLanguage();
             document.getElementById('langSelect').value = savedLang;
             switchLanguage(savedLang);
+
+            // Attempt IP geolocation check in background for new users
+            if (!localStorage.getItem('metabolic_v20_lang')) {
+                autoDetectLanguageByIP();
+            }
 
             document.getElementById('selectedDate').value = activeDateStr;
             lataaKayttajaParametrit();
@@ -466,6 +618,60 @@
             tarkistaCustomTavoite();
             alustaKumulatiivisetPaivaykset();
         };
+
+        function detectInitialLanguage() {
+            const saved = localStorage.getItem('metabolic_v20_lang');
+            if (saved) return saved;
+
+            // Strict fallback default is 'en' (English)
+            const navLangs = (navigator.languages || [navigator.language || '']).map(l => (l || '').toLowerCase());
+            const isFinnishLang = navLangs.some(l => l.startsWith('fi'));
+
+            let isFinlandTimezone = false;
+            try {
+                const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+                if (tz.includes('Helsinki') || tz.includes('Finland')) {
+                    isFinlandTimezone = true;
+                }
+            } catch (e) {}
+
+            if (isFinnishLang || isFinlandTimezone) {
+                return 'fi';
+            }
+
+            return 'en';
+        }
+
+        async function autoDetectLanguageByIP() {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 2000);
+                const res = await fetch('https://ipapi.co/json/', { signal: controller.signal });
+                clearTimeout(timeoutId);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.country_code) {
+                        const detected = (data.country_code === 'FI') ? 'fi' : 'en';
+                        if (!localStorage.getItem('metabolic_v20_lang')) {
+                            document.getElementById('langSelect').value = detected;
+                            switchLanguage(detected);
+                        }
+                        return;
+                    }
+                }
+                // If response is not ok or country_code missing, fallback to English if not explicitly set
+                if (!localStorage.getItem('metabolic_v20_lang')) {
+                    document.getElementById('langSelect').value = 'en';
+                    switchLanguage('en');
+                }
+            } catch (e) {
+                // If IP check fails (timeout, adblocker, network error), default to English if not explicitly set
+                if (!localStorage.getItem('metabolic_v20_lang')) {
+                    document.getElementById('langSelect').value = 'en';
+                    switchLanguage('en');
+                }
+            }
+        }
 
         function switchLanguage(lang) {
             localStorage.setItem('metabolic_v20_lang', lang);
@@ -511,6 +717,10 @@
                 stratSelect.options[5].text = t.strat6;
             }
 
+            if (isDemoMode) {
+                pivitaDemoSelectOptions();
+            }
+
             paivitaLaskelmat();
             paivitaKumulatiivinenYhteenveto();
         }
@@ -549,6 +759,71 @@
             }
         }
 
+        function generateDemoMealsForDay(dayOfWeek, gender) {
+            if (gender === "female") {
+                if (dayOfWeek >= 1 && dayOfWeek <= 4) {
+                    return [
+                        { time: "08:00", c: 55, p: 25, f: 15 },
+                        { time: "12:00", c: 65, p: 38, f: 20 },
+                        { time: "17:00", c: 60, p: 35, f: 18 },
+                        { time: "21:00", c: 45, p: 15, f: 16 }
+                    ];
+                } else if (dayOfWeek === 5) {
+                    return [
+                        { time: "08:00", c: 55, p: 25, f: 15 },
+                        { time: "12:00", c: 65, p: 38, f: 20 },
+                        { time: "17:00", c: 55, p: 32, f: 18 },
+                        { time: "21:00", c: 125, p: 10, f: 48 }
+                    ];
+                } else if (dayOfWeek === 6) {
+                    return [
+                        { time: "09:30", c: 65, p: 28, f: 22 },
+                        { time: "14:30", c: 100, p: 42, f: 42 },
+                        { time: "21:00", c: 140, p: 12, f: 52 }
+                    ];
+                } else {
+                    return [
+                        { time: "10:00", c: 70, p: 30, f: 24 },
+                        { time: "15:00", c: 80, p: 42, f: 28 },
+                        { time: "21:00", c: 95, p: 12, f: 38 }
+                    ];
+                }
+            } else {
+                // Mies (Realistinen miehen ateriarytmi: 3-4 ateriaa, isommat annoskoot & iltamässyttely klo 21:00)
+                if (dayOfWeek >= 1 && dayOfWeek <= 4) {
+                    // Ma-To (Arki: 4 ruokailua, reilu aamupala, iso lounas, runsas päivällinen & iltapala/napostelu klo 21:00)
+                    return [
+                        { time: "07:30", c: 75, p: 35, f: 20 },
+                        { time: "11:30", c: 90, p: 55, f: 28 },
+                        { time: "17:00", c: 85, p: 50, f: 26 },
+                        { time: "21:00", c: 60, p: 20, f: 22 }
+                    ];
+                } else if (dayOfWeek === 5) {
+                    // Perjantai (Tuhti lounas & päivällinen + Pe-illan runsas TV-sipsi & dippimässäily klo 21:00)
+                    return [
+                        { time: "07:30", c: 75, p: 35, f: 20 },
+                        { time: "11:30", c: 90, p: 55, f: 28 },
+                        { time: "17:00", c: 80, p: 48, f: 25 },
+                        { time: "21:00", c: 165, p: 15, f: 68 }
+                    ];
+                } else if (dayOfWeek === 6) {
+                    // Lauantai (Tuhdit annokset, pizza/purilainen + iso TV-sipsi/karkkimättö klo 21:00)
+                    return [
+                        { time: "09:30", c: 85, p: 40, f: 30 },
+                        { time: "14:30", c: 140, p: 60, f: 58 },
+                        { time: "21:00", c: 180, p: 15, f: 72 }
+                    ];
+                } else {
+                    // Sunnuntai (Su-aamiainen, runsas kotiruoka & iltamässyttely TV:n ääressä klo 21:00)
+                    return [
+                        { time: "10:00", c: 95, p: 42, f: 32 },
+                        { time: "15:00", c: 110, p: 58, f: 38 },
+                        { time: "21:00", c: 130, p: 18, f: 52 }
+                    ];
+                }
+            }
+        }
+
         function toggleDemoMode() {
             isDemoMode = !isDemoMode;
             const btn = document.getElementById('demoBtn');
@@ -562,11 +837,37 @@
                 btn.style.color = "#fff";
                 controls.style.display = "block";
 
-                demoDates = {
-                    1: getOffsetDateStr(-2),
-                    2: getOffsetDateStr(-1),
-                    3: getOffsetDateStr(0)
-                };
+                demoDates = {};
+                historyDB = {};
+
+                const selectedGender = document.getElementById('gender').value || "male";
+
+                for (let idx = 1; idx <= 30; idx++) {
+                    const offset = idx - 30;
+                    const dStr = getOffsetDateStr(offset);
+                    demoDates[idx] = dStr;
+
+                    const dObj = new Date(dStr + "T00:00:00");
+                    const dayOfWeek = dObj.getDay(); // 0 = Sun, 1 = Mon, ..., 5 = Fri, 6 = Sat
+
+                    const meals = generateDemoMealsForDay(dayOfWeek, selectedGender);
+
+                    let carbs = 0, protein = 0, fat = 0;
+                    meals.forEach(m => { carbs += m.c; protein += m.p; fat += m.f; });
+                    const dayKcal = (carbs * 4) + (protein * 4) + (fat * 9);
+
+                    const baseW = (selectedGender === "female") ? 100.0 : 110.0;
+                    const diffW = 3.5;
+                    const dayWeight = parseFloat((baseW + diffW - (diffW * ((idx - 1) / 29))).toFixed(1));
+                    const lbm = dayWeight - (dayWeight * 0.32);
+                    const dayTdee = (370 + (21.6 * lbm)) * 1.25;
+
+                    historyDB[dStr] = {
+                        macros: { carbs, protein, fat },
+                        meals: meals,
+                        calculated: { weight: dayWeight, tdee: dayTdee, consumedKcal: dayKcal, lbm: lbm, age: 45 }
+                    };
+                }
 
                 document.getElementById('gender').value = "male";
                 document.getElementById('age').value = "45";
@@ -578,58 +879,14 @@
                 document.getElementById('activityLevel').value = "1.25";
                 document.getElementById('strategyGoal').value = "lose_1pct";
 
-                historyDB = {};
-
-                historyDB[demoDates[1]] = {
-                    macros: { carbs: 300, protein: 98, fat: 72 },
-                    meals: [
-                        { time: "08:00", c: 65, p: 18, f: 12 },
-                        { time: "11:30", c: 35, p: 8,  f: 4  },
-                        { time: "14:00", c: 85, p: 35, f: 22 },
-                        { time: "16:30", c: 45, p: 7,  f: 14 },
-                        { time: "19:30", c: 70, p: 30, f: 20 }
-                    ],
-                    calculated: null
-                };
-
-                historyDB[demoDates[2]] = {
-                    macros: { carbs: 410, protein: 106, fat: 114 },
-                    meals: [
-                        { time: "08:00", c: 65, p: 18, f: 12 },
-                        { time: "11:30", c: 35, p: 8,  f: 4  },
-                        { time: "14:00", c: 85, p: 35, f: 22 },
-                        { time: "16:30", c: 45, p: 7,  f: 14 },
-                        { time: "19:30", c: 70, p: 30, f: 20 },
-                        { time: "21:30", c: 110, p: 8, f: 42 }
-                    ],
-                    calculated: null
-                };
-
-                historyDB[demoDates[3]] = {
-                    macros: { carbs: 540, protein: 140, fat: 150 },
-                    meals: [
-                        { time: "09:30", c: 90,  p: 25, f: 25 },
-                        { time: "13:30", c: 180, p: 55, f: 65 },
-                        { time: "17:00", c: 70,  p: 10, f: 20 },
-                        { time: "20:30", c: 200, p: 50, f: 40 }
-                    ],
-                    calculated: null
-                };
-
-                const w = 110, actMult = 1.25, rMoor = 110 - (110 * 0.32), tdee = (370 + (21.6 * rMoor)) * actMult;
-                [1, 2, 3].forEach(num => {
-                    const dKey = demoDates[num];
-                    const dayObj = historyDB[dKey];
-                    const kCals = (dayObj.macros.carbs * 4) + (dayObj.macros.protein * 4) + (dayObj.macros.fat * 9);
-                    dayObj.calculated = { weight: w, tdee: tdee, consumedKcal: kCals };
-                });
+                pivitaDemoSelectOptions();
 
                 document.getElementById('cumStartDate').value = demoDates[1];
-                document.getElementById('cumEndDate').value = demoDates[3];
+                document.getElementById('cumEndDate').value = demoDates[30];
 
                 tarkistaSukupuoli();
                 tarkistaCustomTavoite();
-                valitseDemoPaiva(1);
+                valitseDemoPaiva(30); // Valitaan TÄNÄÄN (Päivä 30) oletuksena
             } else {
                 btn.innerText = t.demoBtnOn;
                 btn.style.background = "#ff00ff";
@@ -648,18 +905,85 @@
             }
         }
 
-        function valitseDemoPaiva(num) {
-            if (!isDemoMode) return;
-            
-            [1, 2, 3].forEach(n => {
-                const b = document.getElementById(`demoDayBtn${n}`);
-                if (n === num) b.classList.add('active');
-                else b.classList.remove('active');
-            });
+        function pivitaDemoSelectOptions() {
+            const select = document.getElementById('demoDaySelect');
+            if (!select) return;
+            select.innerHTML = '';
+            const lang = document.getElementById('langSelect').value;
+            const dayNamesFi = ["Su", "Ma", "Ti", "Ke", "To", "Pe", "La"];
+            const dayNamesEn = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-            activeDateStr = demoDates[num];
+            for (let idx = 30; idx >= 1; idx--) {
+                const dStr = demoDates[idx];
+                const dObj = new Date(dStr + "T00:00:00");
+                const dw = dObj.getDay();
+                const dName = (lang === 'en') ? dayNamesEn[dw] : dayNamesFi[dw];
+
+                let tag = "";
+                if (idx === 30) tag = (lang === 'en') ? " 🌟 [TODAY]" : " 🌟 [TÄNÄÄN]";
+                else if (dw === 5) tag = (lang === 'en') ? " 📺 [Fri TV Chips]" : " 📺 [Pe TV-sipsit]";
+                else if (dw === 6) tag = (lang === 'en') ? " 🍕 [Sat Treats]" : " 🍕 [La Herkkupäivä]";
+                else if (dw === 0) tag = (lang === 'en') ? " 🍿 [Sun Treats]" : " 🍿 [Su Herkut]";
+                else tag = (lang === 'en') ? " 🥗 [Weekday]" : " 🥗 [Arki]";
+
+                const opt = document.createElement('option');
+                opt.value = dStr;
+                opt.innerText = `Päivä ${idx}: ${dStr} (${dName})${tag}`;
+                select.appendChild(opt);
+            }
+        }
+
+        function valitseDemoPaivaByDate(dStr) {
+            if (!isDemoMode) return;
+            activeDateStr = dStr;
+            const select = document.getElementById('demoDaySelect');
+            if (select) select.value = dStr;
             document.getElementById('selectedDate').value = activeDateStr;
             lataaAktiivisenPaivanTiedot();
+        }
+
+        function valitseDemoPaiva(num) {
+            if (!isDemoMode) return;
+            if (demoDates[num]) {
+                valitseDemoPaivaByDate(demoDates[num]);
+            }
+        }
+
+        function valitseDemoPe() {
+            if (!isDemoMode) return;
+            for (let idx = 30; idx >= 1; idx--) {
+                const dStr = demoDates[idx];
+                const dObj = new Date(dStr + "T00:00:00");
+                if (dObj.getDay() === 5) {
+                    valitseDemoPaivaByDate(dStr);
+                    break;
+                }
+            }
+        }
+
+        function valitseDemoLa() {
+            if (!isDemoMode) return;
+            for (let idx = 30; idx >= 1; idx--) {
+                const dStr = demoDates[idx];
+                const dObj = new Date(dStr + "T00:00:00");
+                if (dObj.getDay() === 6) {
+                    valitseDemoPaivaByDate(dStr);
+                    break;
+                }
+            }
+        }
+
+        function valitseDemoArki() {
+            if (!isDemoMode) return;
+            for (let idx = 30; idx >= 1; idx--) {
+                const dStr = demoDates[idx];
+                const dObj = new Date(dStr + "T00:00:00");
+                const dw = dObj.getDay();
+                if (dw >= 1 && dw <= 4) {
+                    valitseDemoPaivaByDate(dStr);
+                    break;
+                }
+            }
         }
 
         function tarkistaSukupuoli() { 
@@ -667,19 +991,83 @@
             document.getElementById('hipContainer').style.display = (g === "female") ? "block" : "none"; 
             
             if (isDemoMode) {
-                if (g === "female" && document.getElementById('weight').value === "110") {
+                if (g === "female") {
                     document.getElementById('height').value = "170";
                     document.getElementById('weight').value = "100";
                     document.getElementById('waist').value = "104";
                     document.getElementById('neck').value = "38";
                     document.getElementById('hip').value = "118";
-                } else if (g === "male" && document.getElementById('weight').value === "100") {
+                } else if (g === "male") {
                     document.getElementById('height').value = "180";
                     document.getElementById('weight').value = "110";
                     document.getElementById('waist').value = "112";
                     document.getElementById('neck').value = "43";
+                    document.getElementById('hip').value = "";
                 }
             }
+        }
+
+        function paivitaKaikkienPaivienLaskelmat() {
+            const gender = document.getElementById('gender').value;
+            const h = parseFloat(document.getElementById('height').value) || 0;
+            const waist = parseFloat(document.getElementById('waist').value) || 0;
+            const neck = parseFloat(document.getElementById('neck').value) || 0;
+            const hip = parseFloat(document.getElementById('hip').value) || 0;
+            const age = parseInt(document.getElementById('age').value) || 45;
+            const actMult = parseFloat(document.getElementById('activityLevel').value) || 1.25;
+
+            let rPct = (gender === "male") ? 32.0 : 42.0;
+            if ((gender === "male" && h > 0 && waist > neck && neck > 0) || (gender === "female" && h > 0 && (waist + hip) > neck && neck > 0 && hip > 0)) {
+                const pT = h / 2.54, nT = neck / 2.54, vT = waist / 2.54;
+                rPct = (gender === "male") ? (86.010 * log10(vT - nT)) - (70.041 * log10(pT)) + 36.76 : (163.205 * log10(vT + (hip/2.54) - nT)) - (97.684 * log10(pT)) - 78.387;
+                if (rPct < 3) rPct = 3;
+            }
+
+            Object.keys(historyDB).forEach(dKey => {
+                const dayObj = historyDB[dKey];
+                if (dayObj) {
+                    let w = dayObj.calculated?.weight || parseFloat(document.getElementById('weight').value) || 70;
+                    
+                    if (isDemoMode) {
+                        const idx = Object.keys(demoDates).find(k => demoDates[k] === dKey);
+                        if (idx) {
+                            const i = parseInt(idx);
+                            const baseW = (gender === "female") ? 100.0 : 110.0;
+                            const diffW = 3.5;
+                            w = parseFloat((baseW + diffW - (diffW * ((i - 1) / 29))).toFixed(1));
+
+                            const dObj = new Date(dKey + "T00:00:00");
+                            const dayOfWeek = dObj.getDay();
+                            const newMeals = generateDemoMealsForDay(dayOfWeek, gender);
+                            
+                            let carbs = 0, protein = 0, fat = 0;
+                            newMeals.forEach(m => { carbs += m.c; protein += m.p; fat += m.f; });
+                            
+                            dayObj.meals = newMeals;
+                            dayObj.macros = { carbs, protein, fat };
+                        }
+                    }
+
+                    const lbm = w - (w * (rPct / 100));
+                    const dayTdee = (370 + (21.6 * lbm)) * actMult;
+                    const dayKcal = (dayObj.macros.carbs * 4) + (dayObj.macros.protein * 4) + (dayObj.macros.fat * 9);
+
+                    dayObj.calculated = {
+                        weight: w,
+                        tdee: dayTdee,
+                        consumedKcal: dayKcal,
+                        lbm: lbm,
+                        age: age
+                    };
+                }
+            });
+
+            if (isDemoMode && historyDB[activeDateStr]?.calculated?.weight) {
+                document.getElementById('weight').value = historyDB[activeDateStr].calculated.weight;
+            }
+
+            paivitaLaskelmat();
+            paivitaKumulatiivinenYhteenveto();
         }
 
         function tallennaKayttajaParametrit() {
@@ -697,6 +1085,7 @@
                 customCalorieDelta: document.getElementById('customCalorieDelta').value
             };
             localStorage.setItem('metabolic_v20_userParams', JSON.stringify(params));
+            if (window.triggerAutoSyncToDrive) window.triggerAutoSyncToDrive();
         }
 
         function lataaKayttajaParametrit() {
@@ -721,6 +1110,7 @@
             if (isDemoMode) return; 
             localStorage.setItem('metabolic_v20_historyDB', JSON.stringify(historyDB));
             paivitaKumulatiivinenYhteenveto();
+            if (window.triggerAutoSyncToDrive) window.triggerAutoSyncToDrive();
         }
 
         function lataaAktiivisenPaivanTiedot() {
@@ -750,7 +1140,7 @@
         }
 
         function paivitaKumulatiivinenYhteenveto() {
-            let totalDays = 0, totalEnergyKcal = 0, totalDeficitKcal = 0, mtorActiveDaysCount = 0;
+            let totalDays = 0, totalEnergyKcal = 0, totalCalorieSaldo = 0, mtorActiveDaysCount = 0;
 
             const startDate = document.getElementById('cumStartDate').value;
             const endDate = document.getElementById('cumEndDate').value;
@@ -794,7 +1184,7 @@
                         dayObj.calculated = { weight: w, tdee: dayTdee, consumedKcal: dayKcal, lbm: lbm, age: age };
                     }
 
-                    totalDeficitKcal += (dayTdee - dayKcal);
+                    totalCalorieSaldo += (dayKcal - dayTdee);
 
                     let ageMultiplier = 1.0;
                     let minThreshold = 30.0;
@@ -819,23 +1209,32 @@
             const fatKgEl = document.getElementById('cumFatBurnedKg');
             const fatLitersEl = document.getElementById('cumFatBurnedLiters');
 
-            let absVal = Math.abs(totalDeficitKcal);
-            let fatKgVal = absVal / 7700;
-            let fatLitersVal = fatKgVal / 0.90;
+            const absVal = Math.abs(totalCalorieSaldo);
+            const fatKgVal = absVal / 7700;
+            const fatLitersVal = fatKgVal / 0.90;
 
-            deficitEl.innerText = Math.round(totalDeficitKcal);
-            fatKgEl.innerText = fatKgVal.toFixed(2);
-            fatLitersEl.innerText = fatLitersVal.toFixed(2);
-
-            if (totalDeficitKcal < 0) {
-                const surplusText = lang === 'en' ? "⚠️ Accumulated calorie surplus (<span class='alert-red'>weight gained</span>):" : "⚠️ Kertynyt kaloriylitys (<span class='alert-red'>painoa tullut lisää</span>):";
-                deficitTitle.innerHTML = surplusText;
+            if (totalCalorieSaldo > 0) {
+                deficitTitle.innerHTML = lang === 'en' ? "⚠️ Accumulated calorie balance (<span class='alert-red'>surplus = weight gained</span>):" : "⚠️ Kertynyt kalorisaldo (<span class='alert-red'>plussalla = painoa tullut lisää</span>):";
+                deficitEl.innerText = "+" + Math.round(totalCalorieSaldo);
+                fatKgEl.innerText = "+" + fatKgVal.toFixed(2);
+                fatLitersEl.innerText = "+" + fatLitersVal.toFixed(2);
                 deficitEl.className = "alert-red";
                 fatKgEl.className = "alert-red";
                 fatLitersEl.className = "alert-red";
-            } else {
-                deficitTitle.innerText = lang === 'en' ? "Accumulated calorie deficit:" : "Kertynyt kalorivaje:";
+            } else if (totalCalorieSaldo < 0) {
+                deficitTitle.innerHTML = lang === 'en' ? "🟢 Accumulated calorie balance (<span class='alert-green'>negative = weight lost</span>):" : "🟢 Kertynyt kalorisaldo (<span class='alert-green'>negatiivinen = laihduttu</span>):";
+                deficitEl.innerText = Math.round(totalCalorieSaldo);
+                fatKgEl.innerText = "-" + fatKgVal.toFixed(2);
+                fatLitersEl.innerText = "-" + fatLitersVal.toFixed(2);
                 deficitEl.className = "alert-green";
+                fatKgEl.className = "alert-green";
+                fatLitersEl.className = "alert-green";
+            } else {
+                deficitTitle.innerText = lang === 'en' ? "Accumulated calorie balance:" : "Kertynyt kalorisaldo:";
+                deficitEl.innerText = "0";
+                fatKgEl.innerText = "0.00";
+                fatLitersEl.innerText = "0.00";
+                deficitEl.className = "";
                 fatKgEl.className = "";
                 fatLitersEl.className = "";
             }
@@ -1119,6 +1518,96 @@
             document.getElementById('outputBox').style.display = "none";
         }
 
+        function haeVarmuuskopioPayload() {
+            tallennaKayttajaParametrit();
+            return {
+                app: "metabolic_calculator_v20",
+                version: "1.0",
+                exportedAt: new Date().toISOString(),
+                lang: localStorage.getItem('metabolic_v20_lang') || 'fi',
+                userParams: JSON.parse(localStorage.getItem('metabolic_v20_userParams') || '{}'),
+                historyDB: historyDB
+            };
+        }
+
+        function palautaVarmuuskopioPayload(imported) {
+            if (!imported || (typeof imported !== 'object')) return false;
+
+            let hasValidData = false;
+
+            if (imported.historyDB && typeof imported.historyDB === 'object') {
+                historyDB = imported.historyDB;
+                localStorage.setItem('metabolic_v20_historyDB', JSON.stringify(historyDB));
+                hasValidData = true;
+            }
+
+            if (imported.userParams && typeof imported.userParams === 'object') {
+                localStorage.setItem('metabolic_v20_userParams', JSON.stringify(imported.userParams));
+                lataaKayttajaParametrit();
+                hasValidData = true;
+            }
+
+            if (imported.lang) {
+                localStorage.setItem('metabolic_v20_lang', imported.lang);
+                if (document.getElementById('langSelect')) {
+                    document.getElementById('langSelect').value = imported.lang;
+                    switchLanguage(imported.lang);
+                }
+            }
+
+            if (hasValidData) {
+                alustaKumulatiivisetPaivaykset();
+                lataaAktiivisenPaivanTiedot();
+                tarkistaSukupuoli();
+                tarkistaCustomTavoite();
+                paivitaKaikkienPaivienLaskelmat();
+            }
+
+            return hasValidData;
+        }
+
+        window.haeVarmuuskopioPayload = haeVarmuuskopioPayload;
+        window.palautaVarmuuskopioPayload = palautaVarmuuskopioPayload;
+
+        function vieVarmuuskopioData() {
+            const backupData = haeVarmuuskopioPayload();
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+            const downloadAnchor = document.createElement('a');
+            const today = getTodayStr();
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `metabolinen_laskuri_varmuuskopio_${today}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function tuoVarmuuskopioData(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    const lang = document.getElementById('langSelect').value;
+                    const success = palautaVarmuuskopioPayload(imported);
+                    if (!success) {
+                        alert(lang === 'en' ? "Error: The file does not contain valid calculator backup data!" : "Virhe: Tiedosto ei sisällä kelvollista laskurin varmuuskopiodataa!");
+                        return;
+                    }
+                    if (window.triggerAutoSyncToDrive) window.triggerAutoSyncToDrive();
+                    alert(lang === 'en' ? "Backup imported and data updated successfully!" : "Varmuuskopio tuotu ja tiedot päivitetty onnistuneesti!");
+                } catch (err) {
+                    console.error("Import error:", err);
+                    const lang = document.getElementById('langSelect').value;
+                    alert(lang === 'en' ? "Failed to parse JSON backup file. Please make sure it is a valid backup file." : "Virhe tiedoston tuonnissa! Tarkista, että tiedosto on kelvollinen JSON-varmuuskopio.");
+                } finally {
+                    event.target.value = '';
+                }
+            };
+            reader.readAsText(file);
+        }
+
         function nollaaKaikkiTiedot() {
             const lang = document.getElementById('langSelect').value;
             const vahvistus = confirm(
@@ -1133,6 +1622,355 @@
                 location.reload();
             }
         }
+    </script>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+
+        let auth = null;
+        let googleAuthProvider = null;
+        let cachedAccessToken = null;
+        let currentUser = null;
+        let driveFileSyncTimeout = null;
+
+        const DRIVE_FOLDER_NAME = 'Metabolic Calculator Backups';
+        const DRIVE_FILE_NAME = 'metabolic_calculator_backup.json';
+
+        async function getOrCreateDriveFolder(token) {
+            const q = encodeURIComponent(`name = '${DRIVE_FOLDER_NAME}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`);
+            const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!res.ok) throw new Error(`Drive folder search error ${res.status}`);
+            const data = await res.json();
+            if (data.files && data.files.length > 0) {
+                return data.files[0].id;
+            }
+
+            const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    name: DRIVE_FOLDER_NAME,
+                    mimeType: 'application/vnd.google-apps.folder'
+                })
+            });
+            if (!createRes.ok) throw new Error(`Folder creation error ${createRes.status}`);
+            const createdFolder = await createRes.json();
+            return createdFolder.id;
+        }
+
+        async function initGoogleDriveSync() {
+            try {
+                const res = await fetch('/firebase-applet-config.json');
+                if (!res.ok) return;
+                const config = await res.json();
+                const app = initializeApp(config);
+                auth = getAuth(app);
+                
+                googleAuthProvider = new GoogleAuthProvider();
+                googleAuthProvider.addScope('https://www.googleapis.com/auth/drive.file');
+
+                const signBtn = document.getElementById('googleSignInBtn');
+                if (signBtn) {
+                    signBtn.addEventListener('click', async () => {
+                        try {
+                            setDriveStatusUI('loading', 'Kirjaudutaan Google-tilille...');
+                            const result = await signInWithPopup(auth, googleAuthProvider);
+                            const credential = GoogleAuthProvider.credentialFromResult(result);
+                            if (credential && credential.accessToken) {
+                                cachedAccessToken = credential.accessToken;
+                            }
+                            currentUser = result.user;
+                            updateUIForUser(currentUser);
+                            await synkkaaOnSignIn();
+                        } catch (err) {
+                            console.error('Google Sign-in failed:', err);
+                            const lang = document.getElementById('langSelect')?.value || 'fi';
+                            setDriveStatusUI('error', lang === 'en' ? 'Sign-in failed: ' + err.message : 'Kirjautuminen epäonnistui: ' + err.message);
+                        }
+                    });
+                }
+
+                onAuthStateChanged(auth, async (user) => {
+                    currentUser = user;
+                    if (user) {
+                        updateUIForUser(user);
+                        if (cachedAccessToken) {
+                            synkkaaOnSignIn();
+                        } else {
+                            const lang = document.getElementById('langSelect')?.value || 'fi';
+                            setDriveStatusUI('warning', lang === 'en' ? 'Click "Sync Now" to connect Drive' : 'Napsauta "Synkronoitoi nyt" yhdistääksesi Drive');
+                        }
+                    } else {
+                        cachedAccessToken = null;
+                        updateUIForLoggedOut();
+                    }
+                });
+            } catch (e) {
+                console.warn('Firebase init error:', e);
+            }
+        }
+
+        function updateUIForUser(user) {
+            const loggedOutUI = document.getElementById('driveLoggedOutUI');
+            const loggedInUI = document.getElementById('driveLoggedInUI');
+            if (loggedOutUI) loggedOutUI.style.display = 'none';
+            if (loggedInUI) loggedInUI.style.display = 'block';
+            
+            const nameEl = document.getElementById('userName');
+            const emailEl = document.getElementById('userEmail');
+            if (nameEl) nameEl.textContent = user.displayName || user.email || 'Google User';
+            if (emailEl) emailEl.textContent = user.email || '';
+            
+            const avatar = document.getElementById('userAvatar');
+            if (avatar) {
+                if (user.photoURL) {
+                    avatar.src = user.photoURL;
+                    avatar.style.display = 'block';
+                } else {
+                    avatar.style.display = 'none';
+                }
+            }
+        }
+
+        function updateUIForLoggedOut() {
+            const loggedOutUI = document.getElementById('driveLoggedOutUI');
+            const loggedInUI = document.getElementById('driveLoggedInUI');
+            if (loggedOutUI) loggedOutUI.style.display = 'block';
+            if (loggedInUI) loggedInUI.style.display = 'none';
+            
+            const lang = document.getElementById('langSelect')?.value || 'fi';
+            const headerText = document.getElementById('headerDriveStatusText');
+            const headerBadge = document.getElementById('headerDriveBadge');
+            if (headerText) headerText.textContent = lang === 'en' ? 'Not connected' : 'Ei kirjauduttu';
+            if (headerBadge) {
+                headerBadge.style.borderColor = '#333';
+                headerBadge.style.color = '#888';
+            }
+        }
+
+        function setDriveStatusUI(type, message) {
+            const statusEl = document.getElementById('driveSyncStatus');
+            const headerText = document.getElementById('headerDriveStatusText');
+            const headerBadge = document.getElementById('headerDriveBadge');
+            
+            if (statusEl) statusEl.textContent = message;
+            
+            if (type === 'success') {
+                if (statusEl) statusEl.style.color = '#00ff00';
+                if (headerText) headerText.textContent = '🟢 Synkronoitu';
+                if (headerBadge) {
+                    headerBadge.style.borderColor = '#00ff00';
+                    headerBadge.style.color = '#00ff00';
+                }
+            } else if (type === 'loading') {
+                if (statusEl) statusEl.style.color = '#ffff00';
+                if (headerText) headerText.textContent = '🔄 Synkronoidaan...';
+                if (headerBadge) {
+                    headerBadge.style.borderColor = '#ffff00';
+                    headerBadge.style.color = '#ffff00';
+                }
+            } else if (type === 'warning') {
+                if (statusEl) statusEl.style.color = '#ffaa00';
+                if (headerText) headerText.textContent = '⚠️ Yhdistä Drive';
+                if (headerBadge) {
+                    headerBadge.style.borderColor = '#ffaa00';
+                    headerBadge.style.color = '#ffaa00';
+                }
+            } else {
+                if (statusEl) statusEl.style.color = '#ff4444';
+                if (headerText) headerText.textContent = '❌ Virhe';
+                if (headerBadge) {
+                    headerBadge.style.borderColor = '#ff4444';
+                    headerBadge.style.color = '#ff4444';
+                }
+            }
+        }
+
+        async function ensureAccessToken() {
+            if (cachedAccessToken) return cachedAccessToken;
+            if (!auth) throw new Error('Auth not initialized');
+            const result = await signInWithPopup(auth, googleAuthProvider);
+            const credential = GoogleAuthProvider.credentialFromResult(result);
+            if (credential && credential.accessToken) {
+                cachedAccessToken = credential.accessToken;
+                currentUser = result.user;
+                updateUIForUser(currentUser);
+                return cachedAccessToken;
+            }
+            throw new Error('Could not obtain OAuth access token');
+        }
+
+        async function findDriveBackupFile(token, folderId) {
+            if (folderId) {
+                const q = encodeURIComponent(`name = '${DRIVE_FILE_NAME}' and '${folderId}' in parents and trashed = false`);
+                const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.files && data.files.length > 0) return data.files[0];
+                }
+            }
+
+            const fallbackQ = encodeURIComponent(`(name = '${DRIVE_FILE_NAME}' or name = 'metabolinen_laskuri_data.json') and trashed = false`);
+            const fallbackRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${fallbackQ}&fields=files(id,name,modifiedTime)`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (fallbackRes.ok) {
+                const fallbackData = await fallbackRes.json();
+                if (fallbackData.files && fallbackData.files.length > 0) return fallbackData.files[0];
+            }
+            return null;
+        }
+
+        async function tallennaGoogleDriveen() {
+            const lang = document.getElementById('langSelect')?.value || 'fi';
+            try {
+                setDriveStatusUI('loading', lang === 'en' ? '🔄 Saving to Google Drive...' : '🔄 Tallennetaan Google Driveen...');
+                const token = await ensureAccessToken();
+                const folderId = await getOrCreateDriveFolder(token);
+                const payload = window.haeVarmuuskopioPayload ? window.haeVarmuuskopioPayload() : {};
+                const existing = await findDriveBackupFile(token, folderId);
+                const jsonStr = JSON.stringify(payload, null, 2);
+
+                let res;
+                if (existing) {
+                    res = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${existing.id}?uploadType=media`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: jsonStr
+                    });
+                } else {
+                    const metadata = {
+                        name: DRIVE_FILE_NAME,
+                        parents: [folderId],
+                        mimeType: 'application/json'
+                    };
+                    const boundary = '-------314159265358979323846';
+                    const delimiter = "\r\n--" + boundary + "\r\n";
+                    const close_delim = "\r\n--" + boundary + "--";
+                    const multipartBody =
+                        delimiter +
+                        'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+                        JSON.stringify(metadata) +
+                        delimiter +
+                        'Content-Type: application/json\r\n\r\n' +
+                        jsonStr +
+                        close_delim;
+
+                    res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': `multipart/related; boundary=${boundary}`
+                        },
+                        body: multipartBody
+                    });
+                }
+
+                if (!res.ok) throw new Error(`Drive save status ${res.status}`);
+                const nowStr = new Date().toLocaleTimeString(lang === 'en' ? 'en-US' : 'fi-FI', { hour: '2-digit', minute: '2-digit' });
+                setDriveStatusUI('success', lang === 'en' ? `🟢 Synced to Google Drive (${nowStr})` : `🟢 Synkronoitu Google Driveen (${nowStr})`);
+                return true;
+            } catch (err) {
+                console.error('Drive save error:', err);
+                setDriveStatusUI('error', lang === 'en' ? '❌ Drive save failed: ' + err.message : '❌ Tallennus Driveen epäonnistui: ' + err.message);
+                return false;
+            }
+        }
+
+        async function lataaGoogleDrivesta() {
+            const lang = document.getElementById('langSelect')?.value || 'fi';
+            try {
+                setDriveStatusUI('loading', lang === 'en' ? '🔄 Fetching from Google Drive...' : '🔄 Haetaan Google Drivestä...');
+                const token = await ensureAccessToken();
+                const folderId = await getOrCreateDriveFolder(token);
+                const existing = await findDriveBackupFile(token, folderId);
+
+                if (!existing) {
+                    alert(lang === 'en' ? 'No backup file found in Google Drive! Creating a new backup...' : 'Google Drivestä ei löytynyt varmuuskopiotiedostoa! Luodaan uusi varmuuskopio...');
+                    await tallennaGoogleDriveen();
+                    return;
+                }
+
+                const res = await fetch(`https://www.googleapis.com/drive/v3/files/${existing.id}?alt=media`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!res.ok) throw new Error(`Download error ${res.status}`);
+                const driveData = await res.json();
+
+                const success = window.palautaVarmuuskopioPayload ? window.palautaVarmuuskopioPayload(driveData) : false;
+                if (success) {
+                    const nowStr = new Date().toLocaleTimeString(lang === 'en' ? 'en-US' : 'fi-FI', { hour: '2-digit', minute: '2-digit' });
+                    setDriveStatusUI('success', lang === 'en' ? `🟢 Synced from Google Drive (${nowStr})` : `🟢 Ladattu Google Drivestä (${nowStr})`);
+                    alert(lang === 'en' ? 'Data restored successfully from Google Drive!' : 'Tiedot ladattu ja synkronoitu onnistuneesti Google Drivestä!');
+                } else {
+                    throw new Error(lang === 'en' ? 'Invalid Drive backup file' : 'Virheellinen Drive-varmuuskopiotiedosto');
+                }
+            } catch (err) {
+                console.error('Drive fetch error:', err);
+                setDriveStatusUI('error', lang === 'en' ? '❌ Drive load failed: ' + err.message : '❌ Lataus Drivestä epäonnistui: ' + err.message);
+                alert(lang === 'en' ? 'Failed to fetch from Google Drive: ' + err.message : 'Virhe ladattaessa Drivestä: ' + err.message);
+            }
+        }
+
+        async function synkkaaOnSignIn() {
+            try {
+                const token = await ensureAccessToken();
+                const folderId = await getOrCreateDriveFolder(token);
+                const existing = await findDriveBackupFile(token, folderId);
+                if (existing) {
+                    const res = await fetch(`https://www.googleapis.com/drive/v3/files/${existing.id}?alt=media`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (res.ok) {
+                        const driveData = await res.json();
+                        if (window.palautaVarmuuskopioPayload) {
+                            window.palautaVarmuuskopioPayload(driveData);
+                        }
+                    }
+                }
+                await tallennaGoogleDriveen();
+            } catch (e) {
+                console.warn('Initial sync error:', e);
+            }
+        }
+
+        function debouncedAutoSyncToDrive() {
+            if (!currentUser) return;
+            if (driveFileSyncTimeout) clearTimeout(driveFileSyncTimeout);
+            driveFileSyncTimeout = setTimeout(() => {
+                tallennaGoogleDriveen().catch(err => console.warn('Auto sync error:', err));
+            }, 2000);
+        }
+
+        async function kirjauduUlosGoogle() {
+            const lang = document.getElementById('langSelect')?.value || 'fi';
+            if (auth) {
+                await signOut(auth);
+                cachedAccessToken = null;
+                currentUser = null;
+                updateUIForLoggedOut();
+                alert(lang === 'en' ? 'Logged out from Google.' : 'Kirjauduttu ulos Google-tililtä.');
+            }
+        }
+
+        window.synkkaaGoogleDriveManuaalisesti = tallennaGoogleDriveen;
+        window.lataaGoogleDrivesta = lataaGoogleDrivesta;
+        window.kirjauduUlosGoogle = kirjauduUlosGoogle;
+        window.triggerAutoSyncToDrive = debouncedAutoSyncToDrive;
+
+        window.addEventListener('DOMContentLoaded', initGoogleDriveSync);
     </script>
 </body>
 </html>
