@@ -1729,7 +1729,7 @@
             if (window.google && window.google.accounts && window.google.accounts.oauth2) {
                 gisTokenClient = window.google.accounts.oauth2.initTokenClient({
                     client_id: activeClientId,
-                    scope: 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email',
+                    scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email',
                     callback: async (tokenResponse) => {
                         if (tokenResponse.error) {
                             console.warn('GIS Token error:', tokenResponse);
