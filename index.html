@@ -175,6 +175,9 @@
                     <span class="gsi-material-button-contents" data-i18n="signInWithGoogle">Kirjaudu sisään Googlella</span>
                   </div>
                 </button>
+                <p id="braveNotice" style="display: none; font-size: 11px; color: #ffaa00; margin-top: 8px; line-height: 1.4; background: #221100; border: 1px solid #ffaa00; padding: 6px 10px; border-radius: 4px;" data-i18n="braveNoticeText">
+                    🦁 <strong>Brave-selain:</strong> Jos kirjautumisikkuna ei aukea, kytke osoitekentän Brave Shields (leijona-ikoni) pois päältä tälle sivustolle tai salli ponnahdusikkunat.
+                </p>
             </div>
 
             <div id="driveLoggedInUI" style="display: none; background: #001122; border: 1px solid #0088ff; padding: 10px; margin-top: 8px;">
@@ -484,7 +487,8 @@
                 phCustomDelta: "👉 SYÖTÄ VAJE (-) TAI YLITYS (+)",
                 phCarbs: "👉 SYÖTÄ TIETO (HIILIHYDRAATIT G)",
                 phProtein: "👉 SYÖTÄ TIETO (PROTEIINI G)",
-                phFat: "👉 SYÖTÄ TIETO (RASVA G)"
+                phFat: "👉 SYÖTÄ TIETO (RASVA G)",
+                braveNoticeText: "🦁 <strong>Brave-selain:</strong> Jos kirjautumisikkuna ei aukea, kytke osoitekentän Brave Shields (leijona-ikoni) pois päältä tälle sivustolle tai salli ponnahdusikkunat."
             },
             en: {
                 langLabel: "🌐 LANGUAGE:",
@@ -592,7 +596,8 @@
                 phCustomDelta: "👉 ENTER DEFICIT (-) OR SURPLUS (+)",
                 phCarbs: "👉 ENTER DATA (CARBS G)",
                 phProtein: "👉 ENTER DATA (PROTEIN G)",
-                phFat: "👉 ENTER DATA (FAT G)"
+                phFat: "👉 ENTER DATA (FAT G)",
+                braveNoticeText: "🦁 <strong>Brave browser:</strong> If the sign-in window does not open, disable Brave Shields (lion icon) for this site or allow popups."
             }
         };
 
@@ -680,7 +685,7 @@
             document.querySelectorAll('[data-i18n]').forEach(el => {
                 const key = el.getAttribute('data-i18n');
                 if (t[key]) {
-                    el.innerText = t[key];
+                    el.innerHTML = t[key];
                 }
             });
 
@@ -1626,7 +1631,7 @@
 
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+        import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 
         let auth = null;
         let googleAuthProvider = null;
@@ -1675,11 +1680,39 @@
                 googleAuthProvider = new GoogleAuthProvider();
                 googleAuthProvider.addScope('https://www.googleapis.com/auth/drive.file');
 
+                // Check for Brave browser and display helpful notice
+                if (navigator.brave && typeof navigator.brave.isBrave === 'function') {
+                    navigator.brave.isBrave().then(isBrave => {
+                        if (isBrave) {
+                            const bn = document.getElementById('braveNotice');
+                            if (bn) bn.style.display = 'block';
+                        }
+                    }).catch(() => {});
+                }
+
+                // Handle sign-in result from redirect flow (essential for Brave & popup blockers)
+                getRedirectResult(auth).then(async (result) => {
+                    if (result) {
+                        const credential = GoogleAuthProvider.credentialFromResult(result);
+                        if (credential && credential.accessToken) {
+                            cachedAccessToken = credential.accessToken;
+                        }
+                        currentUser = result.user;
+                        if (currentUser) {
+                            updateUIForUser(currentUser);
+                            await synkkaaOnSignIn();
+                        }
+                    }
+                }).catch((err) => {
+                    console.warn('Redirect sign-in error:', err);
+                });
+
                 const signBtn = document.getElementById('googleSignInBtn');
                 if (signBtn) {
                     signBtn.addEventListener('click', async () => {
+                        const lang = document.getElementById('langSelect')?.value || 'fi';
                         try {
-                            setDriveStatusUI('loading', 'Kirjaudutaan Google-tilille...');
+                            setDriveStatusUI('loading', lang === 'en' ? 'Signing in to Google...' : 'Kirjaudutaan Google-tilille...');
                             const result = await signInWithPopup(auth, googleAuthProvider);
                             const credential = GoogleAuthProvider.credentialFromResult(result);
                             if (credential && credential.accessToken) {
@@ -1689,9 +1722,17 @@
                             updateUIForUser(currentUser);
                             await synkkaaOnSignIn();
                         } catch (err) {
-                            console.error('Google Sign-in failed:', err);
-                            const lang = document.getElementById('langSelect')?.value || 'fi';
-                            setDriveStatusUI('error', lang === 'en' ? 'Sign-in failed: ' + err.message : 'Kirjautuminen epäonnistui: ' + err.message);
+                            console.warn('Google Sign-in popup failed, attempting fallback redirect:', err);
+                            const bn = document.getElementById('braveNotice');
+                            if (bn) bn.style.display = 'block';
+
+                            // Fallback to redirect mode if popup is blocked by Brave or browser shields
+                            try {
+                                await signInWithRedirect(auth, googleAuthProvider);
+                            } catch (redirectErr) {
+                                console.error('Redirect sign-in failed:', redirectErr);
+                                setDriveStatusUI('error', (lang === 'en' ? 'Sign-in failed: ' : 'Kirjautuminen epäonnistui: ') + err.message);
+                            }
                         }
                     });
                 }
@@ -1795,13 +1836,21 @@
         async function ensureAccessToken() {
             if (cachedAccessToken) return cachedAccessToken;
             if (!auth) throw new Error('Auth not initialized');
-            const result = await signInWithPopup(auth, googleAuthProvider);
-            const credential = GoogleAuthProvider.credentialFromResult(result);
-            if (credential && credential.accessToken) {
-                cachedAccessToken = credential.accessToken;
-                currentUser = result.user;
-                updateUIForUser(currentUser);
-                return cachedAccessToken;
+            try {
+                const result = await signInWithPopup(auth, googleAuthProvider);
+                const credential = GoogleAuthProvider.credentialFromResult(result);
+                if (credential && credential.accessToken) {
+                    cachedAccessToken = credential.accessToken;
+                    currentUser = result.user;
+                    updateUIForUser(currentUser);
+                    return cachedAccessToken;
+                }
+            } catch (err) {
+                console.warn('Popup blocked in ensureAccessToken, falling back to redirect:', err);
+                const bn = document.getElementById('braveNotice');
+                if (bn) bn.style.display = 'block';
+                await signInWithRedirect(auth, googleAuthProvider);
+                throw new Error(document.getElementById('langSelect')?.value === 'en' ? 'Redirecting to Google Sign-in...' : 'Siirrytään Google-kirjautumiseen...');
             }
             throw new Error('Could not obtain OAuth access token');
         }
