@@ -48,6 +48,12 @@ Enable GitHub Pages under the repository settings (Settings -> Pages -> branch m
 
 Alternatively, deploy it effortlessly on static hosting platforms like Vercel or Netlify.
 
+🔒 Data Privacy & Security
+- **Privacy by Design**: All calculation data, biological metrics, and meal logs are stored locally in your browser's `localStorage`. No data is ever transmitted to external tracking servers or third-party databases.
+- **Restricted Google Drive Sync**: Optional auto-sync utilizes Google OAuth with the strictly limited `drive.file` scope (`https://www.googleapis.com/auth/drive.file`). The app only accesses its own created backup file (`metabolic_calculator_backup.json`) and has **zero access** to any other files or folders in your Google Drive.
+- **Zero Third-Party Tracking**: No analytics, tracking pixels, or cookies are used.
+- For full details, see the [PRIVACY.md](./PRIVACY.md) document.
+
 📄 Copyright & License
 © 2026 HVA2026.
 This program is free software: you can redistribute it and/or modify it under the terms of the **GNU General Public License v3.0** as published by the Free Software Foundation.
