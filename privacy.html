@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="fi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tietosuojaseloste - Metabolic Calculator</title>
+    <title>Privacy Policy / Tietosuojaseloste - Metabolic Calculator</title>
     <style>
         :root {
             --bg-color: #0d0f12;
@@ -33,6 +33,68 @@
             border-radius: 8px;
             padding: 30px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .btn-back {
+            display: inline-block;
+            background: #1f242d;
+            color: var(--accent-cyan);
+            border: 1px solid var(--accent-cyan);
+            padding: 8px 16px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .btn-back:hover {
+            background: var(--accent-cyan);
+            color: #000;
+        }
+
+        .lang-toggle-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #0d0f12;
+            padding: 4px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+        }
+
+        .lang-btn {
+            background: transparent;
+            color: var(--text-muted);
+            border: none;
+            padding: 6px 14px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .lang-btn:hover {
+            color: #fff;
+        }
+
+        .lang-btn.active {
+            background: #1f242d;
+            color: var(--accent-cyan);
+            border: 1px solid var(--accent-cyan);
+            box-shadow: 0 0 8px rgba(0, 255, 255, 0.2);
         }
 
         h1 {
@@ -81,33 +143,12 @@
             display: inline-block;
         }
 
-        .btn-back {
-            display: inline-block;
-            background: #1f242d;
-            color: var(--accent-cyan);
-            border: 1px solid var(--accent-cyan);
-            padding: 8px 16px;
-            border-radius: 4px;
-            text-decoration: none;
-            font-weight: bold;
-            font-size: 13px;
-            margin-bottom: 20px;
-            transition: all 0.2s;
-        }
-
-        .btn-back:hover {
-            background: var(--accent-cyan);
-            color: #000;
-        }
-
         .lang-section {
-            margin-bottom: 40px;
+            display: none;
         }
 
-        .divider {
-            height: 1px;
-            background: var(--border-color);
-            margin: 40px 0;
+        .lang-section.visible {
+            display: block;
         }
 
         footer {
@@ -115,19 +156,67 @@
             font-size: 12px;
             color: var(--text-muted);
             text-align: center;
+            border-top: 1px solid var(--border-color);
+            padding-top: 20px;
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <a href="/" class="btn-back">← Takaisin sovellukseen / Back to app</a>
+    <div class="top-bar">
+        <a href="/" class="btn-back" id="backBtn">← Back to app / Takaisin sovellukseen</a>
+        <div class="lang-toggle-group">
+            <span style="font-size: 12px; color: var(--text-muted); margin-right: 4px; font-weight: bold;">🌐</span>
+            <button class="lang-btn" id="btnLangEn" onclick="switchLang('en')">🇬🇧 English</button>
+            <button class="lang-btn" id="btnLangFi" onclick="switchLang('fi')">🇫🇮 Suomi</button>
+        </div>
+    </div>
 
-    <div class="lang-section">
-        <h1>🔒 Tietosuojaseloste (Privacy Policy)</h1>
-        <p><strong>Metabolic Calculator v1.0</strong><br><em>Päivitetty / Updated: 2026-08-03</em></p>
+    <!-- ENGLISH PRIVACY POLICY SECTION (DEFAULT) -->
+    <div id="privacy-en" class="lang-section">
+        <h1>🔒 Privacy Policy</h1>
+        <p><strong>Metabolic Calculator v1.0</strong><br><em>Updated: 2026-08-03</em></p>
 
-        <h2>🇫🇮 1. Mitä tietoja sovellus käsittelee?</h2>
+        <h2>1. What Data is Processed?</h2>
+        <p>Metabolic Calculator adheres strictly to the <em>Privacy by Design</em> principle. The application processes only functional data entered directly by the user:</p>
+        <ul>
+            <li><strong>Body and Metabolic Metrics:</strong> Gender, age, height, weight, waist, neck, and hip circumferences, activity level, and target deficit/surplus.</li>
+            <li><strong>Meal Logs & Nutrition Data:</strong> Recorded meals (timestamp, carbs, protein, fat) and calculated 24h glycemic load (GL) and insulin response curves.</li>
+            <li><strong>Application Settings:</strong> Selected language (Finnish/English) and UI state.</li>
+            <li><strong>Google Drive Sync:</strong> If enabled, the app processes only its own backup data payload in JSON format. The app <strong>DOES NOT REQUEST OR PROCESS</strong> the user's name, email address, profile picture, or personal identity details.</li>
+        </ul>
+
+        <h2>2. How is Data Processed and Stored?</h2>
+        <ul>
+            <li><strong>100% Client-Side Processing:</strong> All calculations, chart renders, and data manipulation occur entirely within the user's web browser via JavaScript.</li>
+            <li><strong>Local Storage Only:</strong> Data is saved exclusively in the user's local browser storage (<code>localStorage</code>). No data is ever transmitted to developer or third-party servers.</li>
+            <li><strong>Zero Tracking or Cookies:</strong> The application uses no tracking cookies, advertising IDs, or third-party analytics services (e.g., Google Analytics).</li>
+            <li><strong>Google Drive Auto-Sync (Optional):</strong>
+                <ul>
+                    <li>The app requests strictly the minimum required OAuth 2.0 scope: <span class="code-box">https://www.googleapis.com/auth/drive.file</span></li>
+                    <li>This grants access <strong>exclusively</strong> to files created by this application (<code>metabolic_calculator_backup.json</code> inside <code>Metabolic Calculator Backups</code>).</li>
+                    <li>The app has <strong>zero access</strong> to any other files, folders, or documents in your Google Drive.</li>
+                    <li>The app does not request identity scopes (such as <code>email</code>, <code>profile</code>, or <code>openid</code>).</li>
+                    <li>Sync requests execute directly between the user's browser and Google's official Drive APIs.</li>
+                </ul>
+            </li>
+        </ul>
+
+        <h2>3. Data Control & Deletion</h2>
+        <ul>
+            <li><strong>Clear Local Data:</strong> You can completely erase all data stored in your browser at any time via the app settings using the <strong>"⚠️ MASTER RESET (CLEAR ALL DATA)"</strong> button.</li>
+            <li><strong>Delete Drive Backup:</strong> Backups in Google Drive can be deleted directly from your Google Drive storage at any time.</li>
+            <li><strong>Revoke Access:</strong> Google Drive permissions can be revoked at any time at <a href="https://myaccount.google.com/permissions" target="_blank" style="color: var(--accent-cyan);">myaccount.google.com/permissions</a>.</li>
+        </ul>
+    </div>
+
+    <!-- FINNISH PRIVACY POLICY SECTION -->
+    <div id="privacy-fi" class="lang-section">
+        <h1>🔒 Tietosuojaseloste</h1>
+        <p><strong>Metabolic Calculator v1.0</strong><br><em>Päivitetty: 2026-08-03</em></p>
+
+        <h2>1. Mitä tietoja sovellus käsittelee?</h2>
         <p>Metabolic Calculator on suunniteltu noudattamaan tiukinta mahdollista tietosuojaperiaatetta (<em>Privacy by Design</em>). Sovellus käsittelee vain käyttäjän itse syöttämiä toiminnallisia tietoja:</p>
         <ul>
             <li><strong>Kehon ja aineenvaihdunnan parametrit:</strong> Sukupuoli, ikä, pituus, paino, vyötärön, niskan ja lantion ympäryssuhteet, aktiivisuustaso sekä tavoitteet/kalorivaje.</li>
@@ -147,7 +236,7 @@
                     <li>Tämä antaa sovellukselle pääsyn <strong>vain ja ainoastaan</strong> sovelluksen itsensä luomaan varmuuskopiotiedostoon (<code>metabolic_calculator_backup.json</code> kansiossa <code>Metabolic Calculator Backups</code>).</li>
                     <li>Sovelluksella <strong>ei ole mitään pääsyä</strong> käyttäjän muihin Google Driven tiedostoihin, kansioihin tai dokumentteihin.</li>
                     <li>Sovellus ei pyydä henkilötieto-scopeja (esim. <code>email</code>, <code>profile</code> tai <code>openid</code>).</li>
-                    <li>Synkronointikutsut tapahtuvat suoraan käyttäjän selaimen ja Googles virallisen rajapinnan välillä ilman välikäsiä.</li>
+                    <li>Synkronointikutsut tapahtuvat suoraan käyttäjän selaimen ja Googlen virallisen rajapinnan välillä ilman välikäsiä.</li>
                 </ul>
             </li>
         </ul>
@@ -160,48 +249,56 @@
         </ul>
     </div>
 
-    <div class="divider"></div>
-
-    <div class="lang-section">
-        <h2>🇬🇧 Privacy Policy (In English)</h2>
-
-        <h3>1. What Data is Processed?</h3>
-        <p>Metabolic Calculator adheres strictly to the <em>Privacy by Design</em> principle. The application processes only functional data entered directly by the user:</p>
-        <ul>
-            <li><strong>Body and Metabolic Metrics:</strong> Gender, age, height, weight, waist, neck, and hip circumferences, activity level, and target deficit/surplus.</li>
-            <li><strong>Meal Logs & Nutrition Data:</strong> Recorded meals (timestamp, carbs, protein, fat) and calculated 24h glycemic load (GL) and insulin response curves.</li>
-            <li><strong>Application Settings:</strong> Selected language (Finnish/English) and UI state.</li>
-            <li><strong>Google Drive Sync:</strong> If enabled, the app processes only its own backup data payload in JSON format. The app <strong>DOES NOT REQUEST OR PROCESS</strong> the user's name, email address, profile picture, or personal identity details.</li>
-        </ul>
-
-        <h3>2. How is Data Processed and Stored?</h3>
-        <ul>
-            <li><strong>100% Client-Side Processing:</strong> All calculations, chart renders, and data manipulation occur entirely within the user's web browser via JavaScript.</li>
-            <li><strong>Local Storage Only:</strong> Data is saved exclusively in the user's local browser storage (<code>localStorage</code>). No data is ever transmitted to developer or third-party servers.</li>
-            <li><strong>Zero Tracking or Cookies:</strong> The application uses no tracking cookies, advertising IDs, or third-party analytics services (e.g. Google Analytics).</li>
-            <li><strong>Google Drive Auto-Sync (Optional):</strong>
-                <ul>
-                    <li>The app requests strictly the minimum required OAuth 2.0 scope: <span class="code-box">https://www.googleapis.com/auth/drive.file</span></li>
-                    <li>This grants access <strong>exclusively</strong> to files created by this application (<code>metabolic_calculator_backup.json</code> inside <code>Metabolic Calculator Backups</code>).</li>
-                    <li>The app has <strong>zero access</strong> to any other files, folders, or documents in your Google Drive.</li>
-                    <li>The app does not request identity scopes (such as <code>email</code>, <code>profile</code>, or <code>openid</code>).</li>
-                    <li>Sync requests execute directly between the user's browser and Google's official Drive APIs.</li>
-                </ul>
-            </li>
-        </ul>
-
-        <h3>3. Data Control & Deletion</h3>
-        <ul>
-            <li><strong>Clear Local Data:</strong> You can completely erase all data stored in your browser at any time via the app settings using the <strong>"⚠️ MASTER RESET (CLEAR ALL DATA)"</strong> button.</li>
-            <li><strong>Delete Drive Backup:</strong> Backups in Google Drive can be deleted directly from your Google Drive storage at any time.</li>
-            <li><strong>Revoke Access:</strong> Google Drive permissions can be revoked at any time at <a href="https://myaccount.google.com/permissions" target="_blank" style="color: var(--accent-cyan);">myaccount.google.com/permissions</a>.</li>
-        </ul>
-    </div>
-
     <footer>
-        Metabolic Calculator v1.0 &bull; Privacy by Design &bull; <a href="/" style="color: var(--accent-cyan);">Palaa laskuriin / Return to calculator</a>
+        Metabolic Calculator v1.0 &bull; Privacy by Design &bull; <a href="/" id="footerHomeLink" style="color: var(--accent-cyan);">Return to calculator / Palaa laskuriin</a>
     </footer>
 </div>
+
+<script>
+    function switchLang(lang) {
+        const secEn = document.getElementById('privacy-en');
+        const secFi = document.getElementById('privacy-fi');
+        const btnEn = document.getElementById('btnLangEn');
+        const btnFi = document.getElementById('btnLangFi');
+        const backBtn = document.getElementById('backBtn');
+        const footerHomeLink = document.getElementById('footerHomeLink');
+
+        if (lang === 'fi') {
+            secEn.classList.remove('visible');
+            secFi.classList.add('visible');
+            btnEn.classList.remove('active');
+            btnFi.classList.add('active');
+            backBtn.textContent = '← Takaisin sovellukseen';
+            footerHomeLink.textContent = 'Palaa laskuriin';
+            document.documentElement.lang = 'fi';
+        } else {
+            secFi.classList.remove('visible');
+            secEn.classList.add('visible');
+            btnFi.classList.remove('active');
+            btnEn.classList.add('active');
+            backBtn.textContent = '← Back to app';
+            footerHomeLink.textContent = 'Return to calculator';
+            document.documentElement.lang = 'en';
+        }
+        localStorage.setItem('metabolic_v20_lang', lang);
+    }
+
+    // Determine initial language: Default is 'en' unless localStorage says 'fi' or URL param ?lang=fi
+    (function initLanguage() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlLang = urlParams.get('lang');
+        const savedLang = localStorage.getItem('metabolic_v20_lang');
+
+        let initialLang = 'en'; // Default is English
+        if (urlLang === 'fi' || urlLang === 'en') {
+            initialLang = urlLang;
+        } else if (savedLang === 'fi') {
+            initialLang = 'fi';
+        }
+
+        switchLang(initialLang);
+    })();
+</script>
 
 </body>
 </html>
