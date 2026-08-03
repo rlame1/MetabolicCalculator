@@ -1179,6 +1179,7 @@
                 customCalorieDelta: document.getElementById('customCalorieDelta').value
             };
             localStorage.setItem('metabolic_v20_userParams', JSON.stringify(params));
+            localStorage.setItem('metabolic_v20_lastUpdate', new Date().toISOString());
             if (triggerSync && window.triggerAutoSyncToDrive) window.triggerAutoSyncToDrive();
         }
 
@@ -1203,6 +1204,7 @@
         function sailytaPaivaDB() {
             if (isDemoMode) return; 
             localStorage.setItem('metabolic_v20_historyDB', JSON.stringify(historyDB));
+            localStorage.setItem('metabolic_v20_lastUpdate', new Date().toISOString());
             paivitaKumulatiivinenYhteenveto();
         }
 
@@ -1696,7 +1698,7 @@
             return {
                 app: "metabolic_calculator_v20",
                 version: "1.0",
-                exportedAt: new Date().toISOString(),
+                exportedAt: localStorage.getItem('metabolic_v20_lastUpdate') || new Date().toISOString(),
                 lang: localStorage.getItem('metabolic_v20_lang') || 'fi',
                 userParams: JSON.parse(localStorage.getItem('metabolic_v20_userParams') || '{}'),
                 historyDB: historyDB
@@ -2136,55 +2138,198 @@
             return null;
         }
 
+        function mergeMealsArrays(mealsA = [], mealsB = []) {
+            const merged = [];
+            const usedIndicesB = new Set();
+
+            function isSameMeal(m1, m2) {
+                if (!m1 || !m2) return false;
+                const time1 = m1.time || "";
+                const time2 = m2.time || "";
+                const c1 = Number(m1.c) || 0;
+                const c2 = Number(m2.c) || 0;
+                const p1 = Number(m1.p) || 0;
+                const p2 = Number(m2.p) || 0;
+                const f1 = Number(m1.f) || 0;
+                const f2 = Number(m2.f) || 0;
+                return time1 === time2 && c1 === c2 && p1 === p2 && f1 === f2;
+            }
+
+            mealsA.forEach(m1 => {
+                merged.push({ ...m1 });
+                for (let i = 0; i < mealsB.length; i++) {
+                    if (!usedIndicesB.has(i) && isSameMeal(m1, mealsB[i])) {
+                        usedIndicesB.add(i);
+                        break;
+                    }
+                }
+            });
+
+            let addedFromB = 0;
+            mealsB.forEach((m2, i) => {
+                if (!usedIndicesB.has(i)) {
+                    merged.push({ ...m2 });
+                    addedFromB++;
+                }
+            });
+
+            merged.sort((a, b) => (a.time || "00:00").localeCompare(b.time || "00:00"));
+
+            return { mergedMeals: merged, addedFromB };
+        }
+
+        function yhdistaVarmuuskopioData(localPayload, drivePayload) {
+            if (!drivePayload || typeof drivePayload !== 'object') {
+                return { mergedPayload: localPayload, localUpdated: false, driveUpdated: true };
+            }
+            if (!localPayload || typeof localPayload !== 'object') {
+                return { mergedPayload: drivePayload, localUpdated: true, driveUpdated: false };
+            }
+
+            const localDB = localPayload.historyDB || {};
+            const driveDB = drivePayload.historyDB || {};
+
+            const allDateKeys = new Set([...Object.keys(localDB), ...Object.keys(driveDB)]);
+
+            const mergedDB = {};
+            let localUpdated = false;
+            let driveUpdated = false;
+
+            allDateKeys.forEach(dateStr => {
+                const localDay = localDB[dateStr];
+                const driveDay = driveDB[dateStr];
+
+                if (localDay && !driveDay) {
+                    mergedDB[dateStr] = JSON.parse(JSON.stringify(localDay));
+                    driveUpdated = true;
+                } else if (!localDay && driveDay) {
+                    mergedDB[dateStr] = JSON.parse(JSON.stringify(driveDay));
+                    localUpdated = true;
+                } else {
+                    const mealsA = localDay.meals || [];
+                    const mealsB = driveDay.meals || [];
+
+                    const mergeAtoB = mergeMealsArrays(mealsA, mealsB);
+                    const mergeBtoA = mergeMealsArrays(mealsB, mealsA);
+
+                    if (mergeAtoB.addedFromB > 0) {
+                        localUpdated = true;
+                    }
+                    if (mergeBtoA.addedFromB > 0) {
+                        driveUpdated = true;
+                    }
+
+                    const finalMeals = mergeAtoB.mergedMeals;
+
+                    let totalC = 0, totalP = 0, totalF = 0;
+                    finalMeals.forEach(m => {
+                        totalC += Number(m.c) || 0;
+                        totalP += Number(m.p) || 0;
+                        totalF += Number(m.f) || 0;
+                    });
+
+                    const mergedCalc = { ...(driveDay.calculated || {}), ...(localDay.calculated || {}) };
+
+                    mergedDB[dateStr] = {
+                        macros: { carbs: totalC, protein: totalP, fat: totalF },
+                        meals: finalMeals,
+                        calculated: Object.keys(mergedCalc).length > 0 ? mergedCalc : null
+                    };
+                }
+            });
+
+            const localParams = localPayload.userParams || {};
+            const driveParams = drivePayload.userParams || {};
+            const mergedParams = { ...driveParams, ...localParams };
+
+            const mergedPayload = {
+                app: "metabolic_calculator_v20",
+                version: "1.0",
+                exportedAt: new Date().toISOString(),
+                lang: localPayload.lang || drivePayload.lang || 'fi',
+                userParams: mergedParams,
+                historyDB: mergedDB
+            };
+
+            return {
+                mergedPayload,
+                localUpdated,
+                driveUpdated
+            };
+        }
+
+        async function kirjoitaPayloadDriveen(payload, token, folderId, existing) {
+            const jsonStr = JSON.stringify(payload, null, 2);
+            if (existing) {
+                return fetch(`https://www.googleapis.com/upload/drive/v3/files/${existing.id}?uploadType=media`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: jsonStr
+                });
+            } else {
+                const metadata = {
+                    name: DRIVE_FILE_NAME,
+                    parents: [folderId],
+                    mimeType: 'application/json'
+                };
+                const boundary = '-------314159265358979323846';
+                const delimiter = "\r\n--" + boundary + "\r\n";
+                const close_delim = "\r\n--" + boundary + "--";
+                const multipartBody =
+                    delimiter +
+                    'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+                    JSON.stringify(metadata) +
+                    delimiter +
+                    'Content-Type: application/json\r\n\r\n' +
+                    jsonStr +
+                    close_delim;
+
+                return fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': `multipart/related; boundary=${boundary}`
+                    },
+                    body: multipartBody
+                });
+            }
+        }
+
         async function tallennaGoogleDriveen() {
             const lang = document.getElementById('langSelect')?.value || 'fi';
             try {
                 setDriveStatusUI('loading', lang === 'en' ? '🔄 Saving to Google Drive...' : '🔄 Tallennetaan Google Driveen...');
                 const token = await ensureAccessToken();
                 const folderId = await getOrCreateDriveFolder(token);
-                const payload = window.haeVarmuuskopioPayload ? window.haeVarmuuskopioPayload() : {};
                 const existing = await findDriveBackupFile(token, folderId);
-                const jsonStr = JSON.stringify(payload, null, 2);
 
-                let res;
+                const localPayload = window.haeVarmuuskopioPayload ? window.haeVarmuuskopioPayload() : {};
+                let payloadToSave = localPayload;
+
                 if (existing) {
-                    res = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${existing.id}?uploadType=media`, {
-                        method: 'PATCH',
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: jsonStr
-                    });
-                } else {
-                    const metadata = {
-                        name: DRIVE_FILE_NAME,
-                        parents: [folderId],
-                        mimeType: 'application/json'
-                    };
-                    const boundary = '-------314159265358979323846';
-                    const delimiter = "\r\n--" + boundary + "\r\n";
-                    const close_delim = "\r\n--" + boundary + "--";
-                    const multipartBody =
-                        delimiter +
-                        'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
-                        JSON.stringify(metadata) +
-                        delimiter +
-                        'Content-Type: application/json\r\n\r\n' +
-                        jsonStr +
-                        close_delim;
-
-                    res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': `multipart/related; boundary=${boundary}`
-                        },
-                        body: multipartBody
-                    });
+                    try {
+                        const fetchRes = await fetch(`https://www.googleapis.com/drive/v3/files/${existing.id}?alt=media`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (fetchRes.ok) {
+                            const driveData = await fetchRes.json();
+                            const { mergedPayload, localUpdated } = yhdistaVarmuuskopioData(localPayload, driveData);
+                            payloadToSave = mergedPayload;
+                            if (localUpdated && window.palautaVarmuuskopioPayload) {
+                                window.palautaVarmuuskopioPayload(mergedPayload);
+                            }
+                        }
+                    } catch (mergeErr) {
+                        console.warn('Drive read before save notice:', mergeErr);
+                    }
                 }
 
+                const res = await kirjoitaPayloadDriveen(payloadToSave, token, folderId, existing);
                 if (!res.ok) throw new Error(`Drive save status ${res.status}`);
+
                 const nowStr = new Date().toLocaleTimeString(lang === 'en' ? 'en-US' : 'fi-FI', { hour: '2-digit', minute: '2-digit' });
                 setDriveStatusUI('success', lang === 'en' ? `🟢 Synced to Google Drive (${nowStr})` : `🟢 Synkronoitu Google Driveen (${nowStr})`);
                 return true;
@@ -2216,14 +2361,20 @@
                 if (!res.ok) throw new Error(`Download error ${res.status}`);
                 const driveData = await res.json();
 
-                const success = window.palautaVarmuuskopioPayload ? window.palautaVarmuuskopioPayload(driveData) : false;
-                if (success) {
-                    const nowStr = new Date().toLocaleTimeString(lang === 'en' ? 'en-US' : 'fi-FI', { hour: '2-digit', minute: '2-digit' });
-                    setDriveStatusUI('success', lang === 'en' ? `🟢 Synced from Google Drive (${nowStr})` : `🟢 Ladattu Google Drivestä (${nowStr})`);
-                    alert(lang === 'en' ? 'Data restored successfully from Google Drive!' : 'Tiedot ladattu ja synkronoitu onnistuneesti Google Drivestä!');
-                } else {
-                    throw new Error(lang === 'en' ? 'Invalid Drive backup file' : 'Virheellinen Drive-varmuuskopiotiedosto');
+                const localPayload = window.haeVarmuuskopioPayload ? window.haeVarmuuskopioPayload() : {};
+                const { mergedPayload, localUpdated, driveUpdated } = yhdistaVarmuuskopioData(localPayload, driveData);
+
+                if (window.palautaVarmuuskopioPayload) {
+                    window.palautaVarmuuskopioPayload(mergedPayload);
                 }
+
+                if (driveUpdated) {
+                    await kirjoitaPayloadDriveen(mergedPayload, token, folderId, existing);
+                }
+
+                const nowStr = new Date().toLocaleTimeString(lang === 'en' ? 'en-US' : 'fi-FI', { hour: '2-digit', minute: '2-digit' });
+                setDriveStatusUI('success', lang === 'en' ? `🟢 Synced with Google Drive (${nowStr})` : `🟢 Synkronoitu Google Driven kanssa (${nowStr})`);
+                alert(lang === 'en' ? 'Data merged and synchronized successfully with Google Drive!' : 'Tiedot yhdistetty ja synkronoitu onnistuneesti Google Driven kanssa!');
             } catch (err) {
                 console.error('Drive fetch error:', err);
                 setDriveStatusUI('error', lang === 'en' ? '❌ Drive load failed: ' + err.message : '❌ Lataus Drivestä epäonnistui: ' + err.message);
@@ -2236,18 +2387,28 @@
                 const token = await ensureAccessToken();
                 const folderId = await getOrCreateDriveFolder(token);
                 const existing = await findDriveBackupFile(token, folderId);
+
+                const localPayload = window.haeVarmuuskopioPayload ? window.haeVarmuuskopioPayload() : {};
+
                 if (existing) {
                     const res = await fetch(`https://www.googleapis.com/drive/v3/files/${existing.id}?alt=media`, {
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
                     if (res.ok) {
                         const driveData = await res.json();
-                        if (window.palautaVarmuuskopioPayload) {
-                            window.palautaVarmuuskopioPayload(driveData);
+                        const { mergedPayload, localUpdated, driveUpdated } = yhdistaVarmuuskopioData(localPayload, driveData);
+
+                        if (localUpdated && window.palautaVarmuuskopioPayload) {
+                            window.palautaVarmuuskopioPayload(mergedPayload);
                         }
+
+                        if (driveUpdated) {
+                            await kirjoitaPayloadDriveen(mergedPayload, token, folderId, existing);
+                        }
+
                         const lang = document.getElementById('langSelect')?.value || 'fi';
                         const nowStr = new Date().toLocaleTimeString(lang === 'en' ? 'en-US' : 'fi-FI', { hour: '2-digit', minute: '2-digit' });
-                        setDriveStatusUI('success', lang === 'en' ? `🟢 Synced from Google Drive (${nowStr})` : `🟢 Ladattu Google Drivestä (${nowStr})`);
+                        setDriveStatusUI('success', lang === 'en' ? `🟢 Synced with Google Drive (${nowStr})` : `🟢 Synkronoitu Google Driven kanssa (${nowStr})`);
                     }
                 } else {
                     await tallennaGoogleDriveen();
