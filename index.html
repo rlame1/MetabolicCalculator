@@ -1821,6 +1821,60 @@
         const DRIVE_FILE_NAME = 'metabolic_calculator_backup.json';
         const DEFAULT_CLIENT_ID = '859528638907-30p83takq9j1a1k44urmd5oq9jbbuep8.apps.googleusercontent.com';
 
+        function saveDriveSession(token, userObj, expiresInSeconds = 3599) {
+            if (token) cachedAccessToken = token;
+            if (userObj) currentUser = userObj;
+            if (!currentUser) currentUser = { displayName: 'Google Drive User', email: '' };
+            const expiresAt = Date.now() + (expiresInSeconds * 1000);
+
+            try {
+                if (token) localStorage.setItem('metabolic_drive_token', token);
+                localStorage.setItem('metabolic_drive_token_expires', expiresAt.toString());
+                localStorage.setItem('metabolic_drive_user', JSON.stringify({
+                    displayName: currentUser.displayName || currentUser.email || 'Google Drive User',
+                    email: currentUser.email || '',
+                    photoURL: currentUser.photoURL || ''
+                }));
+                localStorage.setItem('metabolic_drive_logged_in', 'true');
+            } catch (e) {
+                console.warn('Storage save notice:', e);
+            }
+        }
+
+        function clearDriveSession() {
+            cachedAccessToken = null;
+            currentUser = null;
+            try {
+                localStorage.removeItem('metabolic_drive_token');
+                localStorage.removeItem('metabolic_drive_token_expires');
+                localStorage.removeItem('metabolic_drive_user');
+                localStorage.removeItem('metabolic_drive_logged_in');
+            } catch (e) {}
+        }
+
+        function loadSavedDriveSession() {
+            try {
+                const isLoggedIn = localStorage.getItem('metabolic_drive_logged_in') === 'true';
+                if (!isLoggedIn) return false;
+
+                const token = localStorage.getItem('metabolic_drive_token');
+                const expiresAt = parseInt(localStorage.getItem('metabolic_drive_token_expires') || '0', 10);
+                const savedUserStr = localStorage.getItem('metabolic_drive_user');
+                const savedUser = savedUserStr ? JSON.parse(savedUserStr) : { displayName: 'Google Drive User', email: '' };
+
+                currentUser = savedUser;
+                updateUIForUser(currentUser);
+
+                if (token && expiresAt > (Date.now() + 60000)) {
+                    cachedAccessToken = token;
+                    return true;
+                }
+            } catch (e) {
+                console.warn('Session load notice:', e);
+            }
+            return false;
+        }
+
         function setupGisOAuth(clientId) {
             const activeClientId = clientId || DEFAULT_CLIENT_ID;
             if (window.google && window.google.accounts && window.google.accounts.oauth2) {
@@ -1839,8 +1893,8 @@
                             return;
                         }
                         if (tokenResponse.access_token) {
-                            cachedAccessToken = tokenResponse.access_token;
-                            currentUser = { displayName: 'Google Drive User', email: '' };
+                            const expiresSec = tokenResponse.expires_in ? parseInt(tokenResponse.expires_in, 10) : 3599;
+                            saveDriveSession(tokenResponse.access_token, currentUser || { displayName: 'Google Drive User', email: '' }, expiresSec);
                             updateUIForUser(currentUser);
                             await synkkaaOnSignIn();
                         }
@@ -1900,6 +1954,24 @@
 
             setupGisOAuth(clientId);
 
+            // Restore saved session on page load
+            const hasValidToken = loadSavedDriveSession();
+            if (hasValidToken) {
+                synkkaaOnSignIn();
+            } else if (localStorage.getItem('metabolic_drive_logged_in') === 'true') {
+                // Was logged in previously, try background renewal
+                setTimeout(async () => {
+                    try {
+                        await ensureAccessToken();
+                        synkkaaOnSignIn();
+                    } catch(e) {
+                        console.warn('Silent token refresh on load notice:', e);
+                        const lang = document.getElementById('langSelect')?.value || 'fi';
+                        setDriveStatusUI('warning', lang === 'en' ? 'Connection expired. Click "Sync Now" to renew.' : 'Yhteys vanhentunut. Napsauta "Synkronoitoi nyt" uudistaaksesi.');
+                    }
+                }, 1000);
+            }
+
             // Show new tab button and Brave notice if in an iframe or if Brave is detected
             const isInIframe = window.self !== window.top;
             const bn = document.getElementById('braveNotice');
@@ -1914,10 +1986,8 @@
                 getRedirectResult(auth).then(async (result) => {
                     if (result) {
                         const credential = GoogleAuthProvider.credentialFromResult(result);
-                        if (credential && credential.accessToken) {
-                            cachedAccessToken = credential.accessToken;
-                        }
                         currentUser = result.user;
+                        saveDriveSession(credential?.accessToken, currentUser, 3599);
                         if (currentUser) {
                             updateUIForUser(currentUser);
                             await synkkaaOnSignIn();
@@ -1937,7 +2007,7 @@
                     // 1. Primary: GIS token client (google.accounts.oauth2.initTokenClient)
                     if (gisTokenClient) {
                         try {
-                            gisTokenClient.requestAccessToken({ prompt: 'consent' });
+                            gisTokenClient.requestAccessToken({ prompt: 'select_account' });
                             return;
                         } catch (gisErr) {
                             console.warn('GIS token request failed, trying fallback:', gisErr);
@@ -1949,10 +2019,8 @@
                         try {
                             const result = await signInWithPopup(auth, googleAuthProvider);
                             const credential = GoogleAuthProvider.credentialFromResult(result);
-                            if (credential && credential.accessToken) {
-                                cachedAccessToken = credential.accessToken;
-                            }
                             currentUser = result.user;
+                            saveDriveSession(credential?.accessToken, currentUser, 3599);
                             updateUIForUser(currentUser);
                             await synkkaaOnSignIn();
                         } catch (err) {
@@ -1979,8 +2047,9 @@
 
             if (auth) {
                 onAuthStateChanged(auth, async (user) => {
-                    currentUser = user;
                     if (user) {
+                        currentUser = user;
+                        saveDriveSession(cachedAccessToken, user, 3599);
                         updateUIForUser(user);
                         if (cachedAccessToken) {
                             synkkaaOnSignIn();
@@ -1988,8 +2057,8 @@
                             const lang = document.getElementById('langSelect')?.value || 'fi';
                             setDriveStatusUI('warning', lang === 'en' ? 'Click "Sync Now" to connect Drive' : 'Napsauta "Synkronoitoi nyt" yhdistääksesi Drive');
                         }
-                    } else {
-                        cachedAccessToken = null;
+                    } else if (!localStorage.getItem('metabolic_drive_logged_in')) {
+                        clearDriveSession();
                         updateUIForLoggedOut();
                     }
                 });
@@ -2091,22 +2160,54 @@
         }
 
         async function ensureAccessToken() {
-            if (cachedAccessToken) return cachedAccessToken;
+            const tokenExpires = parseInt(localStorage.getItem('metabolic_drive_token_expires') || '0', 10);
+            if (cachedAccessToken && tokenExpires > (Date.now() + 60000)) {
+                return cachedAccessToken;
+            }
 
-            // Try GIS token client first
+            // 1. Try GIS token client silent request first
+            if (gisTokenClient) {
+                try {
+                    const token = await new Promise((resolve, reject) => {
+                        const originalCallback = gisTokenClient.callback;
+                        gisTokenClient.callback = (res) => {
+                            if (originalCallback) originalCallback(res);
+                            if (res && res.access_token) {
+                                const expiresSec = res.expires_in ? parseInt(res.expires_in, 10) : 3599;
+                                saveDriveSession(res.access_token, currentUser, expiresSec);
+                                resolve(res.access_token);
+                            } else {
+                                reject(new Error(res?.error_description || res?.error || 'Silent token request failed.'));
+                            }
+                        };
+                        try {
+                            gisTokenClient.requestAccessToken({ prompt: '' });
+                        } catch (e) {
+                            reject(e);
+                        }
+                    });
+                    return token;
+                } catch (silentErr) {
+                    console.warn('Silent token refresh notice:', silentErr);
+                }
+            }
+
+            // 2. Fallback: prompt for account selection via GIS
             if (gisTokenClient) {
                 return new Promise((resolve, reject) => {
                     const originalCallback = gisTokenClient.callback;
                     gisTokenClient.callback = (res) => {
                         if (originalCallback) originalCallback(res);
                         if (res && res.access_token) {
+                            const expiresSec = res.expires_in ? parseInt(res.expires_in, 10) : 3599;
+                            saveDriveSession(res.access_token, currentUser, expiresSec);
                             resolve(res.access_token);
                         } else {
                             reject(new Error('Access token request was cancelled or blocked.'));
                         }
                     };
                     try {
-                        gisTokenClient.requestAccessToken({ prompt: '' });
+                        gisTokenClient.requestAccessToken({ prompt: 'select_account' });
                     } catch (e) {
                         reject(e);
                     }
@@ -2118,8 +2219,7 @@
                 const result = await signInWithPopup(auth, googleAuthProvider);
                 const credential = GoogleAuthProvider.credentialFromResult(result);
                 if (credential && credential.accessToken) {
-                    cachedAccessToken = credential.accessToken;
-                    currentUser = result.user;
+                    saveDriveSession(credential.accessToken, result.user, 3599);
                     updateUIForUser(currentUser);
                     return cachedAccessToken;
                 }
@@ -2470,13 +2570,22 @@
 
         async function kirjauduUlosGoogle() {
             const lang = document.getElementById('langSelect')?.value || 'fi';
-            if (auth) {
-                await signOut(auth);
-                cachedAccessToken = null;
-                currentUser = null;
-                updateUIForLoggedOut();
-                alert(lang === 'en' ? 'Logged out from Google.' : 'Kirjauduttu ulos Google-tililtä.');
+            
+            if (cachedAccessToken && window.google && window.google.accounts && window.google.accounts.oauth2) {
+                try {
+                    window.google.accounts.oauth2.revoke(cachedAccessToken, () => {});
+                } catch (e) {}
             }
+
+            if (auth) {
+                try {
+                    await signOut(auth);
+                } catch (e) {}
+            }
+
+            clearDriveSession();
+            updateUIForLoggedOut();
+            alert(lang === 'en' ? 'Logged out from Google Drive.' : 'Kirjauduttu ulos Google-tililtä.');
         }
 
         window.synkkaaGoogleDriveManuaalisesti = tallennaGoogleDriveen;
