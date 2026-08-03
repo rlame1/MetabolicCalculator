@@ -41,6 +41,43 @@
         .btn-backup { background: #003366; color: #00ffff; border: 2px solid #00ffff; font-weight: bold; padding: 10px; margin-top: 5px; font-size: 12px; flex: 1; min-width: 140px; cursor: pointer; text-transform: uppercase; font-family: inherit; }
         .btn-backup:hover { background: #00ffff; color: #000; }
         
+        .info-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            line-height: 16px;
+            border-radius: 50%;
+            background: #002200;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-left: 6px;
+            vertical-align: middle;
+            user-select: none;
+            transition: all 0.2s ease;
+        }
+        .info-icon:hover {
+            background: #00ff00;
+            color: #000;
+            box-shadow: 0 0 6px #00ff00;
+        }
+        .info-popup-panel {
+            display: none;
+            margin-top: 6px;
+            margin-bottom: 12px;
+            padding: 10px 12px;
+            background: #001a00;
+            border: 1px dashed #00ff00;
+            color: #00ff00;
+            font-size: 11px;
+            line-height: 1.4;
+            border-radius: 4px;
+        }
+        
         /* Official Google Sign-in Button Styles */
         .gsi-material-button {
           -moz-user-select: none;
@@ -355,8 +392,12 @@
             <h3 style="margin-top:20px;" data-i18n="mtorTitle">🛡️ PROTEIINI JA LIHASSUOJA (mTOR)</h3>
             <p><span class="result-title" data-i18n="mtorThresholdLabel">Kerta-aterian mTOR-kynnys:</span> <span id="resMtorG" class="alert-green" style="font-weight:bold;"></span></p>
             <p><span class="result-title" data-i18n="dailyProtLabel">Päivittäinen kokonaisproteiini:</span> <span id="resDailyProt" class="alert-green"></span></p>
+            <p><span class="result-title" data-i18n="protProtectionLabel">Lihasmassan suojaus:</span> <span id="resProtProtection" style="font-weight:bold;"></span> <span class="info-icon" onclick="toggleInfoPopup('protInfoBox')" title="Info">?</span></p>
+            <div id="protInfoBox" class="info-popup-panel" data-i18n="proteinInfoText">Riittävä proteiininsaanti ja maltillinen kalorivaje suojaavat lihaskudosta rasvanpudotuksen aikana.</div>
 
             <h3 style="margin-top:20px;" data-i18n="insulinTitle">🧬 PÄIVÄN INSULIINI- JA GLYKEEMINEN KUORMA</h3>
+            <p><span class="result-title" data-i18n="fatBurnWindowLabel">Rasvanpolttoikkuna (≤35 µIU/ml):</span> <span id="resFatBurnWindow" style="font-size:15px; font-weight:bold;"></span> <span class="info-icon" onclick="toggleInfoPopup('insulinInfoBox')" title="Info">?</span></p>
+            <div id="insulinInfoBox" class="info-popup-panel" data-i18n="insulinInfoText">Keho polttaa omia rasvavarastojaan tehokkaasti vasta, kun insuliini alittaa 35 µIU/mL. Varmista vähintään 12 tunnin matalan insuliinin ikkuna vuorokaudessa.</div>
             <p><span class="result-title" data-i18n="glLabel">Päivän Glykeeminen Kuorma (GL):</span> <span id="resGlycemicLoad" class="alert-yellow" style="font-weight:bold;"></span></p>
             <p><span class="result-title" data-i18n="iTotLabel">Päivän Kokonaisinsuliinituotanto (I-Tot):</span> <span id="resInsulinTotal"></span></p>
             <p><span class="result-title" data-i18n="bufferLabel">Ruoansulatuksen Puskurikerroin (D):</span> <span id="resInsulinBuffer"></span>x</p>
@@ -372,6 +413,7 @@
                         <span>🟢 <strong data-i18n="legendInsulin">Insuliinivaste (uIU/ml)</strong></span>
                         <span>🟡 <strong data-i18n="legendGL">Glykeeminen Kuorma (GL)</strong></span>
                         <span>🔴 <strong data-i18n="legendThreshold">-- Rasvanpolton kynnystaso (35 uIU/ml)</strong></span>
+                        <span>🟩 <strong data-i18n="legendFatBurnArea">Rasvanpolttoalue (≤35 uIU/ml)</strong></span>
                         <span>🔵 <strong data-i18n="legendNow">| Tämänhetkinen aika (NYT)</strong></span>
                     </div>
                 </div>
@@ -471,6 +513,14 @@
                 mtorTitle: "🛡️ PROTEIINI JA LIHASSUOJA (mTOR)",
                 mtorThresholdLabel: "Kerta-aterian mTOR-kynnys:",
                 dailyProtLabel: "Päivittäinen kokonaisproteiini:",
+                protProtectionLabel: "Lihasmassan suojaus:",
+                fatBurnWindowLabel: "Rasvanpolttoikkuna (≤35 µIU/ml):",
+                fatBurnWindowTargetMet: "Tavoite saavutettu (≥12 h)",
+                fatBurnWindowBelowTarget: "Alle tavoitteen (<12 h)",
+                protProtectedMsg: "Lihasmassa suojattu",
+                protIncreaseMsg: "Lisää proteiininsaantia",
+                insulinInfoText: "Keho polttaa omia rasvavarastojaan tehokkaasti vasta, kun insuliini alittaa 35 µIU/mL. Varmista vähintään 12 tunnin matalan insuliinin ikkuna vuorokaudessa.",
+                proteinInfoText: "Riittävä proteiininsaanti ja maltillinen kalorivaje suojaavat lihaskudosta rasvanpudotuksen aikana.",
                 insulinTitle: "🧬 PÄIVÄN INSULIINI- JA GLYKEEMINEN KUORMA",
                 glLabel: "Päivän Glykeeminen Kuorma (GL):",
                 iTotLabel: "Päivän Kokonaisinsuliinituotanto (I-Tot):",
@@ -481,6 +531,7 @@
                 legendInsulin: "Insuliinivaste (uIU/ml)",
                 legendGL: "Glykeeminen Kuorma (GL)",
                 legendThreshold: "-- Rasvanpolton kynnystaso (35 uIU/ml)",
+                legendFatBurnArea: "Rasvanpolttoalue (≤35 uIU/ml)",
                 legendNow: "| Tämänhetkinen aika (NYT)",
                 phAge: "👉 SYÖTÄ TIETO (IKÄ)",
                 phHeight: "👉 SYÖTÄ TIETO (PITUUS CM)",
@@ -589,6 +640,14 @@
                 mtorTitle: "🛡️ PROTEIN & MUSCLE PROTECTION (mTOR)",
                 mtorThresholdLabel: "Single meal mTOR threshold:",
                 dailyProtLabel: "Daily total protein:",
+                protProtectionLabel: "Muscle mass protection:",
+                fatBurnWindowLabel: "Fat burning window (≤35 µIU/ml):",
+                fatBurnWindowTargetMet: "Target achieved (≥12 h)",
+                fatBurnWindowBelowTarget: "Below target (<12 h)",
+                protProtectedMsg: "Muscle mass protected",
+                protIncreaseMsg: "Increase protein intake",
+                insulinInfoText: "The body burns its own fat stores efficiently only when insulin drops below 35 µIU/mL. Ensure a low-insulin window of at least 12 hours per day.",
+                proteinInfoText: "Sufficient protein intake and a moderate calorie deficit protect muscle tissue during fat loss.",
                 insulinTitle: "🧬 DAILY INSULIN & GLYCEMIC LOAD",
                 glLabel: "Daily Glycemic Load (GL):",
                 iTotLabel: "Daily Total Insulin Production (I-Tot):",
@@ -599,6 +658,7 @@
                 legendInsulin: "Insulin Response (uIU/ml)",
                 legendGL: "Glycemic Load (GL)",
                 legendThreshold: "-- Fat burning threshold (35 uIU/ml)",
+                legendFatBurnArea: "Fat burning zone (≤35 uIU/ml)",
                 legendNow: "| Current time (NOW)",
                 phAge: "👉 ENTER DATA (AGE)",
                 phHeight: "👉 ENTER DATA (HEIGHT CM)",
@@ -1757,7 +1817,7 @@
             if (window.google && window.google.accounts && window.google.accounts.oauth2) {
                 gisTokenClient = window.google.accounts.oauth2.initTokenClient({
                     client_id: activeClientId,
-                    scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email',
+                    scope: 'https://www.googleapis.com/auth/drive.file',
                     callback: async (tokenResponse) => {
                         if (tokenResponse.error) {
                             console.warn('GIS Token error:', tokenResponse);
@@ -1771,21 +1831,7 @@
                         }
                         if (tokenResponse.access_token) {
                             cachedAccessToken = tokenResponse.access_token;
-                            try {
-                                const uRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-                                    headers: { 'Authorization': `Bearer ${cachedAccessToken}` }
-                                });
-                                if (uRes.ok) {
-                                    const uInfo = await uRes.json();
-                                    currentUser = {
-                                        displayName: uInfo.name || uInfo.email || 'Google User',
-                                        email: uInfo.email || '',
-                                        photoURL: uInfo.picture || ''
-                                    };
-                                }
-                            } catch (e) {
-                                currentUser = { displayName: 'Google User', email: '' };
-                            }
+                            currentUser = { displayName: 'Google Drive User', email: '' };
                             updateUIForUser(currentUser);
                             await synkkaaOnSignIn();
                         }
