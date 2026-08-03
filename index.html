@@ -2011,12 +2011,16 @@
             }
         }
 
+        let lastDriveSyncTime = null;
+        let isSyncingToDrive = false;
+
         function updateUIForLoggedOut() {
             const loggedOutUI = document.getElementById('driveLoggedOutUI');
             const loggedInUI = document.getElementById('driveLoggedInUI');
             if (loggedOutUI) loggedOutUI.style.display = 'block';
             if (loggedInUI) loggedInUI.style.display = 'none';
             
+            lastDriveSyncTime = null;
             const lang = document.getElementById('langSelect')?.value || 'fi';
             const headerText = document.getElementById('headerDriveStatusText');
             const headerBadge = document.getElementById('headerDriveBadge');
@@ -2024,6 +2028,7 @@
             if (headerBadge) {
                 headerBadge.style.borderColor = '#333';
                 headerBadge.style.color = '#888';
+                headerBadge.title = '';
             }
         }
 
@@ -2031,36 +2036,49 @@
             const statusEl = document.getElementById('driveSyncStatus');
             const headerText = document.getElementById('headerDriveStatusText');
             const headerBadge = document.getElementById('headerDriveBadge');
+            const lang = document.getElementById('langSelect')?.value || 'fi';
             
             if (statusEl) statusEl.textContent = message;
             
             if (type === 'success') {
+                lastDriveSyncTime = new Date();
+                const nowStr = lastDriveSyncTime.toLocaleTimeString(lang === 'en' ? 'en-US' : 'fi-FI', { hour: '2-digit', minute: '2-digit' });
                 if (statusEl) statusEl.style.color = '#00ff00';
-                if (headerText) headerText.textContent = '🟢 Synkronoitu';
+                if (headerText) headerText.textContent = lang === 'en' ? `🟢 Synced (${nowStr})` : `🟢 Synkronoitu (${nowStr})`;
                 if (headerBadge) {
                     headerBadge.style.borderColor = '#00ff00';
                     headerBadge.style.color = '#00ff00';
+                    headerBadge.title = lang === 'en' ? `Google Drive synced at ${nowStr}` : `Google Drive synkronoitu klo ${nowStr}`;
                 }
             } else if (type === 'loading') {
                 if (statusEl) statusEl.style.color = '#ffff00';
-                if (headerText) headerText.textContent = '🔄 Synkronoidaan...';
+                if (headerText) {
+                    if (lastDriveSyncTime) {
+                        const nowStr = lastDriveSyncTime.toLocaleTimeString(lang === 'en' ? 'en-US' : 'fi-FI', { hour: '2-digit', minute: '2-digit' });
+                        headerText.textContent = `🔄 (${nowStr})`;
+                    } else {
+                        headerText.textContent = lang === 'en' ? '🔄 Syncing...' : '🔄 Synkronoidaan...';
+                    }
+                }
                 if (headerBadge) {
                     headerBadge.style.borderColor = '#ffff00';
                     headerBadge.style.color = '#ffff00';
                 }
             } else if (type === 'warning') {
                 if (statusEl) statusEl.style.color = '#ffaa00';
-                if (headerText) headerText.textContent = '⚠️ Yhdistä Drive';
+                if (headerText) headerText.textContent = lang === 'en' ? '⚠️ Connect Drive' : '⚠️ Yhdistä Drive';
                 if (headerBadge) {
                     headerBadge.style.borderColor = '#ffaa00';
                     headerBadge.style.color = '#ffaa00';
+                    headerBadge.title = '';
                 }
             } else {
                 if (statusEl) statusEl.style.color = '#ff4444';
-                if (headerText) headerText.textContent = '❌ Virhe';
+                if (headerText) headerText.textContent = lang === 'en' ? '❌ Error' : '❌ Virhe';
                 if (headerBadge) {
                     headerBadge.style.borderColor = '#ff4444';
                     headerBadge.style.color = '#ff4444';
+                    headerBadge.title = '';
                 }
             }
         }
@@ -2299,6 +2317,8 @@
         }
 
         async function tallennaGoogleDriveen() {
+            if (isSyncingToDrive) return false;
+            isSyncingToDrive = true;
             const lang = document.getElementById('langSelect')?.value || 'fi';
             try {
                 setDriveStatusUI('loading', lang === 'en' ? '🔄 Saving to Google Drive...' : '🔄 Tallennetaan Google Driveen...');
@@ -2337,10 +2357,14 @@
                 console.error('Drive save error:', err);
                 setDriveStatusUI('error', lang === 'en' ? '❌ Drive save failed: ' + err.message : '❌ Tallennus Driveen epäonnistui: ' + err.message);
                 return false;
+            } finally {
+                isSyncingToDrive = false;
             }
         }
 
         async function lataaGoogleDrivesta() {
+            if (isSyncingToDrive) return;
+            isSyncingToDrive = true;
             const lang = document.getElementById('langSelect')?.value || 'fi';
             try {
                 setDriveStatusUI('loading', lang === 'en' ? '🔄 Fetching from Google Drive...' : '🔄 Haetaan Google Drivestä...');
@@ -2350,6 +2374,7 @@
 
                 if (!existing) {
                     alert(lang === 'en' ? 'No backup file found in Google Drive! Creating a new backup...' : 'Google Drivestä ei löytynyt varmuuskopiotiedostoa! Luodaan uusi varmuuskopio...');
+                    isSyncingToDrive = false;
                     await tallennaGoogleDriveen();
                     return;
                 }
@@ -2379,10 +2404,14 @@
                 console.error('Drive fetch error:', err);
                 setDriveStatusUI('error', lang === 'en' ? '❌ Drive load failed: ' + err.message : '❌ Lataus Drivestä epäonnistui: ' + err.message);
                 alert(lang === 'en' ? 'Failed to fetch from Google Drive: ' + err.message : 'Virhe ladattaessa Drivestä: ' + err.message);
+            } finally {
+                isSyncingToDrive = false;
             }
         }
 
         async function synkkaaOnSignIn() {
+            if (isSyncingToDrive) return;
+            isSyncingToDrive = true;
             try {
                 const token = await ensureAccessToken();
                 const folderId = await getOrCreateDriveFolder(token);
@@ -2411,17 +2440,23 @@
                         setDriveStatusUI('success', lang === 'en' ? `🟢 Synced with Google Drive (${nowStr})` : `🟢 Synkronoitu Google Driven kanssa (${nowStr})`);
                     }
                 } else {
+                    isSyncingToDrive = false;
                     await tallennaGoogleDriveen();
+                    return;
                 }
             } catch (e) {
                 console.warn('Initial sync error:', e);
+            } finally {
+                isSyncingToDrive = false;
             }
         }
 
         function debouncedAutoSyncToDrive() {
             if (!currentUser && !cachedAccessToken) return;
+            if (isSyncingToDrive) return;
             if (driveFileSyncTimeout) clearTimeout(driveFileSyncTimeout);
             driveFileSyncTimeout = setTimeout(() => {
+                if (isSyncingToDrive) return;
                 tallennaGoogleDriveen().catch(err => console.warn('Auto sync error:', err));
             }, 2000);
         }
