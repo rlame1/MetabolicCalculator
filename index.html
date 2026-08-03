@@ -1807,11 +1807,6 @@
     </script>
 
     <script type="module">
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-        import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-
-        let auth = null;
-        let googleAuthProvider = null;
         let gisTokenClient = null;
         let cachedAccessToken = null;
         let currentUser = null;
@@ -1934,24 +1929,6 @@
 
         async function initGoogleDriveSync() {
             let clientId = DEFAULT_CLIENT_ID;
-            try {
-                const res = await fetch('/firebase-applet-config.json');
-                if (res.ok) {
-                    const config = await res.json();
-                    if (config && config.apiKey) {
-                        const app = initializeApp(config);
-                        auth = getAuth(app);
-                        googleAuthProvider = new GoogleAuthProvider();
-                        googleAuthProvider.addScope('https://www.googleapis.com/auth/drive.file');
-                    }
-                    if (config && config.oAuthClientId) {
-                        clientId = config.oAuthClientId;
-                    }
-                }
-            } catch (e) {
-                console.warn('Config fetch notice:', e);
-            }
-
             setupGisOAuth(clientId);
 
             // Restore saved session on page load
@@ -1982,84 +1959,24 @@
                 if (tb) tb.style.display = 'block';
             }
 
-            if (auth) {
-                getRedirectResult(auth).then(async (result) => {
-                    if (result) {
-                        const credential = GoogleAuthProvider.credentialFromResult(result);
-                        currentUser = result.user;
-                        saveDriveSession(credential?.accessToken, currentUser, 3599);
-                        if (currentUser) {
-                            updateUIForUser(currentUser);
-                            await synkkaaOnSignIn();
-                        }
-                    }
-                }).catch((err) => {
-                    console.warn('Redirect sign-in error:', err);
-                });
-            }
-
             const signBtn = document.getElementById('googleSignInBtn');
             if (signBtn) {
                 signBtn.addEventListener('click', async () => {
                     const lang = document.getElementById('langSelect')?.value || 'fi';
                     setDriveStatusUI('loading', lang === 'en' ? 'Signing in to Google...' : 'Kirjaudutaan Google-tilille...');
 
-                    // 1. Primary: GIS token client (google.accounts.oauth2.initTokenClient)
                     if (gisTokenClient) {
                         try {
                             gisTokenClient.requestAccessToken({ prompt: 'select_account' });
                             return;
                         } catch (gisErr) {
-                            console.warn('GIS token request failed, trying fallback:', gisErr);
+                            console.warn('GIS token request failed:', gisErr);
                         }
                     }
 
-                    // 2. Fallback: Firebase popup
-                    if (auth) {
-                        try {
-                            const result = await signInWithPopup(auth, googleAuthProvider);
-                            const credential = GoogleAuthProvider.credentialFromResult(result);
-                            currentUser = result.user;
-                            saveDriveSession(credential?.accessToken, currentUser, 3599);
-                            updateUIForUser(currentUser);
-                            await synkkaaOnSignIn();
-                        } catch (err) {
-                            console.warn('Google Sign-in popup failed:', err);
-                            if (bn) bn.style.display = 'block';
-                            if (tb) tb.style.display = 'block';
-
-                            if (window.self !== window.top) {
-                                setDriveStatusUI('warning', lang === 'en' ? 'Sign-in requires a top-level window. Opening new tab...' : 'Kirjautuminen vaatii pääikkunan. Avataan uusi välilehti...');
-                                window.open(window.location.href, '_blank');
-                                return;
-                            }
-
-                            try {
-                                await signInWithRedirect(auth, googleAuthProvider);
-                            } catch (redirectErr) {
-                                console.error('Redirect sign-in failed:', redirectErr);
-                                setDriveStatusUI('error', (lang === 'en' ? 'Sign-in failed: ' : 'Kirjautuminen epäonnistui: ') + err.message);
-                            }
-                        }
-                    }
-                });
-            }
-
-            if (auth) {
-                onAuthStateChanged(auth, async (user) => {
-                    if (user) {
-                        currentUser = user;
-                        saveDriveSession(cachedAccessToken, user, 3599);
-                        updateUIForUser(user);
-                        if (cachedAccessToken) {
-                            synkkaaOnSignIn();
-                        } else {
-                            const lang = document.getElementById('langSelect')?.value || 'fi';
-                            setDriveStatusUI('warning', lang === 'en' ? 'Click "Sync Now" to connect Drive' : 'Napsauta "Synkronoitoi nyt" yhdistääksesi Drive');
-                        }
-                    } else if (!localStorage.getItem('metabolic_drive_logged_in')) {
-                        clearDriveSession();
-                        updateUIForLoggedOut();
+                    if (window.self !== window.top) {
+                        setDriveStatusUI('warning', lang === 'en' ? 'Sign-in requires a top-level window. Opening new tab...' : 'Kirjautuminen vaatii pääikkunan. Avataan uusi välilehti...');
+                        window.open(window.location.href, '_blank');
                     }
                 });
             }
@@ -2214,30 +2131,7 @@
                 });
             }
 
-            if (!auth) throw new Error('Auth not initialized');
-            try {
-                const result = await signInWithPopup(auth, googleAuthProvider);
-                const credential = GoogleAuthProvider.credentialFromResult(result);
-                if (credential && credential.accessToken) {
-                    saveDriveSession(credential.accessToken, result.user, 3599);
-                    updateUIForUser(currentUser);
-                    return cachedAccessToken;
-                }
-            } catch (err) {
-                console.warn('Popup blocked in ensureAccessToken:', err);
-                const bn = document.getElementById('braveNotice');
-                const tb = document.getElementById('openInNewTabBtn');
-                if (bn) bn.style.display = 'block';
-                if (tb) tb.style.display = 'block';
-
-                if (window.self !== window.top) {
-                    window.open(window.location.href, '_blank');
-                    throw new Error('Opened in new tab for authentication.');
-                }
-                await signInWithRedirect(auth, googleAuthProvider);
-                throw new Error(document.getElementById('langSelect')?.value === 'en' ? 'Redirecting to Google Sign-in...' : 'Siirrytään Google-kirjautumiseen...');
-            }
-            throw new Error('Could not obtain OAuth access token');
+            throw new Error('Google Identity Services client not initialized');
         }
 
         async function findDriveBackupFile(token, folderId) {
@@ -2574,12 +2468,6 @@
             if (cachedAccessToken && window.google && window.google.accounts && window.google.accounts.oauth2) {
                 try {
                     window.google.accounts.oauth2.revoke(cachedAccessToken, () => {});
-                } catch (e) {}
-            }
-
-            if (auth) {
-                try {
-                    await signOut(auth);
                 } catch (e) {}
             }
 
