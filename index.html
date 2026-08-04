@@ -1701,19 +1701,32 @@
         }
 
         function haeVarmuuskopioPayload() {
-            tallennaKayttajaParametrit(false);
+            if (!isDemoMode) {
+                tallennaKayttajaParametrit(false);
+            }
+            const realHistoryDB = isDemoMode 
+                ? (JSON.parse(localStorage.getItem('metabolic_v20_historyDB')) || {})
+                : historyDB;
+            const realUserParams = isDemoMode
+                ? (JSON.parse(localStorage.getItem('metabolic_v20_userParams')) || {})
+                : JSON.parse(localStorage.getItem('metabolic_v20_userParams') || '{}');
+
             return {
                 app: "metabolic_calculator_v20",
                 version: "1.0",
                 exportedAt: localStorage.getItem('metabolic_v20_lastUpdate') || new Date().toISOString(),
                 lang: localStorage.getItem('metabolic_v20_lang') || 'fi',
-                userParams: JSON.parse(localStorage.getItem('metabolic_v20_userParams') || '{}'),
-                historyDB: historyDB
+                userParams: realUserParams,
+                historyDB: realHistoryDB
             };
         }
 
         function palautaVarmuuskopioPayload(imported) {
             if (!imported || (typeof imported !== 'object')) return false;
+
+            if (isDemoMode) {
+                toggleDemoMode();
+            }
 
             let hasValidData = false;
 
@@ -2318,6 +2331,12 @@
         }
 
         async function tallennaGoogleDriveen() {
+            if (isDemoMode) {
+                console.warn('Google Drive sync blocked: Demo mode is active.');
+                const lang = document.getElementById('langSelect')?.value || 'fi';
+                setDriveStatusUI('warning', lang === 'en' ? '⚠️ Demo mode active - Drive save blocked' : '⚠️ Esittelytila päällä - tallennus suljettu');
+                return false;
+            }
             if (isSyncingToDrive) return false;
             isSyncingToDrive = true;
             const lang = document.getElementById('langSelect')?.value || 'fi';
@@ -2364,6 +2383,9 @@
         }
 
         async function lataaGoogleDrivesta() {
+            if (isDemoMode) {
+                toggleDemoMode();
+            }
             if (isSyncingToDrive) return;
             isSyncingToDrive = true;
             const lang = document.getElementById('langSelect')?.value || 'fi';
@@ -2411,6 +2433,10 @@
         }
 
         async function synkkaaOnSignIn() {
+            if (isDemoMode) {
+                console.warn('Google Drive initial sync skipped: Demo mode is active.');
+                return;
+            }
             if (isSyncingToDrive) return;
             isSyncingToDrive = true;
             try {
@@ -2453,10 +2479,12 @@
         }
 
         function debouncedAutoSyncToDrive() {
+            if (isDemoMode) return;
             if (!currentUser && !cachedAccessToken) return;
             if (isSyncingToDrive) return;
             if (driveFileSyncTimeout) clearTimeout(driveFileSyncTimeout);
             driveFileSyncTimeout = setTimeout(() => {
+                if (isDemoMode) return;
                 if (isSyncingToDrive) return;
                 tallennaGoogleDriveen().catch(err => console.warn('Auto sync error:', err));
             }, 2000);
