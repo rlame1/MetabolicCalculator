@@ -326,6 +326,9 @@
                 <input type="number" id="hip" inputmode="decimal" step="any" data-i18n-placeholder="phHip" placeholder="👉 SYÖTÄ TIETO (LANTIO CM)" oninput="tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();">
             </div>
 
+            <label data-i18n="bodyFatLabel">Oma rasvaprosentti (%) [Vapaaehtoinen / Syötä jos tiedossa]:</label> 
+            <input type="number" id="bodyFat" inputmode="decimal" step="any" data-i18n-placeholder="phBodyFat" placeholder="👉 SYÖTÄ RASVAPROSENTTI % (JOS TIEDOSSA)" oninput="tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();">
+
             <label data-i18n="activityLabel">Aktiivisuustason kerroin:</label>
             <select id="activityLevel" onchange="tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();">
                 <option value="1.2">Passiivinen (istumatyö, vähän/ei liikuntaa) [1.2]</option>
@@ -488,6 +491,7 @@
                 waistLabel: "Vyötärön ympärys (cm) [Vapaaehtoinen]:",
                 neckLabel: "Niskan ympärys (cm) [Vapaaehtoinen]:",
                 hipLabel: "Lantion ympärys (cm) [Naisilla vapaaehtoinen]:",
+                bodyFatLabel: "Oma rasvaprosentti (%) [Vapaaehtoinen / Syötä jos tiedossa]:",
                 activityLabel: "Aktiivisuustason kerroin:",
                 act1: "Passiivinen (istumatyö, vähän/ei liikuntaa) [1.2]",
                 act2: "Perusaktiivinen (vakio oletus) [1.25]",
@@ -558,6 +562,7 @@
                 phWaist: "👉 SYÖTÄ TIETO (VYÖTÄRÖ CM)",
                 phNeck: "👉 SYÖTÄ TIETO (NISKA CM)",
                 phHip: "👉 SYÖTÄ TIETO (LANTIO CM)",
+                phBodyFat: "👉 SYÖTÄ RASVAPROSENTTI % (JOS TIEDOSSA)",
                 disclaimerText: "Vastuuvapauslauseke: Tämä työkalu on tarkoitettu vain koulutus- ja opetustarkoituksiin eikä se korvaa ammatillista lääketieteellistä neuvontaa, diagnoosia tai hoitoa. Kehittäjä ei ota mitään vastuuta tai korvausvelvollisuutta tämän työkalun käytöstä tai sen laskelmista.",
                 copyrightText: "© 2026 HVA2026. Julkaistu GNU General Public License v3.0 (GPLv3) -lisenssillä.",
                 demoSelectLabel: "VALITSE DEMO-PÄIVÄ (30 PÄIVÄN HISTORIA):",
@@ -622,6 +627,7 @@
                 waistLabel: "Waist circumference (cm) [Optional]:",
                 neckLabel: "Neck circumference (cm) [Optional]:",
                 hipLabel: "Hip circumference (cm) [Female optional]:",
+                bodyFatLabel: "Own body fat percentage (%) [Optional / Enter if known]:",
                 activityLabel: "Activity level multiplier:",
                 act1: "Sedentary (desk job, little/no exercise) [1.2]",
                 act2: "Basal active (default) [1.25]",
@@ -692,6 +698,7 @@
                 phWaist: "👉 ENTER DATA (WAIST CM)",
                 phNeck: "👉 ENTER DATA (NECK CM)",
                 phHip: "👉 ENTER DATA (HIP CM)",
+                phBodyFat: "👉 ENTER BODY FAT % (IF KNOWN)",
                 phCustomDelta: "👉 ENTER DEFICIT (-) OR SURPLUS (+)",
                 phCarbs: "👉 ENTER DATA (CARBS G)",
                 phProtein: "👉 ENTER DATA (PROTEIN G)",
@@ -1133,14 +1140,18 @@
             const waist = parseFloat(document.getElementById('waist').value) || 0;
             const neck = parseFloat(document.getElementById('neck').value) || 0;
             const hip = parseFloat(document.getElementById('hip').value) || 0;
+            const userBodyFat = parseFloat(document.getElementById('bodyFat')?.value) || 0;
             const age = parseInt(document.getElementById('age').value) || 45;
             const actMult = parseFloat(document.getElementById('activityLevel').value) || 1.25;
 
-            let rPct = (gender === "male") ? 32.0 : 42.0;
-            if ((gender === "male" && h > 0 && waist > neck && neck > 0) || (gender === "female" && h > 0 && (waist + hip) > neck && neck > 0 && hip > 0)) {
-                const pT = h / 2.54, nT = neck / 2.54, vT = waist / 2.54;
-                rPct = (gender === "male") ? (86.010 * log10(vT - nT)) - (70.041 * log10(pT)) + 36.76 : (163.205 * log10(vT + (hip/2.54) - nT)) - (97.684 * log10(pT)) - 78.387;
-                if (rPct < 3) rPct = 3;
+            let rPct = userBodyFat;
+            if (rPct <= 0) {
+                rPct = (gender === "male") ? 32.0 : 42.0;
+                if ((gender === "male" && h > 0 && waist > neck && neck > 0) || (gender === "female" && h > 0 && (waist + hip) > neck && neck > 0 && hip > 0)) {
+                    const pT = h / 2.54, nT = neck / 2.54, vT = waist / 2.54;
+                    rPct = (gender === "male") ? (86.010 * log10(vT - nT)) - (70.041 * log10(pT)) + 36.76 : (163.205 * log10(vT + (hip/2.54) - nT)) - (97.684 * log10(pT)) - 78.387;
+                    if (rPct < 3) rPct = 3;
+                }
             }
 
             Object.keys(historyDB).forEach(dKey => {
@@ -1200,6 +1211,7 @@
                 waist: document.getElementById('waist').value,
                 neck: document.getElementById('neck').value,
                 hip: document.getElementById('hip').value,
+                bodyFat: document.getElementById('bodyFat')?.value || '',
                 activityLevel: document.getElementById('activityLevel').value,
                 strategyGoal: document.getElementById('strategyGoal').value,
                 customCalorieDelta: document.getElementById('customCalorieDelta').value
@@ -1213,7 +1225,7 @@
             const saved = localStorage.getItem('metabolic_v20_userParams');
             if (saved) {
                 const p = JSON.parse(saved);
-                ['gender','age','height','weight','waist','neck','hip','activityLevel','strategyGoal','customCalorieDelta'].forEach(k => {
+                ['gender','age','height','weight','waist','neck','hip','bodyFat','activityLevel','strategyGoal','customCalorieDelta'].forEach(k => {
                     if (p[k] !== undefined && document.getElementById(k)) document.getElementById(k).value = p[k];
                 });
             }
@@ -1357,11 +1369,15 @@
                         const gender = document.getElementById('gender').value;
                         const actMult = parseFloat(document.getElementById('activityLevel').value) || 1.25;
 
-                        let rPct = (gender === "male") ? 32.0 : 42.0;
-                        if ((gender === "male" && h > 0 && waist > neck && neck > 0) || (gender === "female" && h > 0 && (waist + hip) > neck && neck > 0 && hip > 0)) {
-                            const pT = h / 2.54, nT = neck / 2.54, vT = waist / 2.54;
-                            rPct = (gender === "male") ? (86.010 * log10(vT - nT)) - (70.041 * log10(pT)) + 36.76 : (163.205 * log10(vT + (hip/2.54) - nT)) - (97.684 * log10(pT)) - 78.387;
-                            if (rPct < 3) rPct = 3;
+                        const userBodyFat = parseFloat(document.getElementById('bodyFat')?.value) || 0;
+                        let rPct = userBodyFat;
+                        if (rPct <= 0) {
+                            rPct = (gender === "male") ? 32.0 : 42.0;
+                            if ((gender === "male" && h > 0 && waist > neck && neck > 0) || (gender === "female" && h > 0 && (waist + hip) > neck && neck > 0 && hip > 0)) {
+                                const pT = h / 2.54, nT = neck / 2.54, vT = waist / 2.54;
+                                rPct = (gender === "male") ? (86.010 * log10(vT - nT)) - (70.041 * log10(pT)) + 36.76 : (163.205 * log10(vT + (hip/2.54) - nT)) - (97.684 * log10(pT)) - 78.387;
+                                if (rPct < 3) rPct = 3;
+                            }
                         }
                         lbm = w - (w * (rPct / 100)); 
                         dayTdee = (370 + (21.6 * lbm)) * actMult;
@@ -1476,11 +1492,15 @@
                 if (window.triggerAutoSyncToDrive) window.triggerAutoSyncToDrive();
             }
 
-            let rPct = (gender === "male") ? 32.0 : 42.0;
-            if ((gender === "male" && h > 0 && waist > neck && neck > 0) || (gender === "female" && h > 0 && (waist + hip) > neck && neck > 0 && hip > 0)) {
-                const pT = h / 2.54, nT = neck / 2.54, vT = waist / 2.54;
-                rPct = (gender === "male") ? (86.010 * log10(vT - nT)) - (70.041 * log10(pT)) + 36.76 : (163.205 * log10(vT + (hip/2.54) - nT)) - (97.684 * log10(pT)) - 78.387;
-                if (rPct < 3) rPct = 3;
+            const userBodyFat = parseFloat(document.getElementById('bodyFat')?.value) || 0;
+            let rPct = userBodyFat;
+            if (rPct <= 0) {
+                rPct = (gender === "male") ? 32.0 : 42.0;
+                if ((gender === "male" && h > 0 && waist > neck && neck > 0) || (gender === "female" && h > 0 && (waist + hip) > neck && neck > 0 && hip > 0)) {
+                    const pT = h / 2.54, nT = neck / 2.54, vT = waist / 2.54;
+                    rPct = (gender === "male") ? (86.010 * log10(vT - nT)) - (70.041 * log10(pT)) + 36.76 : (163.205 * log10(vT + (hip/2.54) - nT)) - (97.684 * log10(pT)) - 78.387;
+                    if (rPct < 3) rPct = 3;
+                }
             }
 
             const actMult = parseFloat(document.getElementById('activityLevel').value) || 1.25;
