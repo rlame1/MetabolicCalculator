@@ -293,6 +293,7 @@
             <p><span id="cumDeficitTitle" class="result-title" data-i18n="cumDeficit">Kertynyt kalorisaldo:</span> <span id="cumDeficitTotal" style="font-weight:bold;">0</span> kcal (<span id="cumFatBurnedKg">0.00</span> kg / <span id="cumFatBurnedLiters">0.00</span> litraa rasvaa)</p>
             <p style="font-size: 11px; color: #888; margin-top: -6px; margin-bottom: 10px;" data-i18n="cumSaldoExpl">(Plussalla [+] = Syöty yli kulutuksen, painoa tullut lisää | Negatiivinen [-] = Syöty alle kulutuksen, laihduttu)</p>
             <p><span class="result-title" data-i18n="cumMtor">Lihassuoja (mTOR) aktivoitu:</span> <span id="cumMtorDays" class="alert-yellow">0</span> päiviä</p>
+            <p><span class="result-title" data-i18n="cumAutophagy">Aktiivinen autofagia (≥14 h paasto):</span> <span id="cumAutophagyDays" class="alert-green">0</span> päiviä</p>
         </div>
     </details>
 
@@ -398,6 +399,12 @@
             <p><span class="result-title" data-i18n="dailyProtLabel">Päivittäinen kokonaisproteiini:</span> <span id="resDailyProt" class="alert-green"></span></p>
             <p><span class="result-title" data-i18n="protProtectionLabel">Lihasmassan suojaus:</span> <span id="resProtProtection" style="font-weight:bold;"></span> <span class="info-icon" onclick="toggleInfoPopup('protInfoBox')" title="Info">?</span></p>
             <div id="protInfoBox" class="info-popup-panel" data-i18n="proteinInfoText">Riittävä proteiininsaanti ja maltillinen kalorivaje suojaavat lihaskudosta rasvanpudotuksen aikana.</div>
+
+            <h3 style="margin-top:20px;" data-i18n="fastingTitle">🛡️ PAASTOIKKUNA JA AUTOFAGIAN STATUS</h3>
+            <p><span class="result-title" data-i18n="eatingWindowLabel">Syömisikkunan kesto (tuntia):</span> <span id="resEatingWindow" style="font-weight:bold;"></span></p>
+            <p><span class="result-title" data-i18n="fastingWindowLabel">Syömätön paastoikkuna (tuntia):</span> <span id="resFastingWindow" class="alert-green" style="font-weight:bold;"></span></p>
+            <p><span class="result-title" data-i18n="autophagyStatusLabel">Autofagian statusvaste:</span> <br><span id="resAutophagyStatus" style="font-size:15px; font-weight:bold;"></span> <span class="info-icon" onclick="toggleInfoPopup('fastingInfoBox')" title="Info">?</span></p>
+            <div id="fastingInfoBox" class="info-popup-panel" data-i18n="fastingInfoText">Autofagia on elimistön luonnollinen solujen siivousmekanismi, joka käynnistyy tehostetusti yli 14 tunnin syömättömän paaston jälkeen.</div>
 
             <h3 style="margin-top:20px;" data-i18n="insulinTitle">🧬 PÄIVÄN INSULIINI- JA GLYKEEMINEN KUORMA</h3>
             <p><span class="result-title" data-i18n="fatBurnWindowLabel">Rasvanpolttoikkuna (≤35 µIU/ml):</span> <span id="resFatBurnWindow" style="font-size:15px; font-weight:bold;"></span> <span class="info-icon" onclick="toggleInfoPopup('insulinInfoBox')" title="Info">?</span></p>
@@ -520,6 +527,12 @@
                 mtorThresholdLabel: "Kerta-aterian mTOR-kynnys:",
                 dailyProtLabel: "Päivittäinen kokonaisproteiini:",
                 protProtectionLabel: "Lihasmassan suojaus:",
+                fastingTitle: "🛡️ PAASTOIKKUNA JA AUTOFAGIAN STATUS",
+                eatingWindowLabel: "Syömisikkunan kesto (tuntia):",
+                fastingWindowLabel: "Syömätön paastoikkuna (tuntia):",
+                autophagyStatusLabel: "Autofagian statusvaste:",
+                fastingInfoText: "Autofagia on elimistön luonnollinen solujen siivousmekanismi, joka käynnistyy tehostetusti yli 14 tunnin syömättömän paaston jälkeen.",
+                cumAutophagy: "Aktiivinen autofagia (≥14 h paasto):",
                 fatBurnWindowLabel: "Rasvanpolttoikkuna (≤35 µIU/ml):",
                 fatBurnWindowTargetMet: "Tavoite saavutettu (≥12 h)",
                 fatBurnWindowBelowTarget: "Alle tavoitteen (<12 h)",
@@ -648,6 +661,12 @@
                 mtorThresholdLabel: "Single meal mTOR threshold:",
                 dailyProtLabel: "Daily total protein:",
                 protProtectionLabel: "Muscle mass protection:",
+                fastingTitle: "🛡️ FASTING WINDOW & AUTOPHAGY STATUS",
+                eatingWindowLabel: "Eating window duration (hours):",
+                fastingWindowLabel: "Fasting window duration (hours):",
+                autophagyStatusLabel: "Autophagy status response:",
+                fastingInfoText: "Autophagy is the body's natural cellular cleanup mechanism that intensifies after a fasting period of over 14 hours.",
+                cumAutophagy: "Active autophagy (≥14 h fast):",
                 fatBurnWindowLabel: "Fat burning window (≤35 µIU/ml):",
                 fatBurnWindowTargetMet: "Target achieved (≥12 h)",
                 fatBurnWindowBelowTarget: "Below target (<12 h)",
@@ -1241,8 +1260,62 @@
             }
         }
 
+        function laskePaastoIkkuna(meals) {
+            if (!meals || meals.length === 0) {
+                return { eatWindow: 0.0, fastWindow: 24.0 };
+            }
+            if (meals.length === 1) {
+                return { eatWindow: 1.0, fastWindow: 23.0 };
+            }
+            let minM = 1440, maxM = -1;
+            meals.forEach(m => {
+                if (m.time) {
+                    const parts = m.time.split(':');
+                    if (parts.length === 2) {
+                        const mins = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+                        if (!isNaN(mins)) {
+                            if (mins < minM) minM = mins;
+                            if (mins > maxM) maxM = mins;
+                        }
+                    }
+                }
+            });
+            if (minM >= 1440 || maxM < 0) {
+                return { eatWindow: 1.0, fastWindow: 23.0 };
+            }
+            let eatWindow = (maxM - minM) / 60;
+            if (eatWindow <= 0) eatWindow = 1.0;
+            let fastWindow = Math.max(0, 24.0 - eatWindow);
+            return { eatWindow: eatWindow, fastWindow: fastWindow };
+        }
+
+        function haeAutofagiaStatus(fastHours, lang) {
+            const isEn = (lang === 'en');
+            if (fastHours < 12) {
+                return {
+                    text: isEn ? "🔴 ANABOLIC (Digestion active, no autophagy)" : "🔴 ANABOLINEN (Ruoansulatus aktiivinen, ei autofagiaa)",
+                    color: "#ff4444"
+                };
+            } else if (fastHours < 14) {
+                return {
+                    text: isEn ? "🟡 BASIC FASTING (Gut rest state achieved)" : "🟡 PERUSPAASTO (Suoliston lepotila saavutettu)",
+                    color: "#ffff00"
+                };
+            } else if (fastHours < 18) {
+                return {
+                    text: isEn ? "🟢 ACTIVE AUTOPHAGY (Cellular cleanup and recycling active)" : "🟢 AKTIIVINEN AUTOFAGIA (Solujen siivous ja kierrätys käynnissä)",
+                    color: "#00ffaa"
+                };
+            } else {
+                return {
+                    text: isEn ? "🟣 DEEP AUTOPHAGY (OMAD / Enhanced cellular cleanup)" : "🟣 SYVÄ AUTOFAGIA (OMAD / Tehostettu solusiivous)",
+                    color: "#e088ff"
+                };
+            }
+        }
+
         function paivitaKumulatiivinenYhteenveto() {
-            let totalDays = 0, totalEnergyKcal = 0, totalCalorieSaldo = 0, mtorActiveDaysCount = 0;
+            let totalDays = 0, totalEnergyKcal = 0, totalCalorieSaldo = 0, mtorActiveDaysCount = 0, autophagyActiveDaysCount = 0;
 
             const startDate = document.getElementById('cumStartDate').value;
             const endDate = document.getElementById('cumEndDate').value;
@@ -1261,6 +1334,11 @@
                     totalDays++;
                     const dayKcal = (dayObj.macros.carbs * 4) + (dayObj.macros.protein * 4) + (dayObj.macros.fat * 9);
                     totalEnergyKcal += dayKcal;
+
+                    const fastingData = laskePaastoIkkuna(dayObj.meals);
+                    if (fastingData.fastWindow >= 14.0) {
+                        autophagyActiveDaysCount++;
+                    }
 
                     let dayTdee = 0;
                     let lbm = 0;
@@ -1346,6 +1424,8 @@
             }
 
             document.getElementById('cumMtorDays').innerText = mtorActiveDaysCount;
+            const cumAutoEl = document.getElementById('cumAutophagyDays');
+            if (cumAutoEl) cumAutoEl.innerText = autophagyActiveDaysCount;
         }
 
         function log10(val) { return Math.log(val) / Math.LN10; }
@@ -1459,6 +1539,21 @@
             const mtorThreshold = Math.max(minThreshold, lbm * 0.4 * ageMultiplier);
             document.getElementById('resMtorG').innerText = `${mtorThreshold.toFixed(1)} g ${lang === 'en' ? 'protein / meal' : 'proteiinia / ateria'}`;
             document.getElementById('resDailyProt').innerText = `${totalProt.toFixed(1)} g`;
+
+            const curMeals = historyDB[activeDateStr] ? historyDB[activeDateStr].meals : [];
+            const fastingData = laskePaastoIkkuna(curMeals);
+            const autoStatus = haeAutofagiaStatus(fastingData.fastWindow, lang);
+
+            const resEatWinEl = document.getElementById('resEatingWindow');
+            const resFastWinEl = document.getElementById('resFastingWindow');
+            const resAutoStatusEl = document.getElementById('resAutophagyStatus');
+
+            if (resEatWinEl) resEatWinEl.innerText = `${fastingData.eatWindow.toFixed(1)} h`;
+            if (resFastWinEl) resFastWinEl.innerText = `${fastingData.fastWindow.toFixed(1)} h`;
+            if (resAutoStatusEl) {
+                resAutoStatusEl.innerText = autoStatus.text;
+                resAutoStatusEl.style.color = autoStatus.color;
+            }
 
             const totalGL = totalCarbs * 0.6;
             const iTot = (totalCarbs * 1.0) + (totalProt * 0.56) + (totalFat * 0.10);
