@@ -359,6 +359,15 @@
     <details class="box" open>
         <summary data-i18n="sec2Title">2. POLTTOAINEEN LISÄYS</summary>
         <div class="details-content">
+            <label data-i18n="favoriteLabel">Suosikkiateriat:</label>
+            <select id="favoriteSelect" onchange="valitseSuosikki(this.value)">
+                <option value="" data-i18n="favoriteDefault">-- Valitse suosikkiateria --</option>
+            </select>
+            <div style="display: flex; gap: 8px; margin-top: 6px; margin-bottom: 12px; flex-wrap: wrap;">
+                <button type="button" onclick="tallennaSuosikki()" data-i18n="saveFavBtn" style="flex: 1; min-width: 180px; background: #004422; color: #00ffaa; border: 1px solid #00ffaa; padding: 10px; margin-top: 0; font-size: 12px; cursor: pointer;">⭐ TALLENNA NYKYISET MAKROT SUOSIKIKSI</button>
+                <button type="button" onclick="poistaSuosikki()" data-i18n="deleteFavBtn" style="flex: 1; min-width: 180px; background: #440000; color: #ffaaaa; border: 1px solid #ff4444; padding: 10px; margin-top: 0; font-size: 12px; cursor: pointer;">❌ POISTA VALITTU SUOSIKKI</button>
+            </div>
+
             <label data-i18n="mealTimeLabel">Aterian aika (HH:MM) [Vapaaehtoinen, oletus: Nyt]:</label> 
             <input type="time" id="mealTime">
 
@@ -508,6 +517,15 @@
                 strat6: "Mukautettu kalorimuutos (Vaje/Ylitys)",
                 customDeltaLabel: "Oma mukautettu kalorimuutos (kcal/pvä):",
                 sec2Title: "2. POLTTOAINEEN LISÄYS",
+                favoriteLabel: "Suosikkiateriat:",
+                favoriteDefault: "-- Valitse suosikkiateria --",
+                saveFavBtn: "⭐ TALLENNA NYKYISET MAKROT SUOSIKIKSI",
+                deleteFavBtn: "❌ POISTA VALITTU SUOSIKKI",
+                editMealBtn: "✏️ Muokkaa",
+                deleteMealBtn: "🗑️ Poista",
+                favPromptName: "Anna suosikkiaterialle nimi:",
+                favAlertEmpty: "Syötä ainakin jokin makro (hiilihydraatit, proteiini tai rasva) ennen tallennusta!",
+                favAlertSelectDelete: "Valitse poistettava suosikkiateria valikosta!",
                 mealTimeLabel: "Aterian aika (HH:MM) [Vapaaehtoinen, oletus: Nyt]:",
                 carbsLabel: "Hiilihydraatit (g):",
                 proteinLabel: "Proteiini (g):",
@@ -644,6 +662,15 @@
                 strat6: "Custom calorie delta (Deficit/Surplus)",
                 customDeltaLabel: "Custom calorie change (kcal/day):",
                 sec2Title: "2. FUEL ADDITION",
+                favoriteLabel: "Favorite Meals:",
+                favoriteDefault: "-- Select a favorite meal --",
+                saveFavBtn: "⭐ SAVE CURRENT MACROS AS FAVORITE",
+                deleteFavBtn: "❌ DELETE SELECTED FAVORITE",
+                editMealBtn: "✏️ Edit",
+                deleteMealBtn: "🗑️ Delete",
+                favPromptName: "Enter a name for the favorite meal:",
+                favAlertEmpty: "Please enter at least one macro value (carbs, protein, or fat) before saving!",
+                favAlertSelectDelete: "Please select a favorite meal from the dropdown to delete!",
                 mealTimeLabel: "Meal time (HH:MM) [Optional, default: Now]:",
                 carbsLabel: "Carbohydrates (g):",
                 proteinLabel: "Protein (g):",
@@ -725,6 +752,7 @@
             document.getElementById('selectedDate').value = activeDateStr;
             lataaKayttajaParametrit();
             lataaAktiivisenPaivanTiedot();
+            lataaSuosikit();
             tarkistaSukupuoli(); 
             tarkistaCustomTavoite();
             alustaKumulatiivisetPaivaykset();
@@ -832,6 +860,7 @@
                 pivitaDemoSelectOptions();
             }
 
+            lataaSuosikit();
             paivitaLaskelmat();
             paivitaKumulatiivinenYhteenveto();
         }
@@ -1599,9 +1628,11 @@
 
         function paivitaLogiNaytto() {
             const tl = document.getElementById('mealTimeline'); 
+            if (!tl) return;
             tl.innerHTML = "";
             const curData = historyDB[activeDateStr];
-            const lang = document.getElementById('langSelect').value;
+            const lang = document.getElementById('langSelect')?.value || 'fi';
+            const t = translations[lang] || translations.fi;
 
             if (curData && curData.meals && curData.meals.length > 0) {
                 document.getElementById('logBox').style.display = "block";
@@ -1612,14 +1643,125 @@
                     const iPeak = iTot / buf;
 
                     const mealWord = lang === 'en' ? 'Meal' : 'Ateria';
+                    const editWord = t.editMealBtn || (lang === 'en' ? '✏️ Edit' : '✏️ Muokkaa');
+                    const deleteWord = t.deleteMealBtn || (lang === 'en' ? '🗑️ Delete' : '🗑️ Poista');
+
                     const d = document.createElement('div'); 
                     d.className = 'meal-log-item';
-                    d.innerHTML = `<strong>${mealWord} ${idx + 1} (${m.time})</strong> — C: ${m.c}g | P: ${m.p}g | F: ${m.f}g &nbsp;|&nbsp; <span style="color:#ffff00;">GL: ${gl.toFixed(1)}</span> | <span style="color:#88ffff;">D: ${buf.toFixed(2)}x</span> | <span style="color:#ff88ff;">Peak: ${iPeak.toFixed(1)} uIU/ml</span>`;
+                    d.innerHTML = `<strong>${mealWord} ${idx + 1} (${m.time})</strong> — C: ${m.c}g | P: ${m.p}g | F: ${m.f}g &nbsp;|&nbsp; <span style="color:#ffff00;">GL: ${gl.toFixed(1)}</span> | <span style="color:#88ffff;">D: ${buf.toFixed(2)}x</span> | <span style="color:#ff88ff;">Peak: ${iPeak.toFixed(1)} uIU/ml</span>
+                    <span style="margin-left: 8px; display: inline-block;">
+                        <button type="button" onclick="muokkaaAnnos(${idx})" style="display:inline-block; width:auto; padding:2px 6px; font-size:11px; margin-top:0; background:#003344; color:#00ffff; border:1px solid #00ffff; cursor:pointer;">${editWord}</button>
+                        <button type="button" onclick="poistaAnnos(${idx})" style="display:inline-block; width:auto; padding:2px 6px; font-size:11px; margin-top:0; background:#440000; color:#ffaaaa; border:1px solid #ff4444; cursor:pointer;">${deleteWord}</button>
+                    </span>`;
                     tl.appendChild(d);
                 });
                 document.getElementById('logMacros').innerText = `C: ${curData.macros.carbs.toFixed(1)}g | P: ${curData.macros.protein.toFixed(1)}g | F: ${curData.macros.fat.toFixed(1)}g`;
             } else { 
                 document.getElementById('logBox').style.display = "none"; 
+            }
+        }
+
+        function poistaAnnos(idx) {
+            if (!historyDB[activeDateStr] || !historyDB[activeDateStr].meals) return;
+            historyDB[activeDateStr].meals.splice(idx, 1);
+
+            let totC = 0, totP = 0, totF = 0;
+            historyDB[activeDateStr].meals.forEach(m => {
+                totC += (m.c || 0);
+                totP += (m.p || 0);
+                totF += (m.f || 0);
+            });
+            historyDB[activeDateStr].macros = { carbs: totC, protein: totP, fat: totF };
+
+            sailytaPaivaDB();
+            paivitaLogiNaytto();
+            paivitaLaskelmat();
+            if (window.triggerAutoSyncToDrive) window.triggerAutoSyncToDrive();
+        }
+
+        function muokkaaAnnos(idx) {
+            if (!historyDB[activeDateStr] || !historyDB[activeDateStr].meals || !historyDB[activeDateStr].meals[idx]) return;
+            const m = historyDB[activeDateStr].meals[idx];
+            document.getElementById('carbs').value = (m.c !== undefined && m.c !== null) ? m.c : '';
+            document.getElementById('protein').value = (m.p !== undefined && m.p !== null) ? m.p : '';
+            document.getElementById('fat').value = (m.f !== undefined && m.f !== null) ? m.f : '';
+            if (document.getElementById('mealTime') && m.time) {
+                document.getElementById('mealTime').value = m.time;
+            }
+            poistaAnnos(idx);
+        }
+
+        function lataaSuosikit() {
+            const selectEl = document.getElementById('favoriteSelect');
+            if (!selectEl) return;
+            const lang = document.getElementById('langSelect')?.value || 'fi';
+            const t = translations[lang] || translations.fi;
+
+            const favs = JSON.parse(localStorage.getItem('metabolic_v20_favorites')) || [];
+            
+            let html = `<option value="" data-i18n="favoriteDefault">${t.favoriteDefault || '-- Valitse suosikkiateria --'}</option>`;
+            favs.forEach((fav, idx) => {
+                html += `<option value="${idx}">${fav.name} (C: ${fav.c}g, P: ${fav.p}g, F: ${fav.f}g)</option>`;
+            });
+            selectEl.innerHTML = html;
+        }
+
+        function tallennaSuosikki() {
+            const lang = document.getElementById('langSelect')?.value || 'fi';
+            const t = translations[lang] || translations.fi;
+
+            const c = parseFloat(document.getElementById('carbs').value) || 0;
+            const p = parseFloat(document.getElementById('protein').value) || 0;
+            const f = parseFloat(document.getElementById('fat').value) || 0;
+
+            if (c <= 0 && p <= 0 && f <= 0) {
+                alert(t.favAlertEmpty || "Syötä ainakin jokin makro (hiilihydraatit, proteiini tai rasva) ennen tallennusta!");
+                return;
+            }
+
+            const name = prompt(t.favPromptName || "Anna suosikkiaterialle nimi:");
+            if (!name || !name.trim()) return;
+
+            const favs = JSON.parse(localStorage.getItem('metabolic_v20_favorites')) || [];
+            favs.push({ name: name.trim(), c: c, p: p, f: f });
+            localStorage.setItem('metabolic_v20_favorites', JSON.stringify(favs));
+            lataaSuosikit();
+        }
+
+        function valitseSuosikki(val) {
+            if (val === "" || val === null || val === undefined) return;
+            const idx = parseInt(val, 10);
+            if (isNaN(idx)) return;
+
+            const favs = JSON.parse(localStorage.getItem('metabolic_v20_favorites')) || [];
+            if (favs[idx]) {
+                const fav = favs[idx];
+                document.getElementById('carbs').value = fav.c !== undefined ? fav.c : '';
+                document.getElementById('protein').value = fav.p !== undefined ? fav.p : '';
+                document.getElementById('fat').value = fav.f !== undefined ? fav.f : '';
+            }
+        }
+
+        function poistaSuosikki() {
+            const selectEl = document.getElementById('favoriteSelect');
+            if (!selectEl) return;
+            const val = selectEl.value;
+            const lang = document.getElementById('langSelect')?.value || 'fi';
+            const t = translations[lang] || translations.fi;
+
+            if (val === "" || val === null || val === undefined) {
+                alert(t.favAlertSelectDelete || "Valitse poistettava suosikkiateria valikosta!");
+                return;
+            }
+
+            const idx = parseInt(val, 10);
+            if (isNaN(idx)) return;
+
+            let favs = JSON.parse(localStorage.getItem('metabolic_v20_favorites')) || [];
+            if (idx >= 0 && idx < favs.length) {
+                favs.splice(idx, 1);
+                localStorage.setItem('metabolic_v20_favorites', JSON.stringify(favs));
+                lataaSuosikit();
             }
         }
 
