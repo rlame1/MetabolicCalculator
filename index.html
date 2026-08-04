@@ -326,7 +326,7 @@
                 <input type="number" id="hip" inputmode="decimal" step="any" data-i18n-placeholder="phHip" placeholder="👉 SYÖTÄ TIETO (LANTIO CM)" oninput="tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();">
             </div>
 
-            <label data-i18n="bodyFatLabel">Oma rasvaprosentti (%) [Vapaaehtoinen / Syötä jos tiedossa]:</label> 
+            <label data-i18n="bodyFatLabel">Oma rasvaprosentti (%) [Ohjelma laskee jos pituus, niska ja vyötärö (ja naisilla lantio) annettu. Tai syötä oma:]</label> 
             <input type="number" id="bodyFat" inputmode="decimal" step="any" data-i18n-placeholder="phBodyFat" placeholder="👉 SYÖTÄ RASVAPROSENTTI % (JOS TIEDOSSA)" oninput="tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();">
 
             <label data-i18n="activityLabel">Aktiivisuustason kerroin:</label>
@@ -500,7 +500,7 @@
                 waistLabel: "Vyötärön ympärys (cm) [Vapaaehtoinen]:",
                 neckLabel: "Niskan ympärys (cm) [Vapaaehtoinen]:",
                 hipLabel: "Lantion ympärys (cm) [Naisilla vapaaehtoinen]:",
-                bodyFatLabel: "Oma rasvaprosentti (%) [Vapaaehtoinen / Syötä jos tiedossa]:",
+                bodyFatLabel: "Oma rasvaprosentti (%) [Ohjelma laskee jos pituus, niska ja vyötärö (ja naisilla lantio) annettu. Tai syötä oma:]",
                 activityLabel: "Aktiivisuustason kerroin:",
                 act1: "Passiivinen (istumatyö, vähän/ei liikuntaa) [1.2]",
                 act2: "Perusaktiivinen (vakio oletus) [1.25]",
@@ -645,7 +645,7 @@
                 waistLabel: "Waist circumference (cm) [Optional]:",
                 neckLabel: "Neck circumference (cm) [Optional]:",
                 hipLabel: "Hip circumference (cm) [Female optional]:",
-                bodyFatLabel: "Own body fat percentage (%) [Optional / Enter if known]:",
+                bodyFatLabel: "Own body fat percentage (%) [Auto-calculated if height, neck, waist (+hip) are given. Or enter own:]",
                 activityLabel: "Activity level multiplier:",
                 act1: "Sedentary (desk job, little/no exercise) [1.2]",
                 act2: "Basal active (default) [1.25]",
@@ -1230,7 +1230,36 @@
             paivitaKumulatiivinenYhteenveto();
         }
 
+        function paivitaLaskettuRasvaprosenttiKenttaan() {
+            const h = parseFloat(document.getElementById('height').value) || 0;
+            const waist = parseFloat(document.getElementById('waist').value) || 0;
+            const neck = parseFloat(document.getElementById('neck').value) || 0;
+            const hip = parseFloat(document.getElementById('hip').value) || 0;
+            const gender = document.getElementById('gender').value;
+
+            let rPct = 0;
+            if ((gender === "male" && h > 0 && waist > neck && neck > 0) || (gender === "female" && h > 0 && (waist + hip) > neck && neck > 0 && hip > 0)) {
+                const pT = h / 2.54, nT = neck / 2.54, vT = waist / 2.54;
+                rPct = (gender === "male") ? (86.010 * log10(vT - nT)) - (70.041 * log10(pT)) + 36.76 : (163.205 * log10(vT + (hip/2.54) - nT)) - (97.684 * log10(pT)) - 78.387;
+                if (rPct < 3) rPct = 3;
+            }
+
+            const bfInput = document.getElementById('bodyFat');
+            if (!bfInput) return;
+            const lang = document.getElementById('langSelect')?.value || 'fi';
+            
+            if (rPct > 0) {
+                const bfStr = rPct.toFixed(1) + " %";
+                const phText = (lang === 'en') ? `👉 AUTO-CALCULATED: ${bfStr} (Enter to override)` : `👉 LASKETTU ARVO: ${bfStr} (Syötä muuttaaksesi)`;
+                bfInput.placeholder = phText;
+            } else {
+                const origPh = (lang === 'en') ? "👉 ENTER BODY FAT % (IF KNOWN)" : "👉 SYÖTÄ RASVAPROSENTTI % (JOS TIEDOSSA)";
+                bfInput.placeholder = origPh;
+            }
+        }
+
         function tallennaKayttajaParametrit(triggerSync = true) {
+            paivitaLaskettuRasvaprosenttiKenttaan();
             if (isDemoMode) return; 
             const params = {
                 gender: document.getElementById('gender').value,
@@ -1258,6 +1287,7 @@
                     if (p[k] !== undefined && document.getElementById(k)) document.getElementById(k).value = p[k];
                 });
             }
+            paivitaLaskettuRasvaprosenttiKenttaan();
         }
 
         function vaihdaPaivaa() {
