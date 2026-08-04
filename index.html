@@ -327,7 +327,7 @@
             </div>
 
             <label data-i18n="bodyFatLabel">Oma rasvaprosentti (%) [Ohjelma laskee jos pituus, niska ja vyötärö (ja naisilla lantio) annettu. Tai syötä oma:]</label> 
-            <input type="number" id="bodyFat" inputmode="decimal" step="any" data-i18n-placeholder="phBodyFat" placeholder="👉 SYÖTÄ RASVAPROSENTTI % (JOS TIEDOSSA)" oninput="tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();">
+            <input type="number" id="bodyFat" inputmode="decimal" step="any" data-i18n-placeholder="phBodyFat" placeholder="👉 SYÖTÄ RASVAPROSENTTI % (JOS TIEDOSSA)" oninput="this.dataset.manualOverride = this.value ? 'true' : ''; tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();">
 
             <label data-i18n="activityLabel">Aktiivisuustason kerroin:</label>
             <select id="activityLevel" onchange="tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();">
@@ -1232,13 +1232,14 @@
 
         function paivitaLaskettuRasvaprosenttiKenttaan() {
             const h = parseFloat(document.getElementById('height').value) || 0;
+            const w = parseFloat(document.getElementById('weight').value) || 0;
             const waist = parseFloat(document.getElementById('waist').value) || 0;
             const neck = parseFloat(document.getElementById('neck').value) || 0;
             const hip = parseFloat(document.getElementById('hip').value) || 0;
             const gender = document.getElementById('gender').value;
 
             let rPct = 0;
-            if ((gender === "male" && h > 0 && waist > neck && neck > 0) || (gender === "female" && h > 0 && (waist + hip) > neck && neck > 0 && hip > 0)) {
+            if (w > 0 && ((gender === "male" && h > 0 && waist > neck && neck > 0) || (gender === "female" && h > 0 && (waist + hip) > neck && neck > 0 && hip > 0))) {
                 const pT = h / 2.54, nT = neck / 2.54, vT = waist / 2.54;
                 rPct = (gender === "male") ? (86.010 * log10(vT - nT)) - (70.041 * log10(pT)) + 36.76 : (163.205 * log10(vT + (hip/2.54) - nT)) - (97.684 * log10(pT)) - 78.387;
                 if (rPct < 3) rPct = 3;
@@ -1249,10 +1250,18 @@
             const lang = document.getElementById('langSelect')?.value || 'fi';
             
             if (rPct > 0) {
+                if (!bfInput.dataset.manualOverride) {
+                    bfInput.value = rPct.toFixed(1);
+                    bfInput.dataset.autoCalculated = "true";
+                }
                 const bfStr = rPct.toFixed(1) + " %";
                 const phText = (lang === 'en') ? `👉 AUTO-CALCULATED: ${bfStr} (Enter to override)` : `👉 LASKETTU ARVO: ${bfStr} (Syötä muuttaaksesi)`;
                 bfInput.placeholder = phText;
             } else {
+                if (bfInput.dataset.autoCalculated === "true" && !bfInput.dataset.manualOverride) {
+                    bfInput.value = "";
+                    bfInput.dataset.autoCalculated = "false";
+                }
                 const origPh = (lang === 'en') ? "👉 ENTER BODY FAT % (IF KNOWN)" : "👉 SYÖTÄ RASVAPROSENTTI % (JOS TIEDOSSA)";
                 bfInput.placeholder = origPh;
             }
