@@ -1807,6 +1807,9 @@
                     const mealWord = lang === 'en' ? 'Meal' : 'Ateria';
                     const editWord = t.editMealBtn || (lang === 'en' ? '✏️ Edit' : '✏️ Muokkaa');
                     const deleteWord = t.deleteMealBtn || (lang === 'en' ? '🗑️ Delete' : '🗑️ Poista');
+                    const cLabel = lang === 'en' ? 'C' : 'HH';
+                    const pLabel = 'P';
+                    const fLabel = lang === 'en' ? 'F' : 'R';
 
                     const isEditingThis = (editingMealIndex === idx);
                     const d = document.createElement('div'); 
@@ -1815,14 +1818,17 @@
                         d.style.border = '1px solid #00ffff';
                         d.style.background = 'rgba(0, 255, 255, 0.15)';
                     }
-                    d.innerHTML = `<strong>${mealWord} ${idx + 1} (${m.time})</strong> — C: ${m.c}g | P: ${m.p}g | F: ${m.f}g &nbsp;|&nbsp; <span style="color:#ffff00;">GL: ${gl.toFixed(1)}</span> | <span style="color:#88ffff;">D: ${buf.toFixed(2)}x</span> | <span style="color:#ff88ff;">Peak: ${iPeak.toFixed(1)} uIU/ml</span>
+                    d.innerHTML = `<strong>${mealWord} ${idx + 1} (${m.time})</strong> — ${cLabel}: ${m.c}g | ${pLabel}: ${m.p}g | ${fLabel}: ${m.f}g &nbsp;|&nbsp; <span style="color:#ffff00;">GL: ${gl.toFixed(1)}</span> | <span style="color:#88ffff;">D: ${buf.toFixed(2)}x</span> | <span style="color:#ff88ff;">Peak: ${iPeak.toFixed(1)} uIU/ml</span>
                     <span style="margin-left: 8px; display: inline-block;">
                         <button type="button" onclick="muokkaaAnnos(${idx})" style="display:inline-block; width:auto; padding:2px 6px; font-size:11px; margin-top:0; background:#003344; color:#00ffff; border:1px solid #00ffff; cursor:pointer;">${editWord}</button>
                         <button type="button" onclick="poistaAnnos(${idx})" style="display:inline-block; width:auto; padding:2px 6px; font-size:11px; margin-top:0; background:#440000; color:#ffaaaa; border:1px solid #ff4444; cursor:pointer;">${deleteWord}</button>
                     </span>`;
                     tl.appendChild(d);
                 });
-                document.getElementById('logMacros').innerText = `C: ${curData.macros.carbs.toFixed(1)}g | P: ${curData.macros.protein.toFixed(1)}g | F: ${curData.macros.fat.toFixed(1)}g`;
+                const cLabel = lang === 'en' ? 'C' : 'HH';
+                const pLabel = 'P';
+                const fLabel = lang === 'en' ? 'F' : 'R';
+                document.getElementById('logMacros').innerText = `${cLabel}: ${curData.macros.carbs.toFixed(1)}g | ${pLabel}: ${curData.macros.protein.toFixed(1)}g | ${fLabel}: ${curData.macros.fat.toFixed(1)}g`;
             } else { 
                 document.getElementById('logBox').style.display = "none"; 
             }
@@ -1903,9 +1909,13 @@
 
             const favs = JSON.parse(localStorage.getItem('metabolic_v20_favorites')) || [];
             
+            const cLabel = lang === 'en' ? 'C' : 'HH';
+            const pLabel = 'P';
+            const fLabel = lang === 'en' ? 'F' : 'R';
+
             let html = `<option value="" data-i18n="favoriteDefault">${t.favoriteDefault || '-- Valitse suosikkiateria --'}</option>`;
             favs.forEach((fav, idx) => {
-                html += `<option value="${idx}">${fav.name} (C: ${fav.c}g, P: ${fav.p}g, F: ${fav.f}g)</option>`;
+                html += `<option value="${idx}">${fav.name} (${cLabel}: ${fav.c}g, ${pLabel}: ${fav.p}g, ${fLabel}: ${fav.f}g)</option>`;
             });
             selectEl.innerHTML = html;
         }
