@@ -374,7 +374,8 @@
             <label data-i18n="carbsLabel">Hiilihydraatit (g):</label> <input type="number" id="carbs" inputmode="decimal" data-i18n-placeholder="phCarbs" placeholder="👉 SYÖTÄ TIETO (HIILIHYDRAATIT G)">
             <label data-i18n="proteinLabel">Proteiini (g):</label> <input type="number" id="protein" inputmode="decimal" data-i18n-placeholder="phProtein" placeholder="👉 SYÖTÄ TIETO (PROTEIINI G)">
             <label data-i18n="fatLabel">Rasva (g):</label> <input type="number" id="fat" inputmode="decimal" data-i18n-placeholder="phFat" placeholder="👉 SYÖTÄ TIETO (RASVA G)">
-            <button onclick="lisaaAnnosV20()" data-i18n="logMealBtn">Kirjaa ja laske tase 📥</button>
+            <button id="logMealBtn" onclick="lisaaAnnosV20()" data-i18n="logMealBtn">Kirjaa ja laske tase 📥</button>
+            <button id="cancelEditBtn" type="button" onclick="peruutaMuokkaus()" data-i18n="cancelEditBtn" style="display:none; width:100%; background:#440000; color:#ffaaaa; border:1px solid #ff4444; margin-top:8px; padding:8px; cursor:pointer;">Peruuta muokkaus ❌</button>
         </div>
     </details>
 
@@ -531,6 +532,8 @@
                 proteinLabel: "Proteiini (g):",
                 fatLabel: "Rasva (g):",
                 logMealBtn: "Kirjaa ja laske tase 📥",
+                updateMealBtn: "Päivitä ateria ✏️",
+                cancelEditBtn: "Peruuta muokkaus ❌",
                 sec3Title: "3. PÄIVÄN AIKALEIMATUT ANNOKSET",
                 logMacrosLabel: "Kirjatut kokonaismakrot tänään:",
                 resetDayBtn: "Nollaa valitun päivän loki ❌",
@@ -676,6 +679,8 @@
                 proteinLabel: "Protein (g):",
                 fatLabel: "Fat (g):",
                 logMealBtn: "Log and calculate balance 📥",
+                updateMealBtn: "Update meal ✏️",
+                cancelEditBtn: "Cancel edit ❌",
                 sec3Title: "3. DAILY TIMESTAMPED MEALS",
                 logMacrosLabel: "Logged total macros today:",
                 resetDayBtn: "Reset selected day log ❌",
@@ -738,6 +743,7 @@
         let activeDateStr = getTodayStr();
         let isDemoMode = false;
         let demoDates = {};
+        let editingMealIndex = null;
 
         window.onload = function() { 
             const savedLang = detectInitialLanguage();
@@ -829,6 +835,7 @@
                     el.placeholder = t[key];
                 }
             });
+            paivitaMuokkausUI();
 
             const gSelect = document.getElementById('gender');
             if (gSelect) {
@@ -1302,6 +1309,7 @@
         function vaihdaPaivaa() {
             const inputVal = document.getElementById('selectedDate').value;
             if (inputVal) {
+                if (editingMealIndex !== null) peruutaMuokkaus();
                 activeDateStr = inputVal;
                 lataaAktiivisenPaivanTiedot();
             }
@@ -1309,12 +1317,16 @@
 
         function sailytaPaivaDB() {
             if (isDemoMode) return; 
+            if (activeDateStr && historyDB[activeDateStr]) {
+                historyDB[activeDateStr].updatedAt = new Date().toISOString();
+            }
             localStorage.setItem('metabolic_v20_historyDB', JSON.stringify(historyDB));
             localStorage.setItem('metabolic_v20_lastUpdate', new Date().toISOString());
             paivitaKumulatiivinenYhteenveto();
         }
 
         function lataaAktiivisenPaivanTiedot() {
+            if (editingMealIndex !== null) peruutaMuokkaus();
             if (!historyDB[activeDateStr]) {
                 historyDB[activeDateStr] = { macros: { carbs: 0, protein: 0, fat: 0 }, meals: [], calculated: null };
             }
@@ -1543,21 +1555,52 @@
 
             if (!historyDB[activeDateStr]) historyDB[activeDateStr] = { macros: { carbs: 0, protein: 0, fat: 0 }, meals: [], calculated: null };
 
-            if (!isRefreshOnly && (c > 0 || p > 0 || f > 0)) {
-                const mealTimeInput = document.getElementById('mealTime').value;
-                let timeStr = mealTimeInput;
-                if (!timeStr) {
-                    const now = new Date();
-                    timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+            if (!isRefreshOnly) {
+                if (editingMealIndex !== null && historyDB[activeDateStr] && historyDB[activeDateStr].meals && historyDB[activeDateStr].meals[editingMealIndex] !== undefined) {
+                    const mealTimeInput = document.getElementById('mealTime').value;
+                    let timeStr = mealTimeInput;
+                    if (!timeStr) {
+                        const now = new Date();
+                        timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+                    }
+
+                    historyDB[activeDateStr].meals[editingMealIndex] = { c: c, p: p, f: f, time: timeStr };
+
+                    let totC = 0, totP = 0, totF = 0;
+                    historyDB[activeDateStr].meals.forEach(m => {
+                        totC += (m.c || 0);
+                        totP += (m.p || 0);
+                        totF += (m.f || 0);
+                    });
+                    historyDB[activeDateStr].macros = { carbs: totC, protein: totP, fat: totF };
+
+                    document.getElementById('carbs').value = ""; 
+                    document.getElementById('protein').value = ""; 
+                    document.getElementById('fat').value = ""; 
+                    document.getElementById('mealTime').value = "";
+
+                    editingMealIndex = null;
+                    paivitaMuokkausUI();
+                    sailytaPaivaDB();
+                    if (window.triggerAutoSyncToDrive) window.triggerAutoSyncToDrive();
+                } else if (c > 0 || p > 0 || f > 0) {
+                    const mealTimeInput = document.getElementById('mealTime').value;
+                    let timeStr = mealTimeInput;
+                    if (!timeStr) {
+                        const now = new Date();
+                        timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+                    }
+
+                    historyDB[activeDateStr].macros.carbs += c;
+                    historyDB[activeDateStr].macros.protein += p;
+                    historyDB[activeDateStr].macros.fat += f;
+                    historyDB[activeDateStr].meals.push({ c: c, p: p, f: f, time: timeStr });
+
+                    document.getElementById('carbs').value = ""; document.getElementById('protein').value = ""; document.getElementById('fat').value = ""; document.getElementById('mealTime').value = "";
+
+                    sailytaPaivaDB();
+                    if (window.triggerAutoSyncToDrive) window.triggerAutoSyncToDrive();
                 }
-
-                historyDB[activeDateStr].macros.carbs += c;
-                historyDB[activeDateStr].macros.protein += p;
-                historyDB[activeDateStr].macros.fat += f;
-                historyDB[activeDateStr].meals.push({ c: c, p: p, f: f, time: timeStr });
-
-                document.getElementById('carbs').value = ""; document.getElementById('protein').value = ""; document.getElementById('fat').value = ""; document.getElementById('mealTime').value = "";
-                if (window.triggerAutoSyncToDrive) window.triggerAutoSyncToDrive();
             }
 
             const userBodyFat = parseFloat(document.getElementById('bodyFat')?.value) || 0;
@@ -1685,8 +1728,13 @@
                     const editWord = t.editMealBtn || (lang === 'en' ? '✏️ Edit' : '✏️ Muokkaa');
                     const deleteWord = t.deleteMealBtn || (lang === 'en' ? '🗑️ Delete' : '🗑️ Poista');
 
+                    const isEditingThis = (editingMealIndex === idx);
                     const d = document.createElement('div'); 
                     d.className = 'meal-log-item';
+                    if (isEditingThis) {
+                        d.style.border = '1px solid #00ffff';
+                        d.style.background = 'rgba(0, 255, 255, 0.15)';
+                    }
                     d.innerHTML = `<strong>${mealWord} ${idx + 1} (${m.time})</strong> — C: ${m.c}g | P: ${m.p}g | F: ${m.f}g &nbsp;|&nbsp; <span style="color:#ffff00;">GL: ${gl.toFixed(1)}</span> | <span style="color:#88ffff;">D: ${buf.toFixed(2)}x</span> | <span style="color:#ff88ff;">Peak: ${iPeak.toFixed(1)} uIU/ml</span>
                     <span style="margin-left: 8px; display: inline-block;">
                         <button type="button" onclick="muokkaaAnnos(${idx})" style="display:inline-block; width:auto; padding:2px 6px; font-size:11px; margin-top:0; background:#003344; color:#00ffff; border:1px solid #00ffff; cursor:pointer;">${editWord}</button>
@@ -1703,6 +1751,17 @@
         function poistaAnnos(idx) {
             if (!historyDB[activeDateStr] || !historyDB[activeDateStr].meals) return;
             historyDB[activeDateStr].meals.splice(idx, 1);
+
+            if (editingMealIndex === idx) {
+                editingMealIndex = null;
+                if (document.getElementById('carbs')) document.getElementById('carbs').value = "";
+                if (document.getElementById('protein')) document.getElementById('protein').value = "";
+                if (document.getElementById('fat')) document.getElementById('fat').value = "";
+                if (document.getElementById('mealTime')) document.getElementById('mealTime').value = "";
+                paivitaMuokkausUI();
+            } else if (editingMealIndex !== null && editingMealIndex > idx) {
+                editingMealIndex--;
+            }
 
             let totC = 0, totP = 0, totF = 0;
             historyDB[activeDateStr].meals.forEach(m => {
@@ -1721,13 +1780,39 @@
         function muokkaaAnnos(idx) {
             if (!historyDB[activeDateStr] || !historyDB[activeDateStr].meals || !historyDB[activeDateStr].meals[idx]) return;
             const m = historyDB[activeDateStr].meals[idx];
-            document.getElementById('carbs').value = (m.c !== undefined && m.c !== null) ? m.c : '';
-            document.getElementById('protein').value = (m.p !== undefined && m.p !== null) ? m.p : '';
-            document.getElementById('fat').value = (m.f !== undefined && m.f !== null) ? m.f : '';
+            editingMealIndex = idx;
+            if (document.getElementById('carbs')) document.getElementById('carbs').value = (m.c !== undefined && m.c !== null) ? m.c : '';
+            if (document.getElementById('protein')) document.getElementById('protein').value = (m.p !== undefined && m.p !== null) ? m.p : '';
+            if (document.getElementById('fat')) document.getElementById('fat').value = (m.f !== undefined && m.f !== null) ? m.f : '';
             if (document.getElementById('mealTime') && m.time) {
                 document.getElementById('mealTime').value = m.time;
             }
-            poistaAnnos(idx);
+            paivitaMuokkausUI();
+        }
+
+        function peruutaMuokkaus() {
+            editingMealIndex = null;
+            if (document.getElementById('carbs')) document.getElementById('carbs').value = "";
+            if (document.getElementById('protein')) document.getElementById('protein').value = "";
+            if (document.getElementById('fat')) document.getElementById('fat').value = "";
+            if (document.getElementById('mealTime')) document.getElementById('mealTime').value = "";
+            paivitaMuokkausUI();
+        }
+
+        function paivitaMuokkausUI() {
+            const lang = document.getElementById('langSelect')?.value || 'fi';
+            const t = translations[lang] || translations.fi;
+            const logBtn = document.getElementById('logMealBtn');
+            const cancelBtn = document.getElementById('cancelEditBtn');
+
+            if (editingMealIndex !== null) {
+                if (logBtn) logBtn.innerText = t.updateMealBtn || (lang === 'en' ? 'Update meal ✏️' : 'Päivitä ateria ✏️');
+                if (cancelBtn) cancelBtn.style.display = 'block';
+            } else {
+                if (logBtn) logBtn.innerText = t.logMealBtn || (lang === 'en' ? 'Log and calculate balance 📥' : 'Kirjaa ja laske tase 📥');
+                if (cancelBtn) cancelBtn.style.display = 'none';
+            }
+            paivitaLogiNaytto();
         }
 
         function lataaSuosikit() {
@@ -1989,6 +2074,7 @@
         }
 
         function nollaaValittuPaiva() {
+            if (editingMealIndex !== null) peruutaMuokkaus();
             historyDB[activeDateStr] = { macros: { carbs: 0, protein: 0, fat: 0 }, meals: [], calculated: null };
             sailytaPaivaDB();
             paivitaLogiNaytto();
@@ -2517,6 +2603,9 @@
             const localDB = localPayload.historyDB || {};
             const driveDB = drivePayload.historyDB || {};
 
+            const localExportedAt = localPayload.exportedAt || "";
+            const driveExportedAt = drivePayload.exportedAt || "";
+
             const allDateKeys = new Set([...Object.keys(localDB), ...Object.keys(driveDB)]);
 
             const mergedDB = {};
@@ -2534,46 +2623,61 @@
                     mergedDB[dateStr] = JSON.parse(JSON.stringify(driveDay));
                     localUpdated = true;
                 } else {
-                    const mealsA = localDay.meals || [];
-                    const mealsB = driveDay.meals || [];
+                    const timeLocal = localDay.updatedAt || localExportedAt || "";
+                    const timeDrive = driveDay.updatedAt || driveExportedAt || "";
 
-                    const mergeAtoB = mergeMealsArrays(mealsA, mealsB);
-                    const mergeBtoA = mergeMealsArrays(mealsB, mealsA);
-
-                    if (mergeAtoB.addedFromB > 0) {
-                        localUpdated = true;
-                    }
-                    if (mergeBtoA.addedFromB > 0) {
+                    if (timeLocal > timeDrive) {
+                        mergedDB[dateStr] = JSON.parse(JSON.stringify(localDay));
                         driveUpdated = true;
+                    } else if (timeDrive > timeLocal) {
+                        mergedDB[dateStr] = JSON.parse(JSON.stringify(driveDay));
+                        localUpdated = true;
+                    } else {
+                        const strLocal = JSON.stringify(localDay.meals || []);
+                        const strDrive = JSON.stringify(driveDay.meals || []);
+                        if (strLocal === strDrive) {
+                            mergedDB[dateStr] = JSON.parse(JSON.stringify(localDay));
+                        } else {
+                            const mealsA = localDay.meals || [];
+                            const mealsB = driveDay.meals || [];
+
+                            const mergeAtoB = mergeMealsArrays(mealsA, mealsB);
+                            const mergeBtoA = mergeMealsArrays(mealsB, mealsA);
+
+                            if (mergeAtoB.addedFromB > 0) localUpdated = true;
+                            if (mergeBtoA.addedFromB > 0) driveUpdated = true;
+
+                            const finalMeals = mergeAtoB.mergedMeals;
+                            let totalC = 0, totalP = 0, totalF = 0;
+                            finalMeals.forEach(m => {
+                                totalC += Number(m.c) || 0;
+                                totalP += Number(m.p) || 0;
+                                totalF += Number(m.f) || 0;
+                            });
+
+                            const mergedCalc = { ...(driveDay.calculated || {}), ...(localDay.calculated || {}) };
+
+                            mergedDB[dateStr] = {
+                                macros: { carbs: totalC, protein: totalP, fat: totalF },
+                                meals: finalMeals,
+                                calculated: Object.keys(mergedCalc).length > 0 ? mergedCalc : null,
+                                updatedAt: localDay.updatedAt || driveDay.updatedAt || new Date().toISOString()
+                            };
+                        }
                     }
-
-                    const finalMeals = mergeAtoB.mergedMeals;
-
-                    let totalC = 0, totalP = 0, totalF = 0;
-                    finalMeals.forEach(m => {
-                        totalC += Number(m.c) || 0;
-                        totalP += Number(m.p) || 0;
-                        totalF += Number(m.f) || 0;
-                    });
-
-                    const mergedCalc = { ...(driveDay.calculated || {}), ...(localDay.calculated || {}) };
-
-                    mergedDB[dateStr] = {
-                        macros: { carbs: totalC, protein: totalP, fat: totalF },
-                        meals: finalMeals,
-                        calculated: Object.keys(mergedCalc).length > 0 ? mergedCalc : null
-                    };
                 }
             });
 
             const localParams = localPayload.userParams || {};
             const driveParams = drivePayload.userParams || {};
-            const mergedParams = { ...driveParams, ...localParams };
+            const mergedParams = (localExportedAt >= driveExportedAt)
+                ? { ...driveParams, ...localParams }
+                : { ...localParams, ...driveParams };
 
             const mergedPayload = {
                 app: "metabolic_calculator_v20",
                 version: "1.0",
-                exportedAt: new Date().toISOString(),
+                exportedAt: (localExportedAt >= driveExportedAt ? localExportedAt : driveExportedAt) || new Date().toISOString(),
                 lang: localPayload.lang || drivePayload.lang || 'fi',
                 userParams: mergedParams,
                 historyDB: mergedDB
