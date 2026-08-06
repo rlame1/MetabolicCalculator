@@ -266,9 +266,27 @@
         <summary style="color:#ffff00; border-color:#ffff00;" data-i18n="dateSummary">📅 VALITSE PÄIVÄMÄÄRÄ</summary>
         <div class="details-content">
             <label style="color:#ffff00; margin-top:0;" data-i18n="dateLabel">Päivämäärä:</label>
-            <input type="date" id="selectedDate" style="border-color:#ffff00; color:#ffff00;" onchange="vaihdaPaivaa()">
+            <div style="display: flex; gap: 8px; align-items: center; margin-top: 5px;">
+                <button type="button" onclick="siirryPaivissa(-1)" style="width: auto; padding: 10px 14px; margin-top: 0; background: #222200; border: 1px solid #ffff00; color: #ffff00; cursor: pointer; border-radius: 4px; font-size: 16px;" title="Edellinen päivä (←)" data-i18n-title="prevDayBtnTitle">◀ <span data-i18n="prevDayBtn">Edellinen</span></button>
+                <input type="date" id="selectedDate" style="border-color:#ffff00; color:#ffff00; margin-top: 0; flex: 1;" onchange="vaihdaPaivaa()">
+                <button type="button" onclick="siirryPaivissa(1)" style="width: auto; padding: 10px 14px; margin-top: 0; background: #222200; border: 1px solid #ffff00; color: #ffff00; cursor: pointer; border-radius: 4px; font-size: 16px;" title="Seuraava päivä (→)" data-i18n-title="nextDayBtnTitle"><span data-i18n="nextDayBtn">Seuraava</span> ▶</button>
+            </div>
         </div>
     </details>
+
+    <!-- Floating Date Navigation Buttons -->
+    <div style="position: fixed; top: 50%; left: 10px; transform: translateY(-50%); z-index: 9999; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+        <button type="button" onclick="siirryPaivissa(-1)" style="width: 46px; height: 54px; padding: 0; margin: 0; background: rgba(10, 10, 0, 0.85); border: 2px solid #ffff00; color: #ffff00; border-radius: 8px; cursor: pointer; font-size: 18px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.8); backdrop-filter: blur(4px);" title="Edellinen päivä (← / Vasen nuoli)" data-i18n-title="floatPrevTitle">
+            <span style="font-size: 18px; line-height: 1;">◀</span>
+            <span style="font-size: 9px; margin-top: 2px; font-weight: bold;" data-i18n="floatPrevText">EDELL.</span>
+        </button>
+    </div>
+    <div style="position: fixed; top: 50%; right: 10px; transform: translateY(-50%); z-index: 9999; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+        <button type="button" onclick="siirryPaivissa(1)" style="width: 46px; height: 54px; padding: 0; margin: 0; background: rgba(10, 10, 0, 0.85); border: 2px solid #ffff00; color: #ffff00; border-radius: 8px; cursor: pointer; font-size: 18px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.8); backdrop-filter: blur(4px);" title="Seuraava päivä (→ / Oikea nuoli)" data-i18n-title="floatNextTitle">
+            <span style="font-size: 18px; line-height: 1;">▶</span>
+            <span style="font-size: 9px; margin-top: 2px; font-weight: bold;" data-i18n="floatNextText">SEUR.</span>
+        </button>
+    </div>
 
     <details class="cum-box" id="cumSummaryBox" open>
         <summary data-i18n="cumSummary">📊 KUMULATIIVINEN HISTORIAYHTEENVETO</summary>
@@ -480,6 +498,14 @@
                 mainSub: "Käytä yläkulman \"ASETUKSET\"-painiketta esittelytilan tai nollauksen avaamiseen.",
                 dateSummary: "📅 VALITSE PÄIVÄMÄÄRÄ",
                 dateLabel: "Päivämäärä:",
+                prevDayBtn: "Edellinen",
+                nextDayBtn: "Seuraava",
+                prevDayBtnTitle: "Edellinen päivä (← / Vasen nuoli)",
+                nextDayBtnTitle: "Seuraava päivä (→ / Oikea nuoli)",
+                floatPrevTitle: "Edellinen päivä (← / Vasen nuoli)",
+                floatNextTitle: "Seuraava päivä (→ / Oikea nuoli)",
+                floatPrevText: "EDELL.",
+                floatNextText: "SEUR.",
                 cumSummary: "📊 KUMULATIIVINEN HISTORIAYHTEENVETO",
                 btnLast7Days: "🗓️ VIIMEISET 7 PÄIVÄÄ (KULUNEET)",
                 btnLast30Days: "🗓️ VIIMEISET 30 PÄIVÄÄ (KULUNEET)",
@@ -627,6 +653,14 @@
                 mainSub: "Use the top-right \"OPTIONS\" button to open demo mode or reset.",
                 dateSummary: "📅 SELECT DATE",
                 dateLabel: "Date:",
+                prevDayBtn: "Previous",
+                nextDayBtn: "Next",
+                prevDayBtnTitle: "Previous day (← / Left arrow)",
+                nextDayBtnTitle: "Next day (→ / Right arrow)",
+                floatPrevTitle: "Previous day (← / Left arrow)",
+                floatNextTitle: "Next day (→ / Right arrow)",
+                floatPrevText: "PREV",
+                floatNextText: "NEXT",
                 cumSummary: "📊 CUMULATIVE HISTORY SUMMARY",
                 btnLast7Days: "🗓️ LAST 7 DAYS (COMPLETED)",
                 btnLast30Days: "🗓️ LAST 30 DAYS (COMPLETED)",
@@ -833,6 +867,13 @@
                 const key = el.getAttribute('data-i18n-placeholder');
                 if (t[key]) {
                     el.placeholder = t[key];
+                }
+            });
+
+            document.querySelectorAll('[data-i18n-title]').forEach(el => {
+                const key = el.getAttribute('data-i18n-title');
+                if (t[key]) {
+                    el.title = t[key];
                 }
             });
             paivitaMuokkausUI();
@@ -1305,6 +1346,45 @@
             }
             paivitaLaskettuRasvaprosenttiKenttaan();
         }
+
+        function siirryPaivissa(delta) {
+            const dateInput = document.getElementById('selectedDate');
+            if (!dateInput) return;
+            let currentStr = dateInput.value || activeDateStr || getTodayStr();
+            const parts = currentStr.split('-');
+            if (parts.length === 3) {
+                const year = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10) - 1;
+                const day = parseInt(parts[2], 10);
+                const d = new Date(year, month, day);
+                d.setDate(d.getDate() + delta);
+                
+                const newY = d.getFullYear();
+                const newM = String(d.getMonth() + 1).padStart(2, '0');
+                const newD = String(d.getDate()).padStart(2, '0');
+                const newStr = `${newY}-${newM}-${newD}`;
+                
+                dateInput.value = newStr;
+                vaihdaPaivaa();
+            }
+        }
+
+        window.addEventListener('keydown', function(e) {
+            const activeEl = document.activeElement;
+            if (activeEl) {
+                const tag = activeEl.tagName.toLowerCase();
+                if (tag === 'input' || tag === 'textarea' || tag === 'select' || activeEl.isContentEditable) {
+                    return;
+                }
+            }
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                siirryPaivissa(-1);
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                siirryPaivissa(1);
+            }
+        });
 
         function vaihdaPaivaa() {
             const inputVal = document.getElementById('selectedDate').value;
