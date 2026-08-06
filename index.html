@@ -280,11 +280,19 @@
             <span style="font-size: 18px; line-height: 1;">◀</span>
             <span style="font-size: 9px; margin-top: 2px; font-weight: bold;" data-i18n="floatPrevText">EDELL.</span>
         </button>
+        <button type="button" id="floatDateBtnLeft" onclick="avaaPaivamaaratarkastelu()" style="width: 46px; min-height: 44px; padding: 4px 2px; margin: 0; background: rgba(10, 10, 0, 0.85); border: 2px solid #ffff00; color: #ffff00; border-radius: 8px; cursor: pointer; font-size: 10px; font-weight: bold; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.8); backdrop-filter: blur(4px); text-align: center; line-height: 1.1;" title="Tarkasteltava päivämäärä (Napsauta valitaksesi)" data-i18n-title="floatDateTitle">
+            <span id="floatDateDayNameLeft" style="font-size: 9px; opacity: 0.85;">TO</span>
+            <span id="floatDateStrLeft" style="font-size: 11px; font-weight: bold; margin-top: 1px;">06.08.</span>
+        </button>
     </div>
     <div style="position: fixed; top: 50%; right: max(10px, calc(50% - 472px)); transform: translateY(-50%); z-index: 9999; display: flex; flex-direction: column; align-items: center; gap: 4px;">
         <button type="button" onclick="siirryPaivissa(1)" style="width: 46px; height: 54px; padding: 0; margin: 0; background: rgba(10, 10, 0, 0.85); border: 2px solid #ffff00; color: #ffff00; border-radius: 8px; cursor: pointer; font-size: 18px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.8); backdrop-filter: blur(4px);" title="Seuraava päivä (→ / Oikea nuoli)" data-i18n-title="floatNextTitle">
             <span style="font-size: 18px; line-height: 1;">▶</span>
             <span style="font-size: 9px; margin-top: 2px; font-weight: bold;" data-i18n="floatNextText">SEUR.</span>
+        </button>
+        <button type="button" id="floatDateBtnRight" onclick="avaaPaivamaaratarkastelu()" style="width: 46px; min-height: 44px; padding: 4px 2px; margin: 0; background: rgba(10, 10, 0, 0.85); border: 2px solid #ffff00; color: #ffff00; border-radius: 8px; cursor: pointer; font-size: 10px; font-weight: bold; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.8); backdrop-filter: blur(4px); text-align: center; line-height: 1.1;" title="Tarkasteltava päivämäärä (Napsauta valitaksesi)" data-i18n-title="floatDateTitle">
+            <span id="floatDateDayNameRight" style="font-size: 9px; opacity: 0.85;">TO</span>
+            <span id="floatDateStrRight" style="font-size: 11px; font-weight: bold; margin-top: 1px;">06.08.</span>
         </button>
     </div>
 
@@ -515,6 +523,7 @@
                 nextDayBtnTitle: "Seuraava päivä (→ / Oikea nuoli)",
                 floatPrevTitle: "Edellinen päivä (← / Vasen nuoli)",
                 floatNextTitle: "Seuraava päivä (→ / Oikea nuoli)",
+                floatDateTitle: "Tarkasteltava päivämäärä (Napsauta valitaksesi)",
                 floatPrevText: "EDELL.",
                 floatNextText: "SEUR.",
                 cumSummary: "📊 KUMULATIIVINEN HISTORIAYHTEENVETO",
@@ -674,6 +683,7 @@
                 nextDayBtnTitle: "Next day (→ / Right arrow)",
                 floatPrevTitle: "Previous day (← / Left arrow)",
                 floatNextTitle: "Next day (→ / Right arrow)",
+                floatDateTitle: "Viewed date (Click to select)",
                 floatPrevText: "PREV",
                 floatNextText: "NEXT",
                 cumSummary: "📊 CUMULATIVE HISTORY SUMMARY",
@@ -930,6 +940,7 @@
             lataaSuosikit();
             paivitaLaskelmat();
             paivitaKumulatiivinenYhteenveto();
+            paivitaKelluvatPaivamaaraPainikkeet();
         }
 
         function toggleOptionsPanel() {
@@ -1405,6 +1416,51 @@
             }
         });
 
+        function paivitaKelluvatPaivamaaraPainikkeet() {
+            const dateInput = document.getElementById('selectedDate');
+            const dateVal = dateInput ? dateInput.value : (typeof activeDateStr !== 'undefined' ? activeDateStr : '');
+            if (!dateVal) return;
+
+            const parts = dateVal.split('-');
+            if (parts.length !== 3) return;
+
+            const year = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10);
+            const day = parseInt(parts[2], 10);
+
+            const dObj = new Date(year, month - 1, day);
+            const dayOfWeek = dObj.getDay();
+
+            const lang = document.getElementById('langSelect')?.value || 'fi';
+            const dayNamesFi = ["SU", "MA", "TI", "KE", "TO", "PE", "LA"];
+            const dayNamesEn = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+
+            const dayName = (lang === 'en') ? dayNamesEn[dayOfWeek] : dayNamesFi[dayOfWeek];
+            const formattedDate = `${String(day).padStart(2, '0')}.${String(month).padStart(2, '0')}.`;
+
+            const elNameLeft = document.getElementById('floatDateDayNameLeft');
+            const elStrLeft = document.getElementById('floatDateStrLeft');
+            const elNameRight = document.getElementById('floatDateDayNameRight');
+            const elStrRight = document.getElementById('floatDateStrRight');
+
+            if (elNameLeft) elNameLeft.innerText = dayName;
+            if (elStrLeft) elStrLeft.innerText = formattedDate;
+            if (elNameRight) elNameRight.innerText = dayName;
+            if (elStrRight) elStrRight.innerText = formattedDate;
+        }
+
+        function avaaPaivamaaratarkastelu() {
+            const el = document.getElementById('selectedDate');
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                if (typeof el.showPicker === 'function') {
+                    try { el.showPicker(); } catch(e) { el.focus(); }
+                } else {
+                    el.focus();
+                }
+            }
+        }
+
         function vaihdaPaivaa() {
             const inputVal = document.getElementById('selectedDate').value;
             if (inputVal) {
@@ -1412,6 +1468,7 @@
                 activeDateStr = inputVal;
                 lataaAktiivisenPaivanTiedot();
             }
+            paivitaKelluvatPaivamaaraPainikkeet();
         }
 
         function sailytaPaivaDB() {
@@ -1449,6 +1506,7 @@
             } else {
                 paivitaLaskelmat();
             }
+            paivitaKelluvatPaivamaaraPainikkeet();
         }
 
         function laskePaastoIkkuna(meals) {
