@@ -346,7 +346,12 @@
 
             <label data-i18n="bodyFatLabel">Oma rasvaprosentti (%) [Ohjelma laskee jos pituus, niska ja vyötärö (ja naisilla lantio) annettu. Tai syötä oma:]</label> 
             <input type="number" id="bodyFat" inputmode="decimal" step="any" data-i18n-placeholder="phBodyFat" placeholder="👉 SYÖTÄ RASVAPROSENTTI % (JOS TIEDOSSA)" oninput="this.dataset.manualOverride = this.value ? 'true' : ''; tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();">
+        </div>
+    </details>
 
+    <details class="box" open>
+        <summary data-i18n="secGoalTitle">2. TAVOITE / KULUTUS</summary>
+        <div class="details-content">
             <label data-i18n="activityLabel">Aktiivisuustason kerroin:</label>
             <select id="activityLevel" onchange="tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();">
                 <option value="1.2">Passiivinen (istumatyö, vähän/ei liikuntaa) [1.2]</option>
@@ -371,11 +376,16 @@
                 <label data-i18n="customDeltaLabel">Oma mukautettu kalorimuutos (kcal/pvä):</label>
                 <input type="number" id="customCalorieDelta" inputmode="decimal" value="-500" step="50" data-i18n-placeholder="phCustomDelta" placeholder="👉 SYÖTÄ VAJE (-) TAI YLITYS (+)" oninput="tallennaKayttajaParametrit(); paivitaLaskelmat();">
             </div>
+
+            <div style="margin-top: 15px; padding: 12px; background: rgba(0, 255, 0, 0.08); border: 1px solid #00ff00; border-radius: 6px;">
+                <p style="margin: 0;"><span class="result-title" style="color: #00ff00; font-weight: bold;" data-i18n="estExpenditureLabel">Arvioitu päivittäinen kulutus (TDEE):</span> <span id="estExpenditureVal" class="alert-green" style="font-size: 18px; font-weight: bold;">0</span> kcal/pvä</p>
+                <p style="font-size: 11px; color: #888; margin-top: 4px; margin-bottom: 0;" data-i18n="estExpenditureExpl">(Perustuu rasvattomaan kehonmassaan ja valittuun aktiivisuuskertoimeen)</p>
+            </div>
         </div>
     </details>
 
     <details class="box" open>
-        <summary data-i18n="sec2Title">2. POLTTOAINEEN LISÄYS</summary>
+        <summary data-i18n="sec2Title">3. ATERIAN LISÄYS</summary>
         <div class="details-content">
             <label data-i18n="favoriteLabel">Suosikkiateriat:</label>
             <select id="favoriteSelect" onchange="valitseSuosikki(this.value)">
@@ -398,7 +408,7 @@
     </details>
 
     <details class="box" id="logBox" style="display:none;" open>
-        <summary data-i18n="sec3Title">3. PÄIVÄN AIKALEIMATUT ANNOKSET</summary>
+        <summary data-i18n="sec3Title">4. PÄIVÄN AIKALEIMATUT ANNOKSET</summary>
         <div class="details-content">
             <div id="mealTimeline"></div>
             <p style="margin-top:15px;"><span class="result-title" data-i18n="logMacrosLabel">Kirjatut kokonaismakrot tänään:</span> <span id="logMacros"></span></p>
@@ -407,7 +417,7 @@
     </details>
 
     <details class="box" id="outputBox" style="display:none;" open>
-        <summary data-i18n="sec4Title">4. LAHJOMATON TASE &amp; ANALYTIIKKA</summary>
+        <summary data-i18n="sec4Title">5. LAHJOMATON TASE &amp; ANALYTIIKKA</summary>
         <div class="details-content">
             <div>
                 <p><span class="result-title" data-i18n="fatPctLabel">Rasvaprosentti:</span> <span id="resFatPct" class="alert-orange"></span> %</p>
@@ -543,7 +553,10 @@
                 strat5: "Pidä nykyinen paino",
                 strat6: "Mukautettu kalorimuutos (Vaje/Ylitys)",
                 customDeltaLabel: "Oma mukautettu kalorimuutos (kcal/pvä):",
-                sec2Title: "2. POLTTOAINEEN LISÄYS",
+                secGoalTitle: "2. TAVOITE / KULUTUS",
+                estExpenditureLabel: "Arvioitu päivittäinen kulutus (TDEE):",
+                estExpenditureExpl: "(Perustuu rasvattomaan kehonmassaan ja valittuun aktiivisuuskertoimeen)",
+                sec2Title: "3. ATERIAN LISÄYS",
                 favoriteLabel: "Suosikkiateriat:",
                 favoriteDefault: "-- Valitse suosikkiateria --",
                 saveFavBtn: "⭐ TALLENNA NYKYISET MAKROT SUOSIKIKSI",
@@ -560,10 +573,10 @@
                 logMealBtn: "Kirjaa ja laske tase 📥",
                 updateMealBtn: "Päivitä ateria ✏️",
                 cancelEditBtn: "Peruuta muokkaus ❌",
-                sec3Title: "3. PÄIVÄN AIKALEIMATUT ANNOKSET",
+                sec3Title: "4. PÄIVÄN AIKALEIMATUT ANNOKSET",
                 logMacrosLabel: "Kirjatut kokonaismakrot tänään:",
                 resetDayBtn: "Nollaa valitun päivän loki ❌",
-                sec4Title: "4. LAHJOMATON TASE & ANALYTIIKKA",
+                sec4Title: "5. LAHJOMATON TASE & ANALYTIIKKA",
                 fatPctLabel: "Rasvaprosentti:",
                 leanLabel: "Rasvaton moottorisi (Lean Mass):",
                 fatVolLabel: "Kudosrasvasi (KG / litraa):",
@@ -698,7 +711,10 @@
                 strat5: "Maintain current weight",
                 strat6: "Custom calorie delta (Deficit/Surplus)",
                 customDeltaLabel: "Custom calorie change (kcal/day):",
-                sec2Title: "2. FUEL ADDITION",
+                secGoalTitle: "2. GOAL / EXPENDITURE",
+                estExpenditureLabel: "Estimated daily expenditure (TDEE):",
+                estExpenditureExpl: "(Based on lean body mass and selected activity multiplier)",
+                sec2Title: "3. MEAL ADDITION",
                 favoriteLabel: "Favorite Meals:",
                 favoriteDefault: "-- Select a favorite meal --",
                 saveFavBtn: "⭐ SAVE CURRENT MACROS AS FAVORITE",
@@ -715,10 +731,10 @@
                 logMealBtn: "Log and calculate balance 📥",
                 updateMealBtn: "Update meal ✏️",
                 cancelEditBtn: "Cancel edit ❌",
-                sec3Title: "3. DAILY TIMESTAMPED MEALS",
+                sec3Title: "4. DAILY TIMESTAMPED MEALS",
                 logMacrosLabel: "Logged total macros today:",
                 resetDayBtn: "Reset selected day log ❌",
-                sec4Title: "4. INCORRUPTIBLE BALANCE & ANALYTICS",
+                sec4Title: "5. INCORRUPTIBLE BALANCE & ANALYTICS",
                 fatPctLabel: "Body fat percentage:",
                 leanLabel: "Lean Mass engine:",
                 fatVolLabel: "Body fat tissue (KG / liters):",
@@ -1700,6 +1716,9 @@
 
             document.getElementById('resFatPct').innerText = rPct.toFixed(1);
             document.getElementById('resLean').innerText = rMoor.toFixed(1);
+            if (document.getElementById('estExpenditureVal')) {
+                document.getElementById('estExpenditureVal').innerText = Math.round(tdee);
+            }
 
             const fatKg = w * (rPct / 100);
             const fatLiters = fatKg / 0.90;
