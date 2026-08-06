@@ -312,6 +312,7 @@
             <p style="font-size: 11px; color: #888; margin-top: -6px; margin-bottom: 10px;" data-i18n="cumSaldoExpl">(Plussalla [+] = Syöty yli kulutuksen, painoa tullut lisää | Negatiivinen [-] = Syöty alle kulutuksen, laihduttu)</p>
             <p><span class="result-title" data-i18n="cumMtor">Lihassuoja (mTOR) aktivoitu:</span> <span id="cumMtorDays" class="alert-yellow">0</span> päiviä</p>
             <p><span class="result-title" data-i18n="cumAutophagy">Aktiivinen autofagia (≥14 h paasto):</span> <span id="cumAutophagyDays" class="alert-green">0</span> päiviä</p>
+            <p><span class="result-title" data-i18n="cumFatBurnAvg">Keskimääräinen rasvanpolttoaika (≤35 µIU/ml):</span> <span id="cumFatBurnAvgVal" class="alert-green" style="font-weight:bold;">00:00 / 0.0% vuorokaudesta</span></p>
         </div>
     </details>
 
@@ -597,6 +598,7 @@
                 autophagyStatusLabel: "Autofagian statusvaste:",
                 fastingInfoText: "Autofagia on elimistön luonnollinen solujen siivousmekanismi, joka käynnistyy tehostetusti yli 14 tunnin syömättömän paaston jälkeen.",
                 cumAutophagy: "Aktiivinen autofagia (≥14 h paasto):",
+                cumFatBurnAvg: "Keskimääräinen rasvanpolttoaika (≤35 µIU/ml):",
                 fatBurnWindowLabel: "Rasvanpolttoikkuna (≤35 µIU/ml):",
                 fatBurnWindowTargetMet: "Tavoite saavutettu (≥12 h)",
                 fatBurnWindowBelowTarget: "Alle tavoitteen (<12 h)",
@@ -755,6 +757,7 @@
                 autophagyStatusLabel: "Autophagy status response:",
                 fastingInfoText: "Autophagy is the body's natural cellular cleanup mechanism that intensifies after a fasting period of over 14 hours.",
                 cumAutophagy: "Active autophagy (≥14 h fast):",
+                cumFatBurnAvg: "Average fat burn window (≤35 µIU/ml):",
                 fatBurnWindowLabel: "Fat burning window (≤35 µIU/ml):",
                 fatBurnWindowTargetMet: "Target achieved (≥12 h)",
                 fatBurnWindowBelowTarget: "Below target (<12 h)",
@@ -1502,8 +1505,81 @@
             }
         }
 
+        function laskeInsuliiniAikaan(meals, t) {
+            let insulin = 5.0; 
+            if (!meals || !Array.isArray(meals)) return insulin;
+            meals.forEach(m => {
+                if (m.time) {
+                    const parts = m.time.split(':');
+                    const mealTime = parseInt(parts[0], 10) + (parseInt(parts[1] || '0', 10) / 60);
+                    const dt = t - mealTime;
+                    if (dt >= 0) {
+                        const c = m.c || 0, p = m.p || 0, f = m.f || 0;
+                        const totalM = c + p + f;
+                        const carbRatio = totalM > 0 ? (c / totalM) : 0;
+                        const buf = 1.0 + ((p * 0.01) + (f * 0.02));
+                        const insLoad = ((c * 1.0) + (p * 0.56) + (f * 0.10)) / buf;
+
+                        const tStart = 0.25 - (carbRatio * 0.0833);
+                        const tPeak = 1.0 - (carbRatio * 0.375);
+
+                        if (dt >= tStart) {
+                            let factor = 0;
+                            if (dt <= tPeak) {
+                                const u = (dt - tStart) / (tPeak - tStart);
+                                factor = (3 * u * u) - (2 * u * u * u);
+                            } else {
+                                const tau = dt - tPeak;
+                                const decayScale = 1.8 * buf;
+                                factor = Math.exp(-Math.pow(tau / decayScale, 1.4));
+                            }
+                            if (factor > 0) {
+                                insulin += insLoad * factor;
+                            }
+                        }
+                    }
+                }
+            });
+            return insulin;
+        }
+
+        function laskeRasvanpolttoAika(meals, maxHour = 24.0) {
+            if (!maxHour || maxHour <= 0) return { hours: 0, totalHours: maxHour, pct: 0 };
+            if (maxHour > 24.0) maxHour = 24.0;
+            
+            const totalMinutes = Math.round(maxHour * 60);
+            let fatBurnMinutes = 0;
+            
+            for (let m = 0; m < totalMinutes; m++) {
+                const t = (m + 0.5) / 60;
+                const ins = laskeInsuliiniAikaan(meals, t);
+                if (ins <= 35.0) {
+                    fatBurnMinutes++;
+                }
+            }
+            
+            const hours = fatBurnMinutes / 60;
+            const pct = (hours / maxHour) * 100;
+            return { hours, totalHours: maxHour, pct };
+        }
+
+        function muotoileHHMM(hours) {
+            let h = Math.floor(hours);
+            let m = Math.round((hours - h) * 60);
+            if (m >= 60) { h += 1; m = 0; }
+            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        }
+
+        function muotoileAikaJaProsentti(hours, totalHours, lang = 'fi') {
+            const hhmm = muotoileHHMM(hours);
+            const pct = totalHours > 0 ? ((hours / totalHours) * 100).toFixed(1) : '0.0';
+            const suffix = lang === 'en' ? 'of day' : 'vuorokaudesta';
+            return `${hhmm} / ${pct}% ${suffix}`;
+        }
+
         function paivitaKumulatiivinenYhteenveto() {
             let totalDays = 0, totalEnergyKcal = 0, totalCalorieSaldo = 0, mtorActiveDaysCount = 0, autophagyActiveDaysCount = 0;
+            let totalFatBurnHours = 0;
 
             const startDate = document.getElementById('cumStartDate').value;
             const endDate = document.getElementById('cumEndDate').value;
@@ -1527,6 +1603,9 @@
                     if (fastingData.fastWindow >= 14.0) {
                         autophagyActiveDaysCount++;
                     }
+
+                    const fbData = laskeRasvanpolttoAika(dayObj.meals, 24.0);
+                    totalFatBurnHours += fbData.hours;
 
                     let dayTdee = 0;
                     let lbm = 0;
@@ -1618,6 +1697,16 @@
             document.getElementById('cumMtorDays').innerText = mtorActiveDaysCount;
             const cumAutoEl = document.getElementById('cumAutophagyDays');
             if (cumAutoEl) cumAutoEl.innerText = autophagyActiveDaysCount;
+
+            const cumFatBurnEl = document.getElementById('cumFatBurnAvgVal');
+            if (cumFatBurnEl) {
+                if (totalDays > 0) {
+                    const avgHours = totalFatBurnHours / totalDays;
+                    cumFatBurnEl.innerText = muotoileAikaJaProsentti(avgHours, 24.0, lang);
+                } else {
+                    cumFatBurnEl.innerText = lang === 'en' ? "00:00 / 0.0% of day" : "00:00 / 0.0% vuorokaudesta";
+                }
+            }
         }
 
         function log10(val) { return Math.log(val) / Math.LN10; }
@@ -1799,6 +1888,38 @@
             if (iPeak > 80) insulinStatus = lang === 'en' ? "🔴 HIGH (Elevated insulin buffers fat burning)" : "🔴 KORKEA (Kohonnut insuliini puskuroi rasvanpolton)";
             else if (iPeak > 35) insulinStatus = lang === 'en' ? "🟡 MODERATELY ACTIVE (Digestion active)" : "🟡 KOHTALAISEN AKTIIVINEN (Ruoansulattelu aktiivinen)";
             document.getElementById('resInsulinStatus').innerText = insulinStatus;
+
+            const resFatBurnEl = document.getElementById('resFatBurnWindow');
+            if (resFatBurnEl) {
+                const todayStr = (isDemoMode && demoDates[30]) ? demoDates[30] : getTodayStr();
+                const isToday = (activeDateStr === todayStr);
+
+                if (isToday) {
+                    const now = new Date();
+                    const tNow = now.getHours() + (now.getMinutes() / 60);
+                    const elapsedHours = Math.max(0.1, tNow);
+                    const fbDataNow = laskeRasvanpolttoAika(curMeals, elapsedHours);
+                    const fbData24 = laskeRasvanpolttoAika(curMeals, 24.0);
+
+                    const nowStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+                    const hhmmNow = muotoileHHMM(fbDataNow.hours);
+                    const pctNow = fbDataNow.pct.toFixed(1);
+
+                    const hhmm24 = muotoileHHMM(fbData24.hours);
+                    const pct24 = fbData24.pct.toFixed(1);
+
+                    if (lang === 'en') {
+                        resFatBurnEl.innerText = `${hhmmNow} / ${pctNow}% (by ${nowStr}) | Full 24h: ${hhmm24} / ${pct24}%`;
+                    } else {
+                        resFatBurnEl.innerText = `${hhmmNow} / ${pctNow}% (klo ${nowStr} mennessä) | Koko 24h: ${hhmm24} / ${pct24}%`;
+                    }
+                    resFatBurnEl.className = fbDataNow.pct >= 50 ? "alert-green" : "alert-orange";
+                } else {
+                    const fbData24 = laskeRasvanpolttoAika(curMeals, 24.0);
+                    resFatBurnEl.innerText = muotoileAikaJaProsentti(fbData24.hours, 24.0, lang);
+                    resFatBurnEl.className = fbData24.hours >= 12.0 ? "alert-green" : "alert-orange";
+                }
+            }
 
             historyDB[activeDateStr].calculated = { weight: w, tdee: tdee, consumedKcal: kCals, lbm: rMoor, age: age };
             sailytaPaivaDB();
@@ -2027,44 +2148,7 @@
             const meals = historyDB[activeDateStr]?.meals || [];
 
             function getInsulinAtTime(t) {
-                let insulin = 5.0; 
-                meals.forEach(m => {
-                    if (m.time) {
-                        const parts = m.time.split(':');
-                        const mealTime = parseInt(parts[0], 10) + (parseInt(parts[1] || '0', 10) / 60);
-                        const dt = t - mealTime;
-                        if (dt >= 0) {
-                            const totalM = m.c + m.p + m.f;
-                            const carbRatio = totalM > 0 ? (m.c / totalM) : 0;
-                            const buf = 1.0 + ((m.p * 0.01) + (m.f * 0.02));
-                            const insLoad = ((m.c * 1.0) + (m.p * 0.56) + (m.f * 0.10)) / buf;
-
-                            // Latency and peak timing:
-                            // High-carb: rise starts ~10 min (0.167h), peak ~37.5 min (0.625h)
-                            // Low-carb / High P&F: rise starts ~15 min (0.25h), peak ~60 min (1.0h)
-                            const tStart = 0.25 - (carbRatio * 0.0833);
-                            const tPeak = 1.0 - (carbRatio * 0.375);
-
-                            if (dt >= tStart) {
-                                let factor = 0;
-                                if (dt <= tPeak) {
-                                    // Smooth sigmoidal up-slope (gastric emptying & pancreatic secretion)
-                                    const u = (dt - tStart) / (tPeak - tStart);
-                                    factor = (3 * u * u) - (2 * u * u * u);
-                                } else {
-                                    // Smooth tail decay extended by protein & fat buffer (buf)
-                                    const tau = dt - tPeak;
-                                    const decayScale = 1.8 * buf;
-                                    factor = Math.exp(-Math.pow(tau / decayScale, 1.4));
-                                }
-                                if (factor > 0) {
-                                    insulin += insLoad * factor;
-                                }
-                            }
-                        }
-                    }
-                });
-                return insulin;
+                return laskeInsuliiniAikaan(meals, t);
             }
 
             function getGLAtTime(t) {
