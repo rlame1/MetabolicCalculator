@@ -2518,9 +2518,6 @@
         }
 
         function haeVarmuuskopioPayload() {
-            if (!isDemoMode) {
-                tallennaKayttajaParametrit(false);
-            }
             const realHistoryDB = isDemoMode 
                 ? (JSON.parse(localStorage.getItem('metabolic_v20_historyDB')) || {})
                 : historyDB;
@@ -2531,7 +2528,7 @@
             return {
                 app: "metabolic_calculator_v20",
                 version: "1.0",
-                exportedAt: localStorage.getItem('metabolic_v20_lastUpdate') || new Date().toISOString(),
+                exportedAt: localStorage.getItem('metabolic_v20_lastUpdate') || "", 
                 lang: localStorage.getItem('metabolic_v20_lang') || 'fi',
                 userParams: realUserParams,
                 historyDB: realHistoryDB
@@ -2557,6 +2554,10 @@
                 localStorage.setItem('metabolic_v20_userParams', JSON.stringify(imported.userParams));
                 lataaKayttajaParametrit();
                 hasValidData = true;
+            }
+
+            if (imported.exportedAt) {
+                localStorage.setItem('metabolic_v20_lastUpdate', imported.exportedAt);
             }
 
             if (imported.lang) {
