@@ -854,26 +854,47 @@
 
 
         function getMetricVal(id) {
-            const val = parseFloat(document.getElementById(id).value) || 0;
+            const el = document.getElementById(id);
+            const val = parseFloat(el.value) || 0;
             
             const unit = document.getElementById('unitSelect')?.value || 'metric';
             if (unit === 'imperial') {
+                const storedImp = parseFloat(el.dataset.exactImperial);
+                if (!isNaN(storedImp) && Math.abs(val - storedImp) < 0.001) {
+                    return parseFloat(el.dataset.exactMetric);
+                }
                 if (id === 'weight') return val / 2.20462;
                 if (['height', 'waist', 'neck', 'hip'].includes(id)) return val * 2.54;
+            } else {
+                const storedMet = parseFloat(el.dataset.exactMetric);
+                if (!isNaN(storedMet) && Math.abs(val - storedMet) < 0.001) {
+                    return storedMet;
+                }
             }
             return val;
         }
 
         function setMetricValToInput(id, metricVal) {
-            if (metricVal === null || metricVal === undefined || metricVal === "") { document.getElementById(id).value = ""; return; }
+            const el = document.getElementById(id);
+            if (metricVal === null || metricVal === undefined || metricVal === "") { 
+                el.value = ""; 
+                delete el.dataset.exactMetric;
+                delete el.dataset.exactImperial;
+                return; 
+            }
             
             const unit = document.getElementById('unitSelect')?.value || 'metric';
+            let finalVal;
+            const rawImp = (id === 'weight') ? metricVal * 2.20462 : metricVal / 2.54;
             if (unit === 'imperial') {
-                if (id === 'weight') document.getElementById(id).value = (metricVal * 2.20462).toFixed(1);
-                if (['height', 'waist', 'neck', 'hip'].includes(id)) document.getElementById(id).value = (metricVal / 2.54).toFixed(1);
+                finalVal = Number(rawImp.toFixed(1));
             } else {
-                document.getElementById(id).value = metricVal;
+                finalVal = Number.isInteger(metricVal) ? metricVal : Number(metricVal.toFixed(1));
             }
+            
+            el.dataset.exactMetric = metricVal;
+            el.dataset.exactImperial = (unit === 'imperial') ? finalVal : Number(rawImp.toFixed(1));
+            el.value = finalVal;
         }
 
         function switchUnits(newUnit) {
@@ -881,29 +902,41 @@
             if (newUnit === oldUnit) return;
             
             const ids = ['weight', 'height', 'waist', 'neck', 'hip'];
-            const valsMetric = ids.map(id => {
-                const val = parseFloat(document.getElementById(id).value) || 0;
-                if (!val && document.getElementById(id).value === '') return null;
+            
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                const val = parseFloat(el.value);
+                if (isNaN(val) && el.value === '') return;
+                
+                let m;
                 if (oldUnit === 'imperial') {
-                    if (id === 'weight') return val / 2.20462;
-                    return val * 2.54;
+                    const storedImp = parseFloat(el.dataset.exactImperial);
+                    if (!isNaN(storedImp) && Math.abs(val - storedImp) < 0.001) {
+                        m = parseFloat(el.dataset.exactMetric);
+                    } else {
+                        m = (id === 'weight') ? val / 2.20462 : val * 2.54;
+                    }
+                    const finalVal = Number.isInteger(m) ? m : Number(m.toFixed(1));
+                    el.dataset.exactMetric = finalVal;
+                    el.dataset.exactImperial = val;
+                    el.value = finalVal;
+                } else {
+                    const storedMet = parseFloat(el.dataset.exactMetric);
+                    if (!isNaN(storedMet) && Math.abs(val - storedMet) < 0.001) {
+                        m = storedMet;
+                    } else {
+                        m = val;
+                    }
+                    const imp = (id === 'weight') ? m * 2.20462 : m / 2.54;
+                    const finalVal = Number(imp.toFixed(1));
+                    el.dataset.exactMetric = m;
+                    el.dataset.exactImperial = finalVal;
+                    el.value = finalVal;
                 }
-                return val;
             });
             
             localStorage.setItem('metabolic_v20_units', newUnit);
             updateLabelsForUnits();
-            
-            ids.forEach((id, idx) => {
-                const m = valsMetric[idx];
-                if (m === null) return;
-                if (newUnit === 'imperial') {
-                    if (id === 'weight') document.getElementById(id).value = (m * 2.20462).toFixed(1);
-                    else document.getElementById(id).value = (m / 2.54).toFixed(1);
-                } else {
-                    document.getElementById(id).value = Number.isInteger(m) ? m : m.toFixed(1);
-                }
-            });
             
             tallennaKayttajaParametrit(true);
             paivitaKaikkienPaivienLaskelmat();
@@ -1501,13 +1534,14 @@
             paivitaLaskettuRasvaprosenttiKenttaan();
             if (isDemoMode) return; 
             const params = {
+                _v: 2,
                 gender: document.getElementById('gender').value,
                 age: document.getElementById('age').value,
-                height: document.getElementById('height').value,
-                weight: document.getElementById('weight').value,
-                waist: document.getElementById('waist').value,
-                neck: document.getElementById('neck').value,
-                hip: document.getElementById('hip').value,
+                height: getMetricVal('height'),
+                weight: getMetricVal('weight'),
+                waist: getMetricVal('waist'),
+                neck: getMetricVal('neck'),
+                hip: getMetricVal('hip'),
                 bodyFat: document.getElementById('bodyFat')?.value || '',
                 activityLevel: document.getElementById('activityLevel').value,
                 strategyGoal: document.getElementById('strategyGoal').value,
@@ -1527,8 +1561,17 @@
             const saved = localStorage.getItem('metabolic_v20_userParams');
             if (saved) {
                 const p = JSON.parse(saved);
-                ['gender','age','height','weight','waist','neck','hip','bodyFat','activityLevel','strategyGoal','customCalorieDelta'].forEach(k => {
+                ['gender','age','bodyFat','activityLevel','strategyGoal','customCalorieDelta'].forEach(k => {
                     if (p[k] !== undefined && document.getElementById(k)) document.getElementById(k).value = p[k];
+                });
+                ['height','weight','waist','neck','hip'].forEach(k => {
+                    if (p[k] !== undefined && document.getElementById(k)) {
+                        if (p._v === 2) {
+                            setMetricValToInput(k, p[k]);
+                        } else {
+                            document.getElementById(k).value = p[k];
+                        }
+                    }
                 });
             }
             paivitaLaskettuRasvaprosenttiKenttaan();
