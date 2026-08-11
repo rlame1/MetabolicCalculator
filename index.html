@@ -1,0 +1,3366 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧬</text></svg>">
+    <title>METABOLIC CALCULATOR v1.0 — Interactive Chart & i18n</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://apis.google.com/js/api.js"></script>
+    <style>
+        body { background-color: #050505; color: #00ff00; font-family: 'Courier New', monospace; padding: 15px; max-width: 760px; margin: 0 auto; line-height: 1.5; }
+        h1, h2, h3 { text-align: center; border-bottom: 2px solid #00ff00; padding-bottom: 10px; text-transform: uppercase; }
+        
+        details.box, details.cum-box, details.date-box { border: 1px solid #00ff00; margin: 15px 0; background-color: #000; }
+        details.cum-box { border: 2px double #00ff00; background-color: #041204; }
+        details.date-box { border-color: #ffff00; background-color: #0a0a00; }
+        
+        summary { background: #111; color: #fff; padding: 12px; font-weight: bold; cursor: pointer; text-transform: uppercase; border-bottom: 1px solid #00ff00; user-select: none; font-family: inherit; }
+        summary:hover { background: #1a2a1a; color: #00ff00; }
+        details[open] summary { border-bottom: 2px solid #00ff00; background-color: #0a1f0a; }
+        
+        .details-content { padding: 15px; }
+
+        .top-controls-box { border: 2px solid #00ff00; background-color: #111; padding: 10px 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .btn-options-toggle { background: #222; color: #ff00ff; border: 2px solid #ff00ff; padding: 8px 14px; font-weight: bold; cursor: pointer; font-family: inherit; font-size: 13px; text-transform: uppercase; width: auto; margin: 0; }
+        .btn-options-toggle:hover { background: #ff00ff; color: #000; }
+        
+        label { display: block; margin-top: 10px; font-weight: bold; }
+        input, select { width: 100%; background: #111; border: 1px solid #00ff00; color: #00ff00; padding: 10px; margin-top: 5px; box-sizing: border-box; font-family: inherit; font-size: 16px; }
+        
+        input::placeholder { color: #ffff00; font-weight: bold; opacity: 1; text-transform: uppercase; background-color: #222000; padding: 2px 4px; border: 1px dashed #ffff00; }
+        
+        button { width: 100%; background: #00ff00; color: #000; border: none; padding: 14px; margin-top: 20px; font-weight: bold; cursor: pointer; font-family: inherit; text-transform: uppercase; font-size: 15px; }
+        button:hover { background: #00aa00; }
+        .btn-danger { background: #ff0000; color: #fff; margin-top: 10px; }
+        .btn-danger:hover { background: #aa0000; }
+        .btn-master-reset { background: #330000; color: #ff3333; border: 2px solid #ff0000; font-weight: bold; padding: 12px; margin-top: 10px; font-size: 13px; width: 100%; }
+        .btn-master-reset:hover { background: #ff0000; color: #fff; }
+        .btn-demo { background: #ff00ff; color: #000; font-weight: bold; border: 2px solid #ff00ff; margin-top: 0; width: 100%; padding: 12px; cursor: pointer; font-family: inherit; }
+        .btn-demo:hover { background: #cc00cc; color: #fff; }
+        
+        .btn-backup { background: #003366; color: #00ffff; border: 2px solid #00ffff; font-weight: bold; padding: 10px; margin-top: 5px; font-size: 12px; flex: 1; min-width: 140px; cursor: pointer; text-transform: uppercase; font-family: inherit; }
+        .btn-backup:hover { background: #00ffff; color: #000; }
+        
+        .info-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            line-height: 16px;
+            border-radius: 50%;
+            background: #002200;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-left: 6px;
+            vertical-align: middle;
+            user-select: none;
+            transition: all 0.2s ease;
+        }
+        .info-icon:hover {
+            background: #00ff00;
+            color: #000;
+            box-shadow: 0 0 6px #00ff00;
+        }
+        .info-popup-panel {
+            display: none;
+            margin-top: 6px;
+            margin-bottom: 12px;
+            padding: 10px 12px;
+            background: #001a00;
+            border: 1px dashed #00ff00;
+            color: #00ff00;
+            font-size: 11px;
+            line-height: 1.4;
+            border-radius: 4px;
+        }
+        
+        /* Official Google Sign-in Button Styles */
+        .gsi-material-button {
+          -moz-user-select: none;
+          -webkit-user-select: none;
+          -ms-user-select: none;
+          background-color: WHITE;
+          background-image: none;
+          border: 1px solid #747775;
+          border-radius: 4px;
+          box-sizing: border-box;
+          color: #1f1f1f;
+          cursor: pointer;
+          font-family: 'Roboto', arial, sans-serif;
+          font-size: 14px;
+          height: 40px;
+          letter-spacing: 0.25px;
+          outline: none;
+          overflow: hidden;
+          padding: 0 12px;
+          position: relative;
+          text-align: center;
+          transition: background-color .218s, border-color .218s, box-shadow .218s;
+          vertical-align: middle;
+          white-space: nowrap;
+          width: 100%;
+          max-width: 320px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          margin-top: 6px;
+        }
+        .gsi-material-button .gsi-material-button-icon {
+          height: 20px;
+          margin-right: 12px;
+          min-width: 20px;
+          width: 20px;
+        }
+        .gsi-material-button .gsi-material-button-content-wrapper {
+          align-items: center;
+          display: flex;
+          flex-direction: row;
+          flex-wrap: nowrap;
+          height: 100%;
+          justify-content: center;
+          position: relative;
+          width: 100%;
+        }
+        .gsi-material-button .gsi-material-button-contents {
+          flex-grow: 1;
+          font-family: 'Roboto', arial, sans-serif;
+          font-weight: 500;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          vertical-align: top;
+        }
+        .gsi-material-button:hover {
+          box-shadow: 0 1px 2px 0 rgba(60,64,67,0.30), 0 1px 3px 1px rgba(60,64,67,0.15);
+          background-color: #f8fafd;
+        }
+        
+        .demo-nav-btn { width: 32%; display: inline-block; margin: 4px 0.5%; background: #330033; color: #ff88ff; border: 1px solid #ff00ff; padding: 8px; font-size: 11px; cursor: pointer; text-align: center; box-sizing: border-box; }
+        .demo-nav-btn.active { background: #ff00ff; color: #000; font-weight: bold; }
+
+        .result-title { color: #fff; font-weight: bold; }
+        .alert-red { color: #ff0000; font-weight: bold; }
+        .alert-orange { color: #ffaa00; font-weight: bold; }
+        .alert-green { color: #00ff00; font-weight: bold; }
+        .alert-yellow { color: #ffff00; font-weight: bold; font-size: 13px; line-height: 1.4; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #00ff00; padding: 8px; text-align: left; }
+        th { color: #fff; background-color: #111; }
+        .meal-log-item { font-size: 12px; border-bottom: 1px dashed #00ff00; padding: 8px 0; line-height: 1.6; }
+        
+        .chart-scroll-wrapper { width: 100%; overflow: hidden; margin-top: 15px; border: 1px solid #00ff00; background-color: #000; box-sizing: border-box; }
+        .chart-container { width: 100%; padding: 10px; text-align: center; box-sizing: border-box; }
+        canvas { background-color: #000; display: block; margin: 0 auto; width: 100%; max-width: 100%; height: auto; box-sizing: border-box; }
+        
+        .chart-legend { font-size: 11px; margin-top: 8px; display: flex; justify-content: space-around; flex-wrap: wrap; gap: 5px; border: 1px solid #00ff00; padding: 8px; background: #111; }
+        
+        .options-panel { border: 2px solid #ff00ff; background-color: #0d000d; padding: 15px; margin-bottom: 20px; display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="top-controls-box" style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;">
+        <div></div>
+        <div style="display: flex; justify-content: center;">
+            <div id="headerDriveBadge" style="font-size: 11px; color: #888; background: #000; border: 1px solid #333; padding: 5px 10px; border-radius: 4px; display: flex; align-items: center; gap: 6px; cursor: pointer;" onclick="toggleOptionsPanel();">
+                ☁️ Drive: <span id="headerDriveStatusText">Ei kirjauduttu</span>
+            </div>
+        </div>
+        <div style="display: flex; justify-content: flex-end;">
+            <button class="btn-options-toggle" onclick="toggleOptionsPanel()" data-i18n="optionsBtn">⚙️ ASETUKSET</button>
+        </div>
+    </div>
+
+    <div id="optionsPanel" class="options-panel">
+        <h3 style="color: #ff00ff; border-color: #ff00ff; margin-top: 0; padding-bottom: 6px; font-size: 14px;" data-i18n="optionsTitle">⚙️ LISÄASETUKSET JA HALLINTA</h3>
+        
+        <div style="margin-bottom: 15px; display: flex; flex-wrap: wrap; gap: 15px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <label for="unitSelect" style="margin:0; font-size:13px; color:#fff;" data-i18n="unitLabel">📏 YKSIKÖT:</label>
+                <select id="unitSelect" onchange="switchUnits(this.value)" style="width: auto; padding: 6px; margin:0; font-size: 13px;">
+                    <option value="metric">Metric (KG/CM)</option>
+                    <option value="imperial">Imperial (LBS/IN)</option>
+                </select>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <label for="langSelect" style="margin:0; font-size:13px; color:#fff;" data-i18n="langLabel">🌐 KIELI:</label>
+                <select id="langSelect" onchange="switchLanguage(this.value)" style="width: auto; padding: 6px; margin:0; font-size: 13px;">
+                    <option value="fi">Suomi</option>
+                    <option value="en">English</option>
+                </select>
+            </div>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <button id="demoBtn" class="btn-demo" onclick="toggleDemoMode()" data-i18n="demoBtnOn">🎭 KÄYNNISTÄ ESITTELYTILA (DEMO)</button>
+            <div id="demoControls" style="display:none; margin-top: 10px;">
+                <p style="color: #ff88ff; font-size: 12px; font-weight: bold; margin-bottom: 6px;" data-i18n="demoSelectLabel">VALITSE DEMO-PÄIVÄ (30 PÄIVÄN HISTORIA):</p>
+                <select id="demoDaySelect" onchange="valitseDemoPaivaByDate(this.value)" style="width: 100%; font-size: 12px; padding: 6px; background: #000; color: #ff00ff; border: 1px solid #ff00ff; margin-bottom: 8px;">
+                </select>
+                <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                    <button class="demo-nav-btn" style="flex:1; min-width:70px; font-size:11px;" onclick="valitseDemoPaiva(30)" data-i18n="demoBtnToday">📅 TÄNÄÄN</button>
+                    <button class="demo-nav-btn" style="flex:1; min-width:70px; font-size:11px;" onclick="valitseDemoPe()" data-i18n="demoBtnPe">📺 PE (TV-SIPSIT)</button>
+                    <button class="demo-nav-btn" style="flex:1; min-width:70px; font-size:11px;" onclick="valitseDemoLa()" data-i18n="demoBtnLa">🍕 LA (HERKKU)</button>
+                    <button class="demo-nav-btn" style="flex:1; min-width:70px; font-size:11px;" onclick="valitseDemoArki()" data-i18n="demoBtnArki">🥗 ARKI (NORMAALI)</button>
+                </div>
+            </div>
+        </div>
+
+        <div style="border-top: 1px dashed #4285F4; padding-top: 12px; margin-top: 15px;">
+            <p style="color: #4285F4; font-size: 12px; font-weight: bold; margin-bottom: 4px;" data-i18n="driveTitle">🌐 GOOGLE DRIVE AUTOMAATTISYNKRONOINTI</p>
+            <p style="font-size: 11px; color: #aaa; margin-bottom: 8px;" data-i18n="driveDesc">Kirjaudu sisään Google-tililläsi tallentaaksesi ja synkronoidaksesi laskurin tiedot automaattisesti eri laitteidesi välillä.</p>
+            
+            <div id="driveLoggedOutUI">
+                <button id="googleSignInBtn" class="gsi-material-button" type="button">
+                  <div class="gsi-material-button-state"></div>
+                  <div class="gsi-material-button-content-wrapper">
+                    <div class="gsi-material-button-icon">
+                      <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" style="display: block;">
+                        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
+                        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
+                        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
+                        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
+                        <path fill="none" d="M0 0h48v48H0z"></path>
+                      </svg>
+                    </div>
+                    <span class="gsi-material-button-contents" data-i18n="signInWithGoogle">Kirjaudu sisään Googlella</span>
+                  </div>
+                </button>
+                <button id="openInNewTabBtn" type="button" onclick="window.open(window.location.href, '_blank')" style="display: none; width: 100%; background: #112233; color: #00ffff; border: 1px solid #00ffff; padding: 10px; margin-top: 8px; font-size: 12px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-family: inherit;">
+                    🔗 AVAA SOVELLUS UUTEEN VÄLILEHTEEN ↗
+                </button>
+                <p id="braveNotice" style="display: none; font-size: 11px; color: #ffaa00; margin-top: 8px; line-height: 1.4; background: #221100; border: 1px solid #ffaa00; padding: 6px 10px; border-radius: 4px;" data-i18n="braveNoticeText">
+                    🦁 <strong>Brave / Ikkuna-ohje:</strong><br>1) Jos sovellus on kehyssivulla (iframe), <a href="javascript:void(0)" onclick="window.open(window.location.href,'_blank')" style="color:#00ffff; text-decoration:underline; font-weight:bold;">Avaa uuteen välilehteen ↗</a>.<br>2) Brave-asetus: <em>Asetukset ➔ Yksityisyys ja turvallisuus ➔ Salli Google-kirjautumispainikkeet kolmannen osapuolen sivustoilla</em>.
+                </p>
+            </div>
+
+            <p style="font-size: 11px; margin-top: 8px; margin-bottom: 0;">
+                <a href="https://rlame1.github.io/MetabolicCalculator/privacy.html" target="_blank" style="color: #4285F4; text-decoration: underline;" data-i18n="privacyPolicyLink">🔒 Tietosuojaseloste / Privacy Policy ↗</a>
+            </p>
+
+            <div id="driveLoggedInUI" style="display: none; background: #001122; border: 1px solid #0088ff; padding: 10px; margin-top: 8px;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                    <img id="userAvatar" src="" style="width: 36px; height: 36px; border-radius: 50%; border: 1px solid #00ffff; display: none;" alt="User">
+                    <div>
+                        <p id="userName" style="font-weight: bold; color: #fff; font-size: 13px; margin: 0;"></p>
+                        <p id="userEmail" style="color: #88ccff; font-size: 11px; margin: 0;"></p>
+                    </div>
+                </div>
+                <p id="driveSyncStatus" style="font-size: 11px; color: #00ff00; margin: 6px 0; font-weight: bold;">🟢 Synkronoitu Google Driveen</p>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px;">
+                    <button class="btn-backup" style="background:#004488; border-color:#00aaff; color:#fff;" onclick="synkkaaGoogleDriveManuaalisesti()" data-i18n="syncNowBtn">🔄 SYNKRONOI NYT</button>
+                    <button class="btn-backup" style="background:#003344; border-color:#00ffff; color:#00ffff;" onclick="lataaGoogleDrivesta()" data-i18n="loadFromDriveBtn">📥 LATAA DRIVESTÄ</button>
+                    <button class="btn-backup" style="background:#440000; border-color:#ff4444; color:#ffaaaa;" onclick="kirjauduUlosGoogle()" data-i18n="logoutBtn">🚪 KIRJAUDU ULOS</button>
+                </div>
+            </div>
+        </div>
+
+        <div style="border-top: 1px dashed #00ffff; padding-top: 12px; margin-top: 15px;">
+            <p style="color: #00ffff; font-size: 12px; font-weight: bold; margin-bottom: 4px;" data-i18n="backupTitle">💾 DATAN VARMUUSKOPIOINTI JA TUONTI</p>
+            <p style="font-size: 11px; color: #aaa; margin-bottom: 8px;" data-i18n="backupDesc">Lataa kaikki tallennetut päivä- ja profiilitiedot talteen JSON-tiedostona tai palauta aiemmin varmuuskopioitu data.</p>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn-backup" onclick="vieVarmuuskopioData()" data-i18n="exportBackupBtn">💾 LATAA VARMUUSKOPIO (EXPORT)</button>
+                <button class="btn-backup" onclick="document.getElementById('importFileInput').click()" data-i18n="importBackupBtn">📥 TUO VARMUUSKOPIO (IMPORT)</button>
+                <input type="file" id="importFileInput" accept=".json" style="display:none;" onchange="tuoVarmuuskopioData(event)">
+            </div>
+        </div>
+
+        <div style="border-top: 1px dashed #ff0000; padding-top: 12px; margin-top: 15px;">
+            <p style="font-size: 11px; color: #ff8888; margin-bottom: 8px;" data-i18n="masterResetDesc">Tyhjennä laskurin koko muisti (kaikki tallennetut päivät ja profiilitiedot).</p>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn-master-reset" style="flex: 1; min-width: 200px;" onclick="nollaaKaikkiTiedot()" data-i18n="masterResetBtn">⚠️ NOLLAA KAIKKI TIEDOT (MASTER RESET)</button>
+                <button class="btn-backup" style="flex: 1; min-width: 200px; background: #333; border-color: #666; color: #fff;" onclick="forceAppRefresh()" data-i18n="forceRefreshBtn">🔄 PAKOTA SIVUN PÄIVITYS (FORCE REFRESH)</button>
+            </div>
+        </div>
+    </div>
+
+    <h1 data-i18n="mainTitle">🧬 METABOLINEN LASKURI v1.0</h1>
+    <p style="text-align: center; font-size: 11px; color: #888;" data-i18n="mainSub">Käytä yläkulman "ASETUKSET"-painiketta esittelytilan tai nollauksen avaamiseen.</p>
+    
+    <details class="date-box" open>
+        <summary style="color:#ffff00; border-color:#ffff00;" data-i18n="dateSummary">📅 VALITSE PÄIVÄMÄÄRÄ</summary>
+        <div class="details-content">
+            <label style="color:#ffff00; margin-top:0;" data-i18n="dateLabel">Päivämäärä:</label>
+            <div style="display: flex; gap: 8px; align-items: center; margin-top: 5px;">
+                <button type="button" onclick="siirryPaivissa(-1)" style="width: auto; padding: 10px 14px; margin-top: 0; background: #222200; border: 1px solid #ffff00; color: #ffff00; cursor: pointer; border-radius: 4px; font-size: 16px;" title="Edellinen päivä (←)" data-i18n-title="prevDayBtnTitle">◀ <span data-i18n="prevDayBtn">Edellinen</span></button>
+                <input type="date" id="selectedDate" style="border-color:#ffff00; color:#ffff00; margin-top: 0; flex: 1;" onchange="vaihdaPaivaa()">
+                <button type="button" onclick="siirryPaivissa(1)" style="width: auto; padding: 10px 14px; margin-top: 0; background: #222200; border: 1px solid #ffff00; color: #ffff00; cursor: pointer; border-radius: 4px; font-size: 16px;" title="Seuraava päivä (→)" data-i18n-title="nextDayBtnTitle"><span data-i18n="nextDayBtn">Seuraava</span> ▶</button>
+            </div>
+        </div>
+    </details>
+
+    <!-- Floating Date Navigation Buttons -->
+    <div style="position: fixed; top: 50%; left: max(10px, calc(50% - 472px)); transform: translateY(-50%); z-index: 9999; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+        <button type="button" onclick="siirryPaivissa(-1)" style="width: 46px; height: 54px; padding: 0; margin: 0; background: rgba(10, 10, 0, 0.85); border: 2px solid #ffff00; color: #ffff00; border-radius: 8px; cursor: pointer; font-size: 18px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.8); backdrop-filter: blur(4px);" title="Edellinen päivä (← / Vasen nuoli)" data-i18n-title="floatPrevTitle">
+            <span style="font-size: 18px; line-height: 1;">◀</span>
+            <span style="font-size: 9px; margin-top: 2px; font-weight: bold;" data-i18n="floatPrevText">EDELL.</span>
+        </button>
+        <button type="button" id="floatDateBtnLeft" onclick="avaaPaivamaaratarkastelu()" style="width: 46px; min-height: 44px; padding: 4px 2px; margin: 0; background: rgba(10, 10, 0, 0.85); border: 2px solid #ffff00; color: #ffff00; border-radius: 8px; cursor: pointer; font-size: 10px; font-weight: bold; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.8); backdrop-filter: blur(4px); text-align: center; line-height: 1.1;" title="Tarkasteltava päivämäärä (Napsauta valitaksesi)" data-i18n-title="floatDateTitle">
+            <span id="floatDateDayNameLeft" style="font-size: 9px; opacity: 0.85;">TO</span>
+            <span id="floatDateStrLeft" style="font-size: 11px; font-weight: bold; margin-top: 1px;">06.08.</span>
+        </button>
+    </div>
+    <div style="position: fixed; top: 50%; right: max(10px, calc(50% - 472px)); transform: translateY(-50%); z-index: 9999; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+        <button type="button" onclick="siirryPaivissa(1)" style="width: 46px; height: 54px; padding: 0; margin: 0; background: rgba(10, 10, 0, 0.85); border: 2px solid #ffff00; color: #ffff00; border-radius: 8px; cursor: pointer; font-size: 18px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.8); backdrop-filter: blur(4px);" title="Seuraava päivä (→ / Oikea nuoli)" data-i18n-title="floatNextTitle">
+            <span style="font-size: 18px; line-height: 1;">▶</span>
+            <span style="font-size: 9px; margin-top: 2px; font-weight: bold;" data-i18n="floatNextText">SEUR.</span>
+        </button>
+        <button type="button" id="floatDateBtnRight" onclick="avaaPaivamaaratarkastelu()" style="width: 46px; min-height: 44px; padding: 4px 2px; margin: 0; background: rgba(10, 10, 0, 0.85); border: 2px solid #ffff00; color: #ffff00; border-radius: 8px; cursor: pointer; font-size: 10px; font-weight: bold; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.8); backdrop-filter: blur(4px); text-align: center; line-height: 1.1;" title="Tarkasteltava päivämäärä (Napsauta valitaksesi)" data-i18n-title="floatDateTitle">
+            <span id="floatDateDayNameRight" style="font-size: 9px; opacity: 0.85;">TO</span>
+            <span id="floatDateStrRight" style="font-size: 11px; font-weight: bold; margin-top: 1px;">06.08.</span>
+        </button>
+    </div>
+
+    <details class="cum-box" id="cumSummaryBox" open>
+        <summary data-i18n="cumSummary">📊 KUMULATIIVINEN HISTORIAYHTEENVETO</summary>
+        <div class="details-content">
+            <div style="margin-bottom: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
+                <button type="button" onclick="asetKumuJakso(7)" style="flex: 1; min-width: 140px; padding: 8px 10px; font-size: 11px; font-weight: bold; font-family: inherit; background: #002200; border: 1px solid #00ff00; color: #00ff00; cursor: pointer; border-radius: 3px;" data-i18n="btnLast7Days">🗓️ VIIMEISET 7 PÄIVÄÄ (KULUNEET)</button>
+                <button type="button" onclick="asetKumuJakso(30)" style="flex: 1; min-width: 140px; padding: 8px 10px; font-size: 11px; font-weight: bold; font-family: inherit; background: #002200; border: 1px solid #00ff00; color: #00ff00; cursor: pointer; border-radius: 3px;" data-i18n="btnLast30Days">🗓️ VIIMEISET 30 PÄIVÄÄ (KULUNEET)</button>
+            </div>
+            <div style="margin-bottom: 12px; display: flex; gap: 10px; flex-wrap: wrap; background: #001a00; padding: 10px; border: 1px dashed #00ff00;">
+                <div style="flex: 1; min-width: 140px;">
+                    <label style="font-size: 11px; margin-top:0; color:#00ff00;" data-i18n="cumStartLabel">📅 ALKUPÄIVÄMÄÄRÄ:</label>
+                    <input type="date" id="cumStartDate" onchange="paivitaKumulatiivinenYhteenveto()" style="font-size: 12px; padding: 6px; background: #000; color: #00ff00;">
+                </div>
+                <div style="flex: 1; min-width: 140px;">
+                    <label style="font-size: 11px; margin-top:0; color:#00ff00;" data-i18n="cumEndLabel">📅 LOPPUPÄIVÄMÄÄRÄ:</label>
+                    <input type="date" id="cumEndDate" onchange="paivitaKumulatiivinenYhteenveto()" style="font-size: 12px; padding: 6px; background: #000; color: #00ff00;">
+                </div>
+            </div>
+
+            <p><span class="result-title" data-i18n="cumDays">Seurattuja päiviä yhteensä:</span> <span id="cumDaysCount" class="alert-green">0</span></p>
+            <p><span class="result-title" data-i18n="cumEnergy">Nautittu kokonaisenergia:</span> <span id="cumEnergyTotal" class="alert-orange">0</span> kcal</p>
+            <p><span id="cumDeficitTitle" class="result-title" data-i18n="cumDeficit">Kertynyt kalorisaldo:</span> <span id="cumDeficitTotal" style="font-weight:bold;">0</span> kcal (<span id="cumFatBurnedKg">0.00</span> <span id="cumFatBurnedUnit">kg</span> / <span id="cumFatBurnedLiters">0.00</span> litraa rasvaa)</p>
+            <p style="font-size: 11px; color: #888; margin-top: -6px; margin-bottom: 10px;" data-i18n="cumSaldoExpl">(Plussalla [+] = Syöty yli kulutuksen, painoa tullut lisää | Negatiivinen [-] = Syöty alle kulutuksen, laihduttu)</p>
+            <p><span class="result-title" data-i18n="cumMtor">Lihassuoja (mTOR) aktivoitu:</span> <span id="cumMtorDays" class="alert-yellow">0</span> päiviä</p>
+            <p><span class="result-title" data-i18n="cumAutophagy">Aktiivinen autofagia (≥14 h paasto):</span> <span id="cumAutophagyDays" class="alert-green">0</span> päiviä</p>
+            <p><span class="result-title" data-i18n="cumFatBurnAvg">Keskimääräinen rasvanpolttoaika (≤35 µIU/ml):</span> <span id="cumFatBurnAvgVal" class="alert-green" style="font-weight:bold;">00:00 / 0.0% vuorokaudesta</span></p>
+        </div>
+    </details>
+
+    <details class="box" open>
+        <summary data-i18n="sec1Title">1. BIOLOGISET PARAMETRIT</summary>
+        <div class="details-content">
+            <label data-i18n="genderLabel">Sukupuoli:</label>
+            <select id="gender" onchange="tarkistaSukupuoli(); tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();">
+                <option value="male" selected>Mies</option>
+                <option value="female">Nainen</option>
+            </select>
+            
+            <label data-i18n="ageLabel">Ikä (vuotta) [Vapaaehtoinen]:</label> 
+            <input type="number" id="age" inputmode="numeric"  placeholder="👉 SYÖTÄ TIETO (IKÄ)" oninput="tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();">
+            
+            <label id="lblHeight">Pituus (cm) [Vapaaehtoinen]:</label> 
+            <input type="number" id="height" inputmode="decimal" step="any"  placeholder="👉 SYÖTÄ TIETO (PITUUS CM)" oninput="tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();">
+            
+            <label id="lblWeight">Nykyinen Paino (kg):</label> 
+            <input type="number" id="weight" inputmode="decimal" step="any"  placeholder="👉 SYÖTÄ TIETO (PAINO KG)" oninput="tallennaKayttajaParametrit(); paivitaLaskelmat();">
+            
+            <label id="lblWaist">Vyötärön ympärys (cm) [Vapaaehtoinen]:</label> 
+            <input type="number" id="waist" inputmode="decimal" step="any"  placeholder="👉 SYÖTÄ TIETO (VYÖTÄRÖ CM)" oninput="tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();">
+            
+            <label id="lblNeck">Niskan ympärys (cm) [Vapaaehtoinen]:</label> 
+            <input type="number" id="neck" inputmode="decimal" step="any"  placeholder="👉 SYÖTÄ TIETO (NISKA CM)" oninput="tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();">
+            
+            <div id="hipContainer" style="display:none;">
+                <label id="lblHip">Lantion ympärys (cm) [Naisilla vapaaehtoinen]:</label> 
+                <input type="number" id="hip" inputmode="decimal" step="any"  placeholder="👉 SYÖTÄ TIETO (LANTIO CM)" oninput="tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();">
+            </div>
+
+            <label data-i18n="bodyFatLabel">Oma rasvaprosentti (%) [Ohjelma laskee jos pituus, niska ja vyötärö (ja naisilla lantio) annettu. Tai syötä oma:]</label> 
+            <input type="number" id="bodyFat" inputmode="decimal" step="any"  placeholder="👉 SYÖTÄ RASVAPROSENTTI % (JOS TIEDOSSA)" oninput="this.dataset.manualOverride = this.value ? 'true' : ''; tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();">
+        </div>
+    </details>
+
+    <details class="box" open>
+        <summary data-i18n="secGoalTitle">2. TAVOITE / KULUTUS</summary>
+        <div class="details-content">
+            <label data-i18n="activityLabel">Aktiivisuustason kerroin:</label>
+            <select id="activityLevel" onchange="tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();">
+                <option value="1.2">Passiivinen (istumatyö, vähän/ei liikuntaa) [1.2]</option>
+                <option value="1.25" selected>Perusaktiivinen (vakio oletus) [1.25]</option>
+                <option value="1.375">Kevyt aktiivisuus (liikuntaa 1–3 krt/vko) [1.375]</option>
+                <option value="1.55">Kohtalainen aktiivisuus (liikuntaa 3–5 krt/vko) [1.55]</option>
+                <option value="1.725">Erittäin aktiivinen (liikuntaa 6–7 krt/vko) [1.725]</option>
+                <option value="1.9">Äärimmäisen aktiivinen (fyysinen työ + kova urheilu) [1.9]</option>
+            </select>
+            
+            <label data-i18n="strategyLabel">Strateginen tavoite / Viikkovauhti:</label>
+            <select id="strategyGoal" onchange="tarkistaCustomTavoite(); tallennaKayttajaParametrit(); paivitaLaskelmat();">
+                <option value="lose_1pct" selected>Maksimaalinen 1% / viikko (Dynaaminen)</option>
+                <option value="lose_075pct">Kova 0,75% / viikko (Dynaaminen)</option>
+                <option value="lose_05pct">Ikääntyneet max 0,5% / viikko (Dynaaminen)</option>
+                <option value="lose_025pct">Ikääntynyt turvallinen 0,25% / viikko (Dynaaminen)</option>
+                <option value="maintain">Pidä nykyinen paino</option>
+                <option value="custom">Mukautettu kalorimuutos (Vaje/Ylitys)</option>
+            </select>
+
+            <div id="customGoalContainer" style="display:none;">
+                <label data-i18n="customDeltaLabel">Oma mukautettu kalorimuutos (kcal/pvä):</label>
+                <input type="number" id="customCalorieDelta" inputmode="decimal" value="-500" step="50"  placeholder="👉 SYÖTÄ VAJE (-) TAI YLITYS (+)" oninput="tallennaKayttajaParametrit(); paivitaLaskelmat();">
+            </div>
+
+            <div style="margin-top: 15px; padding: 12px; background: rgba(0, 255, 0, 0.08); border: 1px solid #00ff00; border-radius: 6px;">
+                <p style="margin: 0;"><span class="result-title" style="color: #00ff00; font-weight: bold;" data-i18n="estExpenditureLabel">Arvioitu päivittäinen kulutus (TDEE):</span> <span id="estExpenditureVal" class="alert-green" style="font-size: 18px; font-weight: bold;">0</span> kcal/pvä</p>
+                <p style="font-size: 11px; color: #888; margin-top: 4px; margin-bottom: 0;" data-i18n="estExpenditureExpl">(Perustuu rasvattomaan kehonmassaan ja valittuun aktiivisuuskertoimeen)</p>
+            </div>
+        </div>
+    </details>
+
+    <details class="box" open>
+        <summary data-i18n="sec2Title">3. ATERIAN LISÄYS</summary>
+        <div class="details-content">
+            <label data-i18n="favoriteLabel">Suosikkiateriat:</label>
+            <select id="favoriteSelect" onchange="valitseSuosikki(this.value)">
+                <option value="" data-i18n="favoriteDefault">-- Valitse suosikkiateria --</option>
+            </select>
+            <div style="display: flex; gap: 8px; margin-top: 6px; margin-bottom: 12px; flex-wrap: wrap;">
+                <button type="button" onclick="tallennaSuosikki()" data-i18n="saveFavBtn" style="flex: 1; min-width: 180px; background: #004422; color: #00ffaa; border: 1px solid #00ffaa; padding: 10px; margin-top: 0; font-size: 12px; cursor: pointer;">⭐ TALLENNA NYKYISET MAKROT SUOSIKIKSI</button>
+                <button type="button" onclick="poistaSuosikki()" data-i18n="deleteFavBtn" style="flex: 1; min-width: 180px; background: #440000; color: #ffaaaa; border: 1px solid #ff4444; padding: 10px; margin-top: 0; font-size: 12px; cursor: pointer;">❌ POISTA VALITTU SUOSIKKI</button>
+            </div>
+
+            <label data-i18n="mealTimeLabel">Aterian aika (HH:MM) [Vapaaehtoinen, oletus: Nyt]:</label> 
+            <input type="time" id="mealTime">
+
+            <label data-i18n="carbsLabel">Hiilihydraatit (g):</label> <input type="number" id="carbs" inputmode="decimal"  placeholder="👉 SYÖTÄ TIETO (HIILIHYDRAATIT G)">
+            <label data-i18n="proteinLabel">Proteiini (g):</label> <input type="number" id="protein" inputmode="decimal"  placeholder="👉 SYÖTÄ TIETO (PROTEIINI G)">
+            <label data-i18n="fatLabel">Rasva (g):</label> <input type="number" id="fat" inputmode="decimal"  placeholder="👉 SYÖTÄ TIETO (RASVA G)">
+            <button id="logMealBtn" onclick="lisaaAnnosV20()" data-i18n="logMealBtn">Kirjaa ja laske tase 📥</button>
+            <button id="cancelEditBtn" type="button" onclick="peruutaMuokkaus()" data-i18n="cancelEditBtn" style="display:none; width:100%; background:#440000; color:#ffaaaa; border:1px solid #ff4444; margin-top:8px; padding:8px; cursor:pointer;">Peruuta muokkaus ❌</button>
+        </div>
+    </details>
+
+    <details class="box" id="logBox" style="display:none;" open>
+        <summary data-i18n="sec3Title">4. PÄIVÄN AIKALEIMATUT ANNOKSET</summary>
+        <div class="details-content">
+            <div id="mealTimeline"></div>
+            <p style="margin-top:15px;"><span class="result-title" data-i18n="logMacrosLabel">Kirjatut kokonaismakrot tänään:</span> <span id="logMacros"></span></p>
+            <button class="btn-danger" onclick="nollaaValittuPaiva()" data-i18n="resetDayBtn">Nollaa valitun päivän loki ❌</button>
+        </div>
+    </details>
+
+    <details class="box" id="outputBox" style="display:none;" open>
+        <summary data-i18n="sec4Title">5. LAHJOMATON TASE &amp; ANALYTIIKKA</summary>
+        <div class="details-content">
+            <div>
+                <p><span class="result-title" data-i18n="fatPctLabel">Rasvaprosentti:</span> <span id="resFatPct" class="alert-orange"></span> %</p>
+                <p><span class="result-title" data-i18n="leanLabel">Rasvaton moottorisi (Lean Mass):</span> <span id="resLean"></span> <span id="resLeanUnit">kg</span></p>
+                <p><span class="result-title" data-i18n="fatVolLabel">Kudosrasvasi (KG / litraa):</span> <span id="resFatVolCombined" class="alert-green" style="font-weight:bold;"></span></p>
+                <p><span class="result-title" data-i18n="weeklyTargetLabel">Valittu viikkotavoite:</span> <span id="resWeeklyTarget"></span> <span id="resWeeklyTargetUnit">kg/wk</span> (<span id="resWeeklyVol"></span> litraa)</p>
+                <hr style="border-color:#00ff00;">
+            </div>
+
+            <h3 data-i18n="ledgerTitle">📊 KALORIBUDJETIN TILIOTE</h3>
+            <table>
+                <tr><th data-i18n="ledgerHeader1">TILAVUUSMUUTTUJA</th><th data-i18n="ledgerHeader2">KILOKALORIT (kcal)</th></tr>
+                <tr><td data-i18n="ledgerBudgetLabel">Syöntibudjetti (Tavoite)</td><td id="ledgerBudget" style="color:#fff;font-weight:bold;">-</td></tr>
+                <tr><td data-i18n="ledgerUsedLabel">Käytetty (Nielty kuorma)</td><td id="ledgerUsed" class="alert-orange">-</td></tr>
+                <tr><td data-i18n="ledgerLeftLabel">Jäljellä (Focus-kapasiteetti)</td><td id="ledgerLeft" class="alert-green" style="font-weight:bold;">-</td></tr>
+            </table>
+
+            <h3 style="margin-top:20px;" data-i18n="mtorTitle">🛡️ PROTEIINI JA LIHASSUOJA (mTOR)</h3>
+            <p><span class="result-title" data-i18n="mtorThresholdLabel">Kerta-aterian mTOR-kynnys:</span> <span id="resMtorG" class="alert-green" style="font-weight:bold;"></span></p>
+            <p><span class="result-title" data-i18n="dailyProtLabel">Päivittäinen kokonaisproteiini:</span> <span id="resDailyProt" class="alert-green"></span></p>
+            <p><span class="result-title" data-i18n="protProtectionLabel">Lihasmassan suojaus:</span> <span id="resProtProtection" style="font-weight:bold;"></span> <span class="info-icon" onclick="toggleInfoPopup('protInfoBox')" title="Info">?</span></p>
+            <div id="protInfoBox" class="info-popup-panel" data-i18n="proteinInfoText">Riittävä proteiininsaanti ja maltillinen kalorivaje suojaavat lihaskudosta rasvanpudotuksen aikana.</div>
+
+            <h3 style="margin-top:20px;" data-i18n="fastingTitle">🛡️ PAASTOIKKUNA JA AUTOFAGIAN STATUS</h3>
+            <p><span class="result-title" data-i18n="eatingWindowLabel">Syömisikkunan kesto (tuntia):</span> <span id="resEatingWindow" style="font-weight:bold;"></span></p>
+            <p><span class="result-title" data-i18n="fastingWindowLabel">Syömätön paastoikkuna (tuntia):</span> <span id="resFastingWindow" class="alert-green" style="font-weight:bold;"></span></p>
+            <p><span class="result-title" data-i18n="autophagyStatusLabel">Autofagian statusvaste:</span> <br><span id="resAutophagyStatus" style="font-size:15px; font-weight:bold;"></span> <span class="info-icon" onclick="toggleInfoPopup('fastingInfoBox')" title="Info">?</span></p>
+            <div id="fastingInfoBox" class="info-popup-panel" data-i18n="fastingInfoText">Autofagia on elimistön luonnollinen solujen siivousmekanismi, joka käynnistyy tehostetusti yli 14 tunnin syömättömän paaston jälkeen.</div>
+
+            <h3 style="margin-top:20px;" data-i18n="insulinTitle">🧬 PÄIVÄN INSULIINI- JA GLYKEEMINEN KUORMA</h3>
+            <p><span class="result-title" data-i18n="fatBurnWindowLabel">Rasvanpolttoikkuna (≤35 µIU/ml):</span> <span id="resFatBurnWindow" style="font-size:15px; font-weight:bold;"></span> <span class="info-icon" onclick="toggleInfoPopup('insulinInfoBox')" title="Info">?</span></p>
+            <div id="insulinInfoBox" class="info-popup-panel" data-i18n="insulinInfoText">Keho polttaa omia rasvavarastojaan tehokkaasti vasta, kun insuliini alittaa 35 µIU/mL. Varmista vähintään 12 tunnin matalan insuliinin ikkuna vuorokaudessa.</div>
+            <p><span class="result-title" data-i18n="glLabel">Päivän Glykeeminen Kuorma (GL):</span> <span id="resGlycemicLoad" class="alert-yellow" style="font-weight:bold;"></span></p>
+            <p><span class="result-title" data-i18n="iTotLabel">Päivän Kokonaisinsuliinituotanto (I-Tot):</span> <span id="resInsulinTotal"></span></p>
+            <p><span class="result-title" data-i18n="bufferLabel">Ruoansulatuksen Puskurikerroin (D):</span> <span id="resInsulinBuffer"></span>x</p>
+            <p><span class="result-title" data-i18n="iPeakLabel">Kumulatiivinen insuliinipiikki (I-Peak):</span> <span id="resInsulinPeak" style="font-size:18px; font-weight:bold;"></span></p>
+            <p><span class="result-title" data-i18n="statusLabel">POMO-INSULIININ STATUSVASTE:</span> <br><span id="resInsulinStatus"></span></p>
+
+            <div class="chart-scroll-wrapper">
+                <div class="chart-container">
+                    <h4 style="color:#fff; margin-bottom:5px;" data-i18n="chartTitle">📈 ARVIOITU 24H JATKUVA INSULIINI- JA GL-VASTE</h4>
+                    <canvas id="dynamicsChart" width="850" height="260"></canvas>
+                    
+                    <div class="chart-legend">
+                        <span>🟢 <strong data-i18n="legendInsulin">Insuliinivaste (uIU/ml)</strong></span>
+                        <span>🟡 <strong data-i18n="legendGL">Glykeeminen Kuorma (GL)</strong></span>
+                        <span>🔴 <strong data-i18n="legendThreshold">-- Rasvanpolton kynnystaso (35 uIU/ml)</strong></span>
+                        <span>🟩 <strong data-i18n="legendFatBurnArea">Rasvanpolttoalue (≤35 uIU/ml)</strong></span>
+                        <span>🔵 <strong data-i18n="legendNow">| Tämänhetkinen aika (NYT)</strong></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </details>
+
+   <footer style="text-align: center; margin-top: 30px; margin-bottom: 20px; font-size: 11px; color: #666; border-top: 1px solid #111; padding-top: 15px; line-height: 1.5; max-width: 680px; margin-left: auto; margin-right: auto;">
+    <p data-i18n="disclaimerText" style="margin-bottom: 8px; color: #777;"></p>
+    <p data-i18n="copyrightText" style="margin-top: 4px; color: #888;"></p>
+    <p style="margin-top: 8px;"><a href="https://rlame1.github.io/MetabolicCalculator/privacy.html" target="_blank" style="color: #8b949e; text-decoration: underline;" data-i18n="privacyPolicyLink">🔒 Tietosuojaseloste / Privacy Policy ↗</a></p>
+</footer>
+
+    <script>
+        const translations = {
+            fi: {
+                langLabel: "🌐 KIELI:",
+                optionsBtn: "⚙️ ASETUKSET",
+                optionsTitle: "⚙️ LISÄASETUKSET JA HALLINTA",
+                privacyPolicyLink: "🔒 Tietosuojaseloste / Privacy Policy ↗",
+                demoBtnOn: "🎭 KÄYNNISTÄ ESITTELYTILA (DEMO)",
+                demoBtnOff: "❌ SULJE ESITTELYTILA (PALAA OMIIN)",
+                demoSelectLabel: "VALITSE DEMO-PÄIVÄ:",
+                demoDay1: "1: ARKI",
+                demoDay2: "2: PE (TV)",
+                demoDay3: "3: LA (HERKKU)",
+                backupTitle: "💾 DATAN VARMUUSKOPIOINTI JA TUONTI",
+                backupDesc: "Lataa kaikki tallennetut päivä- ja profiilitiedot talteen JSON-tiedostona tai palauta aiemmin varmuuskopioitu data.",
+                exportBackupBtn: "💾 LATAA VARMUUSKOPIO (EXPORT)",
+                importBackupBtn: "📥 TUO VARMUUSKOPIO (IMPORT)",
+                driveTitle: "🌐 GOOGLE DRIVE AUTOMAATTISYNKRONOINTI",
+                driveDesc: "Kirjaudu sisään Google-tililläsi tallentaaksesi ja synkronoidaksesi laskurin tiedot automaattisesti eri laitteidesi välillä. Sovellus käyttää rajoitettua käyttöoikeutta (drive.file) ja käsittelee ainoastaan omaa varmuuskopiotiedostoaan. Mitään muita Google Driven tiedostojasi ei lueta eikä käsitellä.",
+                signInWithGoogle: "Kirjaudu sisään Googlella",
+                syncNowBtn: "🔄 SYNKRONOI NYT",
+                loadFromDriveBtn: "📥 LATAA DRIVESTÄ",
+                logoutBtn: "🚪 KIRJAUDU ULOS",
+                masterResetDesc: "Tyhjennä laskurin koko muisti (kaikki tallennetut päivät ja profiilitiedot).",
+                masterResetBtn: "⚠️ NOLLAA KAIKKI TIEDOT (MASTER RESET)",
+                forceRefreshBtn: "🔄 PAKOTA SIVUN PÄIVITYS (FORCE REFRESH)",
+                mainTitle: "🧬 METABOLINEN LASKURI v1.0",
+                mainSub: "Käytä yläkulman \"ASETUKSET\"-painiketta esittelytilan tai nollauksen avaamiseen.",
+                dateSummary: "📅 VALITSE PÄIVÄMÄÄRÄ",
+                dateLabel: "Päivämäärä:",
+                prevDayBtn: "Edellinen",
+                nextDayBtn: "Seuraava",
+                prevDayBtnTitle: "Edellinen päivä (← / Vasen nuoli)",
+                nextDayBtnTitle: "Seuraava päivä (→ / Oikea nuoli)",
+                floatPrevTitle: "Edellinen päivä (← / Vasen nuoli)",
+                floatNextTitle: "Seuraava päivä (→ / Oikea nuoli)",
+                floatDateTitle: "Tarkasteltava päivämäärä (Napsauta valitaksesi)",
+                floatPrevText: "EDELL.",
+                floatNextText: "SEUR.",
+                cumSummary: "📊 KUMULATIIVINEN HISTORIAYHTEENVETO",
+                btnLast7Days: "🗓️ VIIMEISET 7 PÄIVÄÄ (KULUNEET)",
+                btnLast30Days: "🗓️ VIIMEISET 30 PÄIVÄÄ (KULUNEET)",
+                cumStartLabel: "📅 ALKUPÄIVÄMÄÄRÄ:",
+                cumEndLabel: "📅 LOPPUPÄIVÄMÄÄRÄ:",
+                cumDays: "Seurattuja päiviä yhteensä:",
+                cumEnergy: "Nautittu kokonaisenergia:",
+                cumDeficit: "Kertynyt kalorisaldo:",
+                cumSaldoExpl: "(Plussalla [+] = Syöty yli kulutuksen, painoa tullut lisää | Negatiivinen [-] = Syöty alle kulutuksen, laihduttu. Laskelma sisältää vain päättyneet kuluneet päiväjaksot.)",
+                cumSurplus: "Kertynyt kaloriylitys",
+                cumMtor: "Lihassuoja (mTOR) aktivoitu:",
+                sec1Title: "1. BIOLOGISET PARAMETRIT",
+                genderLabel: "Sukupuoli:",
+                genderMale: "Mies",
+                genderFemale: "Nainen",
+                ageLabel: "Ikä (vuotta) [Vapaaehtoinen]:",
+                heightLabel: "Pituus (cm) [Vapaaehtoinen]:",
+                weightLabel: "Nykyinen Paino (kg):",
+                waistLabel: "Vyötärön ympärys (cm) [Vapaaehtoinen]:",
+                neckLabel: "Niskan ympärys (cm) [Vapaaehtoinen]:",
+                hipLabel: "Lantion ympärys (cm) [Naisilla vapaaehtoinen]:",
+                bodyFatLabel: "Oma rasvaprosentti (%) [Ohjelma laskee jos pituus, niska ja vyötärö (ja naisilla lantio) annettu. Tai syötä oma:]",
+                activityLabel: "Aktiivisuustason kerroin:",
+                act1: "Passiivinen (istumatyö, vähän/ei liikuntaa) [1.2]",
+                act2: "Perusaktiivinen (vakio oletus) [1.25]",
+                act3: "Kevyt aktiivisuus (liikuntaa 1–3 krt/vko) [1.375]",
+                act4: "Kohtalainen aktiivisuus (liikuntaa 3–5 krt/vko) [1.55]",
+                act5: "Erittäin aktiivinen (liikuntaa 6–7 krt/vko) [1.725]",
+                act6: "Äärimmäisen aktiivinen (fyysinen työ + kova urheilu) [1.9]",
+                strategyLabel: "Strateginen tavoite / Viikkovauhti:",
+                strat1: "Maksimaalinen 1% / viikko (Dynaaminen)",
+                strat2: "Kova 0,75% / viikko (Dynaaminen)",
+                strat3: "Ikääntyneet max 0,5% / viikko (Dynaaminen)",
+                strat4: "Ikääntynyt turvallinen 0,25% / viikko (Dynaaminen)",
+                strat5: "Pidä nykyinen paino",
+                strat6: "Mukautettu kalorimuutos (Vaje/Ylitys)",
+                customDeltaLabel: "Oma mukautettu kalorimuutos (kcal/pvä):",
+                secGoalTitle: "2. TAVOITE / KULUTUS",
+                estExpenditureLabel: "Arvioitu päivittäinen kulutus (TDEE):",
+                estExpenditureExpl: "(Perustuu rasvattomaan kehonmassaan ja valittuun aktiivisuuskertoimeen)",
+                sec2Title: "3. ATERIAN LISÄYS",
+                favoriteLabel: "Suosikkiateriat:",
+                favoriteDefault: "-- Valitse suosikkiateria --",
+                saveFavBtn: "⭐ TALLENNA NYKYISET MAKROT SUOSIKIKSI",
+                deleteFavBtn: "❌ POISTA VALITTU SUOSIKKI",
+                editMealBtn: "✏️ Muokkaa",
+                deleteMealBtn: "🗑️ Poista",
+                favPromptName: "Anna suosikkiaterialle nimi:",
+                favAlertEmpty: "Syötä ainakin jokin makro (hiilihydraatit, proteiini tai rasva) ennen tallennusta!",
+                favAlertSelectDelete: "Valitse poistettava suosikkiateria valikosta!",
+                mealTimeLabel: "Aterian aika (HH:MM) [Vapaaehtoinen, oletus: Nyt]:",
+                carbsLabel: "Hiilihydraatit (g):",
+                proteinLabel: "Proteiini (g):",
+                fatLabel: "Rasva (g):",
+                logMealBtn: "Kirjaa ja laske tase 📥",
+                updateMealBtn: "Päivitä ateria ✏️",
+                cancelEditBtn: "Peruuta muokkaus ❌",
+                sec3Title: "4. PÄIVÄN AIKALEIMATUT ANNOKSET",
+                logMacrosLabel: "Kirjatut kokonaismakrot tänään:",
+                resetDayBtn: "Nollaa valitun päivän loki ❌",
+                sec4Title: "5. LAHJOMATON TASE & ANALYTIIKKA",
+                fatPctLabel: "Rasvaprosentti:",
+                leanLabel: "Rasvaton moottorisi (Lean Mass):",
+                fatVolLabel: "Kudosrasvasi (KG / litraa):",
+                weeklyTargetLabel: "Valittu viikkotavoite:",
+                ledgerTitle: "📊 KALORIBUDJETIN TILIOTE",
+                ledgerHeader1: "TILAVUUSMUUTTUJA",
+                ledgerHeader2: "KILOKALORIT (kcal)",
+                ledgerBudgetLabel: "Syöntibudjetti (Tavoite)",
+                ledgerUsedLabel: "Käytetty (Nielty kuorma)",
+                ledgerLeftLabel: "Jäljellä (Focus-kapasiteetti)",
+                mtorTitle: "🛡️ PROTEIINI JA LIHASSUOJA (mTOR)",
+                mtorThresholdLabel: "Kerta-aterian mTOR-kynnys:",
+                dailyProtLabel: "Päivittäinen kokonaisproteiini:",
+                protProtectionLabel: "Lihasmassan suojaus:",
+                fastingTitle: "🛡️ PAASTOIKKUNA JA AUTOFAGIAN STATUS",
+                eatingWindowLabel: "Syömisikkunan kesto (tuntia):",
+                fastingWindowLabel: "Syömätön paastoikkuna (tuntia):",
+                autophagyStatusLabel: "Autofagian statusvaste:",
+                fastingInfoText: "Autofagia on elimistön luonnollinen solujen siivousmekanismi, joka käynnistyy tehostetusti yli 14 tunnin syömättömän paaston jälkeen.",
+                cumAutophagy: "Aktiivinen autofagia (≥14 h paasto):",
+                cumFatBurnAvg: "Keskimääräinen rasvanpolttoaika (≤35 µIU/ml):",
+                fatBurnWindowLabel: "Rasvanpolttoikkuna (≤35 µIU/ml):",
+                fatBurnWindowTargetMet: "Tavoite saavutettu (≥12 h)",
+                fatBurnWindowBelowTarget: "Alle tavoitteen (<12 h)",
+                protProtectedMsg: "Lihasmassa suojattu",
+                protIncreaseMsg: "Lisää proteiininsaantia",
+                insulinInfoText: "Keho polttaa omia rasvavarastojaan tehokkaasti vasta, kun insuliini alittaa 35 µIU/mL. Varmista vähintään 12 tunnin matalan insuliinin ikkuna vuorokaudessa.",
+                proteinInfoText: "Riittävä proteiininsaanti ja maltillinen kalorivaje suojaavat lihaskudosta rasvanpudotuksen aikana.",
+                insulinTitle: "🧬 PÄIVÄN INSULIINI- JA GLYKEEMINEN KUORMA",
+                glLabel: "Päivän Glykeeminen Kuorma (GL):",
+                iTotLabel: "Päivän Kokonaisinsuliinituotanto (I-Tot):",
+                bufferLabel: "Ruoansulatuksen Puskurikerroin (D):",
+                iPeakLabel: "Kumulatiivinen insuliinipiikki (I-Peak):",
+                statusLabel: "POMO-INSULIININ STATUSVASTE:",
+                chartTitle: "📈 ARVIOITU 24H JATKUVA INSULIINI- JA GL-VASTE",
+                legendInsulin: "Insuliinivaste (uIU/ml)",
+                legendGL: "Glykeeminen Kuorma (GL)",
+                legendThreshold: "-- Rasvanpolton kynnystaso (35 uIU/ml)",
+                legendFatBurnArea: "Rasvanpolttoalue (≤35 uIU/ml)",
+                legendNow: "| Tämänhetkinen aika (NYT)",
+                phAge: "👉 SYÖTÄ TIETO (IKÄ)",
+                phHeight: "👉 SYÖTÄ TIETO (PITUUS CM)",
+                phWeight: "👉 SYÖTÄ TIETO (PAINO KG)",
+                phWaist: "👉 SYÖTÄ TIETO (VYÖTÄRÖ CM)",
+                phNeck: "👉 SYÖTÄ TIETO (NISKA CM)",
+                phHip: "👉 SYÖTÄ TIETO (LANTIO CM)",
+                phBodyFat: "👉 SYÖTÄ RASVAPROSENTTI % (JOS TIEDOSSA)",
+                disclaimerText: "Vastuuvapauslauseke: Tämä työkalu on tarkoitettu vain koulutus- ja opetustarkoituksiin eikä se korvaa ammatillista lääketieteellistä neuvontaa, diagnoosia tai hoitoa. Kehittäjä ei ota mitään vastuuta tai korvausvelvollisuutta tämän työkalun käytöstä tai sen laskelmista.",
+                copyrightText: "© 2026 HVA2026. Julkaistu GNU General Public License v3.0 (GPLv3) -lisenssillä.",
+                demoSelectLabel: "VALITSE DEMO-PÄIVÄ (30 PÄIVÄN HISTORIA):",
+                demoBtnToday: "📅 TÄNÄÄN",
+                demoBtnPe: "📺 PE (TV-SIPSIT)",
+                demoBtnLa: "🍕 LA (HERKKU)",
+                demoBtnArki: "🥗 ARKI (NORMAALI)",
+                phCustomDelta: "👉 SYÖTÄ VAJE (-) TAI YLITYS (+)",
+                phCarbs: "👉 SYÖTÄ TIETO (HIILIHYDRAATIT G)",
+                phProtein: "👉 SYÖTÄ TIETO (PROTEIINI G)",
+                phFat: "👉 SYÖTÄ TIETO (RASVA G)",
+                braveNoticeText: "🦁 <strong>Brave / Ikkuna-ohje:</strong><br>1) Jos sovellus on kehyssivulla (iframe), <a href=\"javascript:void(0)\" onclick=\"window.open(window.location.href,'_blank')\" style=\"color:#00ffff; text-decoration:underline; font-weight:bold;\">Avaa uuteen välilehteen ↗</a>.<br>2) Brave-asetus: <em>Asetukset ➔ Yksityisyys ja turvallisuus ➔ Salli Google-kirjautumispainikkeet kolmannen osapuolen sivustoilla</em>."
+            },
+            en: {
+                langLabel: "🌐 LANGUAGE:",
+                optionsBtn: "⚙️ OPTIONS",
+                optionsTitle: "⚙️ ADVANCED SETTINGS & MANAGEMENT",
+                privacyPolicyLink: "🔒 Privacy Policy / Tietosuojaseloste ↗",
+                demoBtnOn: "🎭 START DEMO MODE",
+                demoBtnOff: "❌ CLOSE DEMO MODE",
+                demoSelectLabel: "SELECT DEMO DAY (30-DAY HISTORY):",
+                demoBtnToday: "📅 TODAY",
+                demoBtnPe: "📺 FRI (TV CHIPS)",
+                demoBtnLa: "🍕 SAT (TREAT DAY)",
+                demoBtnArki: "🥗 WEEKDAY (REGULAR)",
+                disclaimerText: "Disclaimer: This tool is for educational and informational purposes only and does not constitute professional medical advice, diagnosis, or treatment. The developer assumes no responsibility or liability for the use of this tool or its calculations.",
+                copyrightText: "© 2026 HVA2026. Released under the GNU General Public License v3.0 (GPLv3).",
+                backupTitle: "💾 DATA BACKUP & IMPORT",
+                backupDesc: "Export all saved log and profile data as a JSON file, or restore previously backed-up data.",
+                exportBackupBtn: "💾 DOWNLOAD BACKUP (EXPORT)",
+                importBackupBtn: "📥 IMPORT BACKUP (IMPORT)",
+                driveTitle: "🌐 GOOGLE DRIVE AUTO-SYNC",
+                driveDesc: "Sign in with your Google account to automatically save and sync calculator data across your devices. The app uses restricted per-file access (drive.file) and only accesses its own backup file. It has zero access to your other Google Drive files.",
+                signInWithGoogle: "Sign in with Google",
+                syncNowBtn: "🔄 SYNC NOW",
+                loadFromDriveBtn: "📥 FETCH FROM DRIVE",
+                logoutBtn: "🚪 LOG OUT",
+                masterResetDesc: "Clear all calculator memory (all saved days and profile data).",
+                masterResetBtn: "⚠️ MASTER RESET (CLEAR ALL DATA)",
+                forceRefreshBtn: "🔄 FORCE APP REFRESH (CLEAR CACHE)",
+                mainTitle: "🧬 METABOLIC CALCULATOR v1.0",
+                mainSub: "Use the top-right \"OPTIONS\" button to open demo mode or reset.",
+                dateSummary: "📅 SELECT DATE",
+                dateLabel: "Date:",
+                prevDayBtn: "Previous",
+                nextDayBtn: "Next",
+                prevDayBtnTitle: "Previous day (← / Left arrow)",
+                nextDayBtnTitle: "Next day (→ / Right arrow)",
+                floatPrevTitle: "Previous day (← / Left arrow)",
+                floatNextTitle: "Next day (→ / Right arrow)",
+                floatDateTitle: "Viewed date (Click to select)",
+                floatPrevText: "PREV",
+                floatNextText: "NEXT",
+                cumSummary: "📊 CUMULATIVE HISTORY SUMMARY",
+                btnLast7Days: "🗓️ LAST 7 DAYS (COMPLETED)",
+                btnLast30Days: "🗓️ LAST 30 DAYS (COMPLETED)",
+                cumStartLabel: "📅 START DATE:",
+                cumEndLabel: "📅 END DATE:",
+                cumDays: "Total tracked days:",
+                cumEnergy: "Total energy consumed:",
+                cumDeficit: "Accumulated calorie balance:",
+                cumSaldoExpl: "(Positive [+] = Consumed over expenditure, weight gained | Negative [-] = Consumed under expenditure, weight lost. Calculation includes completed past days only.)",
+                cumSurplus: "Accumulated calorie surplus",
+                cumMtor: "Muscle protection (mTOR) activated:",
+                sec1Title: "1. BIOLOGICAL PARAMETERS",
+                genderLabel: "Gender:",
+                genderMale: "Male",
+                genderFemale: "Female",
+                ageLabel: "Age (years) [Optional]:",
+                heightLabel: "Height (cm) [Optional]:",
+                weightLabel: "Current Weight (kg):",
+                waistLabel: "Waist circumference (cm) [Optional]:",
+                neckLabel: "Neck circumference (cm) [Optional]:",
+                hipLabel: "Hip circumference (cm) [Female optional]:",
+                bodyFatLabel: "Own body fat percentage (%) [Auto-calculated if height, neck, waist (+hip) are given. Or enter own:]",
+                activityLabel: "Activity level multiplier:",
+                act1: "Sedentary (desk job, little/no exercise) [1.2]",
+                act2: "Basal active (default) [1.25]",
+                act3: "Light activity (exercise 1–3x/wk) [1.375]",
+                act4: "Moderate activity (exercise 3–5x/wk) [1.55]",
+                act5: "Very active (exercise 6–7x/wk) [1.725]",
+                act6: "Extreme active (physical job + heavy sport) [1.9]",
+                strategyLabel: "Strategic Goal / Weekly Pace:",
+                strat1: "Maximum 1% / week (Dynamic)",
+                strat2: "Hard 0.75% / week (Dynamic)",
+                strat3: "Seniors max 0.5% / week (Dynamic)",
+                strat4: "Seniors safe 0.25% / week (Dynamic)",
+                strat5: "Maintain current weight",
+                strat6: "Custom calorie delta (Deficit/Surplus)",
+                customDeltaLabel: "Custom calorie change (kcal/day):",
+                secGoalTitle: "2. GOAL / EXPENDITURE",
+                estExpenditureLabel: "Estimated daily expenditure (TDEE):",
+                estExpenditureExpl: "(Based on lean body mass and selected activity multiplier)",
+                sec2Title: "3. MEAL ADDITION",
+                favoriteLabel: "Favorite Meals:",
+                favoriteDefault: "-- Select a favorite meal --",
+                saveFavBtn: "⭐ SAVE CURRENT MACROS AS FAVORITE",
+                deleteFavBtn: "❌ DELETE SELECTED FAVORITE",
+                editMealBtn: "✏️ Edit",
+                deleteMealBtn: "🗑️ Delete",
+                favPromptName: "Enter a name for the favorite meal:",
+                favAlertEmpty: "Please enter at least one macro value (carbs, protein, or fat) before saving!",
+                favAlertSelectDelete: "Please select a favorite meal from the dropdown to delete!",
+                mealTimeLabel: "Meal time (HH:MM) [Optional, default: Now]:",
+                carbsLabel: "Carbohydrates (g):",
+                proteinLabel: "Protein (g):",
+                fatLabel: "Fat (g):",
+                logMealBtn: "Log and calculate balance 📥",
+                updateMealBtn: "Update meal ✏️",
+                cancelEditBtn: "Cancel edit ❌",
+                sec3Title: "4. DAILY TIMESTAMPED MEALS",
+                logMacrosLabel: "Logged total macros today:",
+                resetDayBtn: "Reset selected day log ❌",
+                sec4Title: "5. INCORRUPTIBLE BALANCE & ANALYTICS",
+                fatPctLabel: "Body fat percentage:",
+                leanLabel: "Lean Mass engine:",
+                fatVolLabel: "Body fat tissue (KG / liters):",
+                weeklyTargetLabel: "Selected weekly target:",
+                ledgerTitle: "📊 CALORIE BUDGET LEDGER",
+                ledgerHeader1: "VOLUME VARIABLE",
+                ledgerHeader2: "KILOCALORIES (kcal)",
+                ledgerBudgetLabel: "Eating Budget (Target)",
+                ledgerUsedLabel: "Consumed (Ingested load)",
+                ledgerLeftLabel: "Remaining (Focus capacity)",
+                mtorTitle: "🛡️ PROTEIN & MUSCLE PROTECTION (mTOR)",
+                mtorThresholdLabel: "Single meal mTOR threshold:",
+                dailyProtLabel: "Daily total protein:",
+                protProtectionLabel: "Muscle mass protection:",
+                fastingTitle: "🛡️ FASTING WINDOW & AUTOPHAGY STATUS",
+                eatingWindowLabel: "Eating window duration (hours):",
+                fastingWindowLabel: "Fasting window duration (hours):",
+                autophagyStatusLabel: "Autophagy status response:",
+                fastingInfoText: "Autophagy is the body's natural cellular cleanup mechanism that intensifies after a fasting period of over 14 hours.",
+                cumAutophagy: "Active autophagy (≥14 h fast):",
+                cumFatBurnAvg: "Average fat burn window (≤35 µIU/ml):",
+                fatBurnWindowLabel: "Fat burning window (≤35 µIU/ml):",
+                fatBurnWindowTargetMet: "Target achieved (≥12 h)",
+                fatBurnWindowBelowTarget: "Below target (<12 h)",
+                protProtectedMsg: "Muscle mass protected",
+                protIncreaseMsg: "Increase protein intake",
+                insulinInfoText: "The body burns its own fat stores efficiently only when insulin drops below 35 µIU/mL. Ensure a low-insulin window of at least 12 hours per day.",
+                proteinInfoText: "Sufficient protein intake and a moderate calorie deficit protect muscle tissue during fat loss.",
+                insulinTitle: "🧬 DAILY INSULIN & GLYCEMIC LOAD",
+                glLabel: "Daily Glycemic Load (GL):",
+                iTotLabel: "Daily Total Insulin Production (I-Tot):",
+                bufferLabel: "Digestion Buffer Factor (D):",
+                iPeakLabel: "Cumulative Insulin Peak (I-Peak):",
+                statusLabel: "BOSS INSULIN STATUS RESPONSE:",
+                chartTitle: "📈 ESTIMATED 24H CONTINUOUS INSULIN & GL RESPONSE",
+                legendInsulin: "Insulin Response (uIU/ml)",
+                legendGL: "Glycemic Load (GL)",
+                legendThreshold: "-- Fat burning threshold (35 uIU/ml)",
+                legendFatBurnArea: "Fat burning zone (≤35 uIU/ml)",
+                legendNow: "| Current time (NOW)",
+                phAge: "👉 ENTER DATA (AGE)",
+                phHeight: "👉 ENTER DATA (HEIGHT CM)",
+                phWeight: "👉 ENTER DATA (WEIGHT KG)",
+                phWaist: "👉 ENTER DATA (WAIST CM)",
+                phNeck: "👉 ENTER DATA (NECK CM)",
+                phHip: "👉 ENTER DATA (HIP CM)",
+                phBodyFat: "👉 ENTER BODY FAT % (IF KNOWN)",
+                phCustomDelta: "👉 ENTER DEFICIT (-) OR SURPLUS (+)",
+                phCarbs: "👉 ENTER DATA (CARBS G)",
+                phProtein: "👉 ENTER DATA (PROTEIN G)",
+                phFat: "👉 ENTER DATA (FAT G)",
+                braveNoticeText: "🦁 <strong>Brave / Frame note:</strong><br>1) If app is inside an iframe, <a href=\"javascript:void(0)\" onclick=\"window.open(window.location.href,'_blank')\" style=\"color:#00ffff; text-decoration:underline; font-weight:bold;\">Open in a new tab ↗</a>.<br>2) Brave setting: <em>Settings ➔ Privacy & security ➔ Allow Google login buttons on third-party sites</em>."
+            }
+        };
+
+        let historyDB = JSON.parse(localStorage.getItem('metabolic_v20_historyDB')) || {};
+        let activeDateStr = getTodayStr();
+        let isDemoMode = false;
+        let demoDates = {};
+        let editingMealIndex = null;
+
+        window.onload = function() { 
+            const savedLang = detectInitialLanguage();
+            document.getElementById('langSelect').value = savedLang;
+            switchLanguage(savedLang);
+
+            const initialUnit = detectInitialUnit();
+            document.getElementById('unitSelect').value = initialUnit;
+            updateLabelsForUnits();
+
+            // Attempt IP geolocation check in background for new users
+            if (!localStorage.getItem('metabolic_v20_lang') || !localStorage.getItem('metabolic_v20_units')) {
+                autoDetectSettingsByIP();
+            }
+
+            document.getElementById('selectedDate').value = activeDateStr;
+            lataaKayttajaParametrit();
+            lataaAktiivisenPaivanTiedot();
+            lataaSuosikit();
+            tarkistaSukupuoli(); 
+            tarkistaCustomTavoite();
+            alustaKumulatiivisetPaivaykset();
+        };
+
+
+        function getMetricVal(id) {
+            const val = parseFloat(document.getElementById(id).value) || 0;
+            
+            const unit = document.getElementById('unitSelect')?.value || 'metric';
+            if (unit === 'imperial') {
+                if (id === 'weight') return val / 2.20462;
+                if (['height', 'waist', 'neck', 'hip'].includes(id)) return val * 2.54;
+            }
+            return val;
+        }
+
+        function setMetricValToInput(id, metricVal) {
+            if (metricVal === null || metricVal === undefined || metricVal === "") { document.getElementById(id).value = ""; return; }
+            
+            const unit = document.getElementById('unitSelect')?.value || 'metric';
+            if (unit === 'imperial') {
+                if (id === 'weight') document.getElementById(id).value = (metricVal * 2.20462).toFixed(1);
+                if (['height', 'waist', 'neck', 'hip'].includes(id)) document.getElementById(id).value = (metricVal / 2.54).toFixed(1);
+            } else {
+                document.getElementById(id).value = metricVal;
+            }
+        }
+
+        function switchUnits(newUnit) {
+            const oldUnit = localStorage.getItem('metabolic_v20_units') || 'metric';
+            if (newUnit === oldUnit) return;
+            
+            const ids = ['weight', 'height', 'waist', 'neck', 'hip'];
+            const valsMetric = ids.map(id => {
+                const val = parseFloat(document.getElementById(id).value) || 0;
+                if (!val && document.getElementById(id).value === '') return null;
+                if (oldUnit === 'imperial') {
+                    if (id === 'weight') return val / 2.20462;
+                    return val * 2.54;
+                }
+                return val;
+            });
+            
+            localStorage.setItem('metabolic_v20_units', newUnit);
+            updateLabelsForUnits();
+            
+            ids.forEach((id, idx) => {
+                const m = valsMetric[idx];
+                if (m === null) return;
+                if (newUnit === 'imperial') {
+                    if (id === 'weight') document.getElementById(id).value = (m * 2.20462).toFixed(1);
+                    else document.getElementById(id).value = (m / 2.54).toFixed(1);
+                } else {
+                    document.getElementById(id).value = Number.isInteger(m) ? m : m.toFixed(1);
+                }
+            });
+            
+            tallennaKayttajaParametrit(true);
+            paivitaKaikkienPaivienLaskelmat();
+        }
+
+        function updateLabelsForUnits() {
+            
+            const lang = document.getElementById('langSelect')?.value || 'fi';
+            const unit = document.getElementById('unitSelect')?.value || 'metric';
+            const isEn = lang === 'en';
+            const isImperial = unit === 'imperial';
+            
+            const hL = document.getElementById('lblHeight');
+            if(hL) hL.innerText = isEn ? (isImperial ? "Height (in) [Optional]:" : "Height (cm) [Optional]:") : (isImperial ? "Pituus (in) [Vapaaehtoinen]:" : "Pituus (cm) [Vapaaehtoinen]:");
+            const hI = document.getElementById('height');
+            if(hI) hI.placeholder = isEn ? (isImperial ? "👉 ENTER DATA (HEIGHT IN)" : "👉 ENTER DATA (HEIGHT CM)") : (isImperial ? "👉 SYÖTÄ TIETO (PITUUS IN)" : "👉 SYÖTÄ TIETO (PITUUS CM)");
+                
+            const wL = document.getElementById('lblWeight');
+            if(wL) wL.innerText = isEn ? (isImperial ? "Current Weight (lbs):" : "Current Weight (kg):") : (isImperial ? "Nykyinen Paino (lbs):" : "Nykyinen Paino (kg):");
+            const wI = document.getElementById('weight');
+            if(wI) wI.placeholder = isEn ? (isImperial ? "👉 ENTER DATA (WEIGHT LBS)" : "👉 ENTER DATA (WEIGHT KG)") : (isImperial ? "👉 SYÖTÄ TIETO (PAINO LBS)" : "👉 SYÖTÄ TIETO (PAINO KG)");
+
+            const waistL = document.getElementById('lblWaist');
+            if(waistL) waistL.innerText = isEn ? (isImperial ? "Waist circumference (in) [Optional]:" : "Waist circumference (cm) [Optional]:") : (isImperial ? "Vyötärön ympärys (in) [Vapaaehtoinen]:" : "Vyötärön ympärys (cm) [Vapaaehtoinen]:");
+            const waistI = document.getElementById('waist');
+            if(waistI) waistI.placeholder = isEn ? (isImperial ? "👉 ENTER DATA (WAIST IN)" : "👉 ENTER DATA (WAIST CM)") : (isImperial ? "👉 SYÖTÄ TIETO (VYÖTÄRÖ IN)" : "👉 SYÖTÄ TIETO (VYÖTÄRÖ CM)");
+
+            const neckL = document.getElementById('lblNeck');
+            if(neckL) neckL.innerText = isEn ? (isImperial ? "Neck circumference (in) [Optional]:" : "Neck circumference (cm) [Optional]:") : (isImperial ? "Niskan ympärys (in) [Vapaaehtoinen]:" : "Niskan ympärys (cm) [Vapaaehtoinen]:");
+            const neckI = document.getElementById('neck');
+            if(neckI) neckI.placeholder = isEn ? (isImperial ? "👉 ENTER DATA (NECK IN)" : "👉 ENTER DATA (NECK CM)") : (isImperial ? "👉 SYÖTÄ TIETO (NISKA IN)" : "👉 SYÖTÄ TIETO (NISKA CM)");
+
+            const hipL = document.getElementById('lblHip');
+            if(hipL) hipL.innerText = isEn ? (isImperial ? "Hip circumference (in) [Female optional]:" : "Hip circumference (cm) [Female optional]:") : (isImperial ? "Lantion ympärys (in) [Naisilla vapaaehtoinen]:" : "Lantion ympärys (cm) [Naisilla vapaaehtoinen]:");
+            const hipI = document.getElementById('hip');
+            if(hipI) hipI.placeholder = isEn ? (isImperial ? "👉 ENTER DATA (HIP IN)" : "👉 ENTER DATA (HIP CM)") : (isImperial ? "👉 SYÖTÄ TIETO (LANTIO IN)" : "👉 SYÖTÄ TIETO (LANTIO CM)");
+            
+            const ul = document.querySelector('label[data-i18n="unitLabel"]');
+            if (ul) ul.innerText = isEn ? "📏 UNIT:" : "📏 YKSIKÖT:";
+        }
+
+        function detectInitialLanguage() {
+            const saved = localStorage.getItem('metabolic_v20_lang');
+            if (saved) return saved;
+
+            // Strict fallback default is 'en' (English)
+            const navLangs = (navigator.languages || [navigator.language || '']).map(l => (l || '').toLowerCase());
+            const isFinnishLang = navLangs.some(l => l.startsWith('fi'));
+
+            let isFinlandTimezone = false;
+            try {
+                const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+                if (tz.includes('Helsinki') || tz.includes('Finland')) {
+                    isFinlandTimezone = true;
+                }
+            } catch (e) {}
+
+            if (isFinnishLang || isFinlandTimezone) {
+                return 'fi';
+            }
+            return 'en';
+        }
+
+        function detectInitialUnit() {
+            const saved = localStorage.getItem('metabolic_v20_units');
+            if (saved) return saved;
+
+            const navLangs = (navigator.languages || [navigator.language || '']).map(l => (l || '').toLowerCase());
+            const isUS = navLangs.some(l => l.includes('us'));
+
+            let isUSTimezone = false;
+            try {
+                const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+                if (tz.startsWith('America/') && (tz.includes('New_York') || tz.includes('Chicago') || tz.includes('Denver') || tz.includes('Los_Angeles') || tz.includes('Anchorage') || tz.includes('Adak') || tz.includes('Honolulu'))) {
+                    isUSTimezone = true;
+                }
+            } catch (e) {}
+
+            if (isUS || isUSTimezone) {
+                return 'imperial';
+            }
+            return 'metric';
+        }
+
+        async function autoDetectSettingsByIP() {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 2000);
+                const res = await fetch('https://ipapi.co/json/', { signal: controller.signal });
+                clearTimeout(timeoutId);
+
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.country_code) {
+                        if (!localStorage.getItem('metabolic_v20_lang')) {
+                            const detectedLang = (data.country_code === 'FI') ? 'fi' : 'en';
+                            document.getElementById('langSelect').value = detectedLang;
+                            switchLanguage(detectedLang);
+                        }
+                        if (!localStorage.getItem('metabolic_v20_units')) {
+                            const detectedUnit = (['US', 'LR', 'MM'].includes(data.country_code)) ? 'imperial' : 'metric';
+                            document.getElementById('unitSelect').value = detectedUnit;
+                            switchUnits(detectedUnit);
+                        }
+                        return;
+                    }
+                }
+            } catch (e) {
+                // Silent fallback
+            }
+        }
+
+        function switchLanguage(lang) {
+            localStorage.setItem('metabolic_v20_lang', lang);
+            const t = translations[lang] || translations.fi;
+            
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (t[key]) {
+                    el.innerHTML = t[key];
+                }
+            });
+
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                const key = el.getAttribute('data-i18n-placeholder');
+                if (t[key]) {
+                    el.placeholder = t[key];
+                }
+            });
+
+            document.querySelectorAll('[data-i18n-title]').forEach(el => {
+                const key = el.getAttribute('data-i18n-title');
+                if (t[key]) {
+                    el.title = t[key];
+                }
+            });
+            paivitaMuokkausUI();
+            updateLabelsForUnits();
+
+            const gSelect = document.getElementById('gender');
+            if (gSelect) {
+                gSelect.options[0].text = t.genderMale;
+                gSelect.options[1].text = t.genderFemale;
+            }
+
+            const actSelect = document.getElementById('activityLevel');
+            if (actSelect) {
+                actSelect.options[0].text = t.act1;
+                actSelect.options[1].text = t.act2;
+                actSelect.options[2].text = t.act3;
+                actSelect.options[3].text = t.act4;
+                actSelect.options[4].text = t.act5;
+                actSelect.options[5].text = t.act6;
+            }
+
+            const stratSelect = document.getElementById('strategyGoal');
+            if (stratSelect) {
+                stratSelect.options[0].text = t.strat1;
+                stratSelect.options[1].text = t.strat2;
+                stratSelect.options[2].text = t.strat3;
+                stratSelect.options[3].text = t.strat4;
+                stratSelect.options[4].text = t.strat5;
+                stratSelect.options[5].text = t.strat6;
+            }
+
+            if (isDemoMode) {
+                pivitaDemoSelectOptions();
+            }
+
+            lataaSuosikit();
+            paivitaLaskelmat();
+            paivitaKumulatiivinenYhteenveto();
+            paivitaKelluvatPaivamaaraPainikkeet();
+        }
+
+        function toggleOptionsPanel() {
+            const panel = document.getElementById('optionsPanel');
+            panel.style.display = (panel.style.display === 'block') ? 'none' : 'block';
+        }
+
+        function getTodayStr() {
+            const now = new Date();
+            const y = now.getFullYear(), m = String(now.getMonth() + 1).padStart(2, '0'), d = String(now.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        function getOffsetDateStr(daysOffset) {
+            const d = new Date();
+            d.setDate(d.getDate() + daysOffset);
+            const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), date = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${date}`;
+        }
+
+        function asetKumuJakso(daysCount) {
+            const todayStr = (isDemoMode && demoDates[30]) ? demoDates[30] : getTodayStr();
+            const refDate = new Date(todayStr + "T00:00:00");
+            
+            // End date: yesterday (-1 day from today, last completed day)
+            const endDateObj = new Date(refDate.getTime());
+            endDateObj.setDate(endDateObj.getDate() - 1);
+            
+            // Start date: daysCount completed days back
+            const startDateObj = new Date(refDate.getTime());
+            startDateObj.setDate(startDateObj.getDate() - daysCount);
+            
+            const formatDate = (d) => {
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${y}-${m}-${day}`;
+            };
+            
+            document.getElementById('cumStartDate').value = formatDate(startDateObj);
+            document.getElementById('cumEndDate').value = formatDate(endDateObj);
+            
+            paivitaKumulatiivinenYhteenveto();
+        }
+
+        window.asetKumuJakso = asetKumuJakso;
+
+        function alustaKumulatiivisetPaivaykset() {
+            if (!document.getElementById('cumStartDate').value || !document.getElementById('cumEndDate').value) {
+                asetKumuJakso(7);
+            }
+        }
+
+        function generateDemoMealsForDay(dayOfWeek, gender) {
+            if (gender === "female") {
+                if (dayOfWeek >= 1 && dayOfWeek <= 4) {
+                    return [
+                        { time: "08:00", c: 55, p: 25, f: 15 },
+                        { time: "12:00", c: 65, p: 38, f: 20 },
+                        { time: "17:00", c: 60, p: 35, f: 18 },
+                        { time: "21:00", c: 45, p: 15, f: 16 }
+                    ];
+                } else if (dayOfWeek === 5) {
+                    return [
+                        { time: "08:00", c: 55, p: 25, f: 15 },
+                        { time: "12:00", c: 65, p: 38, f: 20 },
+                        { time: "17:00", c: 55, p: 32, f: 18 },
+                        { time: "21:00", c: 125, p: 10, f: 48 }
+                    ];
+                } else if (dayOfWeek === 6) {
+                    return [
+                        { time: "09:30", c: 65, p: 28, f: 22 },
+                        { time: "14:30", c: 100, p: 42, f: 42 },
+                        { time: "21:00", c: 140, p: 12, f: 52 }
+                    ];
+                } else {
+                    return [
+                        { time: "10:00", c: 70, p: 30, f: 24 },
+                        { time: "15:00", c: 80, p: 42, f: 28 },
+                        { time: "21:00", c: 95, p: 12, f: 38 }
+                    ];
+                }
+            } else {
+                // Mies (Realistinen miehen ateriarytmi: 3-4 ateriaa, isommat annoskoot & iltamässyttely klo 21:00)
+                if (dayOfWeek >= 1 && dayOfWeek <= 4) {
+                    // Ma-To (Arki: 4 ruokailua, reilu aamupala, iso lounas, runsas päivällinen & iltapala/napostelu klo 21:00)
+                    return [
+                        { time: "07:30", c: 75, p: 35, f: 20 },
+                        { time: "11:30", c: 90, p: 55, f: 28 },
+                        { time: "17:00", c: 85, p: 50, f: 26 },
+                        { time: "21:00", c: 60, p: 20, f: 22 }
+                    ];
+                } else if (dayOfWeek === 5) {
+                    // Perjantai (Tuhti lounas & päivällinen + Pe-illan runsas TV-sipsi & dippimässäily klo 21:00)
+                    return [
+                        { time: "07:30", c: 75, p: 35, f: 20 },
+                        { time: "11:30", c: 90, p: 55, f: 28 },
+                        { time: "17:00", c: 80, p: 48, f: 25 },
+                        { time: "21:00", c: 165, p: 15, f: 68 }
+                    ];
+                } else if (dayOfWeek === 6) {
+                    // Lauantai (Tuhdit annokset, pizza/purilainen + iso TV-sipsi/karkkimättö klo 21:00)
+                    return [
+                        { time: "09:30", c: 85, p: 40, f: 30 },
+                        { time: "14:30", c: 140, p: 60, f: 58 },
+                        { time: "21:00", c: 180, p: 15, f: 72 }
+                    ];
+                } else {
+                    // Sunnuntai (Su-aamiainen, runsas kotiruoka & iltamässyttely TV:n ääressä klo 21:00)
+                    return [
+                        { time: "10:00", c: 95, p: 42, f: 32 },
+                        { time: "15:00", c: 110, p: 58, f: 38 },
+                        { time: "21:00", c: 130, p: 18, f: 52 }
+                    ];
+                }
+            }
+        }
+
+        function toggleDemoMode() {
+            isDemoMode = !isDemoMode;
+            const btn = document.getElementById('demoBtn');
+            const controls = document.getElementById('demoControls');
+            const lang = document.getElementById('langSelect').value;
+            const t = translations[lang] || translations.fi;
+
+            if (isDemoMode) {
+                btn.innerText = (lang === 'en') ? "❌ CLOSE DEMO MODE" : "❌ SULJE ESITTELYTILA (PALAA OMIIN)";
+                btn.style.background = "#ff3333";
+                btn.style.color = "#fff";
+                controls.style.display = "block";
+
+                demoDates = {};
+                historyDB = {};
+
+                const selectedGender = document.getElementById('gender').value || "male";
+
+                for (let idx = 1; idx <= 30; idx++) {
+                    const offset = idx - 30;
+                    const dStr = getOffsetDateStr(offset);
+                    demoDates[idx] = dStr;
+
+                    const dObj = new Date(dStr + "T00:00:00");
+                    const dayOfWeek = dObj.getDay(); // 0 = Sun, 1 = Mon, ..., 5 = Fri, 6 = Sat
+
+                    const meals = generateDemoMealsForDay(dayOfWeek, selectedGender);
+
+                    let carbs = 0, protein = 0, fat = 0;
+                    meals.forEach(m => { carbs += m.c; protein += m.p; fat += m.f; });
+                    const dayKcal = (carbs * 4) + (protein * 4) + (fat * 9);
+
+                    const baseW = (selectedGender === "female") ? 100.0 : 110.0;
+                    const diffW = 3.5;
+                    const dayWeight = parseFloat((baseW + diffW - (diffW * ((idx - 1) / 29))).toFixed(1));
+                    const lbm = dayWeight - (dayWeight * 0.32);
+                    const dayTdee = (370 + (21.6 * lbm)) * 1.25;
+
+                    historyDB[dStr] = {
+                        macros: { carbs, protein, fat },
+                        meals: meals,
+                        calculated: { weight: dayWeight, tdee: dayTdee, consumedKcal: dayKcal, lbm: lbm, age: 45 }
+                    };
+                }
+
+                document.getElementById('gender').value = "male";
+                document.getElementById('age').value = "45";
+                setMetricValToInput('height', 180);
+                setMetricValToInput('weight', 110);
+                setMetricValToInput('waist', 112);
+                setMetricValToInput('neck', 43);
+                setMetricValToInput('hip', 118); 
+                document.getElementById('activityLevel').value = "1.25";
+                document.getElementById('strategyGoal').value = "lose_1pct";
+
+                pivitaDemoSelectOptions();
+
+                asetKumuJakso(30);
+
+                tarkistaSukupuoli();
+                tarkistaCustomTavoite();
+                valitseDemoPaiva(30); // Valitaan TÄNÄÄN (Päivä 30) oletuksena
+            } else {
+                btn.innerText = t.demoBtnOn;
+                btn.style.background = "#ff00ff";
+                btn.style.color = "#000";
+                controls.style.display = "none";
+
+                historyDB = JSON.parse(localStorage.getItem('metabolic_v20_historyDB')) || {};
+                activeDateStr = getTodayStr();
+                
+            const savedUnit = localStorage.getItem('metabolic_v20_units');
+            if (savedUnit) {
+                document.getElementById('unitSelect').value = savedUnit;
+            }
+            updateLabelsForUnits();
+
+            document.getElementById('selectedDate').value = activeDateStr;
+                lataaKayttajaParametrit();
+                lataaAktiivisenPaivanTiedot();
+                tarkistaSukupuoli();
+                tarkistaCustomTavoite();
+                alustaKumulatiivisetPaivaykset();
+                paivitaKumulatiivinenYhteenveto();
+            }
+        }
+
+        function pivitaDemoSelectOptions() {
+            const select = document.getElementById('demoDaySelect');
+            if (!select) return;
+            select.innerHTML = '';
+            const lang = document.getElementById('langSelect').value;
+            const dayNamesFi = ["Su", "Ma", "Ti", "Ke", "To", "Pe", "La"];
+            const dayNamesEn = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+            for (let idx = 30; idx >= 1; idx--) {
+                const dStr = demoDates[idx];
+                const dObj = new Date(dStr + "T00:00:00");
+                const dw = dObj.getDay();
+                const dName = (lang === 'en') ? dayNamesEn[dw] : dayNamesFi[dw];
+
+                let tag = "";
+                if (idx === 30) tag = (lang === 'en') ? " 🌟 [TODAY]" : " 🌟 [TÄNÄÄN]";
+                else if (dw === 5) tag = (lang === 'en') ? " 📺 [Fri TV Chips]" : " 📺 [Pe TV-sipsit]";
+                else if (dw === 6) tag = (lang === 'en') ? " 🍕 [Sat Treats]" : " 🍕 [La Herkkupäivä]";
+                else if (dw === 0) tag = (lang === 'en') ? " 🍿 [Sun Treats]" : " 🍿 [Su Herkut]";
+                else tag = (lang === 'en') ? " 🥗 [Weekday]" : " 🥗 [Arki]";
+
+                const opt = document.createElement('option');
+                opt.value = dStr;
+                opt.innerText = `Päivä ${idx}: ${dStr} (${dName})${tag}`;
+                select.appendChild(opt);
+            }
+        }
+
+        function valitseDemoPaivaByDate(dStr) {
+            if (!isDemoMode) return;
+            activeDateStr = dStr;
+            const select = document.getElementById('demoDaySelect');
+            if (select) select.value = dStr;
+            
+            const savedUnit = localStorage.getItem('metabolic_v20_units');
+            if (savedUnit) {
+                document.getElementById('unitSelect').value = savedUnit;
+            }
+            updateLabelsForUnits();
+
+            document.getElementById('selectedDate').value = activeDateStr;
+            lataaAktiivisenPaivanTiedot();
+        }
+
+        function valitseDemoPaiva(num) {
+            if (!isDemoMode) return;
+            if (demoDates[num]) {
+                valitseDemoPaivaByDate(demoDates[num]);
+            }
+        }
+
+        function valitseDemoPe() {
+            if (!isDemoMode) return;
+            for (let idx = 30; idx >= 1; idx--) {
+                const dStr = demoDates[idx];
+                const dObj = new Date(dStr + "T00:00:00");
+                if (dObj.getDay() === 5) {
+                    valitseDemoPaivaByDate(dStr);
+                    break;
+                }
+            }
+        }
+
+        function valitseDemoLa() {
+            if (!isDemoMode) return;
+            for (let idx = 30; idx >= 1; idx--) {
+                const dStr = demoDates[idx];
+                const dObj = new Date(dStr + "T00:00:00");
+                if (dObj.getDay() === 6) {
+                    valitseDemoPaivaByDate(dStr);
+                    break;
+                }
+            }
+        }
+
+        function valitseDemoArki() {
+            if (!isDemoMode) return;
+            for (let idx = 30; idx >= 1; idx--) {
+                const dStr = demoDates[idx];
+                const dObj = new Date(dStr + "T00:00:00");
+                const dw = dObj.getDay();
+                if (dw >= 1 && dw <= 4) {
+                    valitseDemoPaivaByDate(dStr);
+                    break;
+                }
+            }
+        }
+
+        function tarkistaSukupuoli() { 
+            const g = document.getElementById('gender').value;
+            document.getElementById('hipContainer').style.display = (g === "female") ? "block" : "none"; 
+            
+            if (isDemoMode) {
+                if (g === "female") {
+                    setMetricValToInput('height', 170);
+                    setMetricValToInput('weight', 100);
+                    setMetricValToInput('waist', 104);
+                    setMetricValToInput('neck', 38);
+                    setMetricValToInput('hip', 118);
+                } else if (g === "male") {
+                    setMetricValToInput('height', 180);
+                    setMetricValToInput('weight', 110);
+                    setMetricValToInput('waist', 112);
+                    setMetricValToInput('neck', 43);
+                    setMetricValToInput('hip', null);
+                }
+            }
+        }
+
+        function paivitaKaikkienPaivienLaskelmat() {
+            const gender = document.getElementById('gender').value;
+            const h = getMetricVal('height') || 0;
+            const waist = getMetricVal('waist') || 0;
+            const neck = getMetricVal('neck') || 0;
+            const hip = getMetricVal('hip') || 0;
+            const userBodyFat = parseFloat(document.getElementById('bodyFat')?.value) || 0;
+            const age = parseInt(document.getElementById('age').value) || 45;
+            const actMult = parseFloat(document.getElementById('activityLevel').value) || 1.25;
+
+            let rPct = userBodyFat;
+            if (rPct <= 0) {
+                rPct = (gender === "male") ? 32.0 : 42.0;
+                if ((gender === "male" && h > 0 && waist > neck && neck > 0) || (gender === "female" && h > 0 && (waist + hip) > neck && neck > 0 && hip > 0)) {
+                    rPct = (gender === "male") 
+                        ? (495 / (1.0324 - 0.19077 * log10(waist - neck) + 0.15456 * log10(h)) - 450) 
+                        : (495 / (1.29579 - 0.35004 * log10(waist + hip - neck) + 0.22100 * log10(h)) - 450);
+                    if (rPct < 3) rPct = 3;
+                }
+            }
+
+            Object.keys(historyDB).forEach(dKey => {
+                const dayObj = historyDB[dKey];
+                if (dayObj) {
+                    let w = dayObj.calculated?.weight || getMetricVal('weight') || 70;
+                    
+                    if (isDemoMode) {
+                        const idx = Object.keys(demoDates).find(k => demoDates[k] === dKey);
+                        if (idx) {
+                            const i = parseInt(idx);
+                            const baseW = (gender === "female") ? 100.0 : 110.0;
+                            const diffW = 3.5;
+                            w = parseFloat((baseW + diffW - (diffW * ((i - 1) / 29))).toFixed(1));
+
+                            const dObj = new Date(dKey + "T00:00:00");
+                            const dayOfWeek = dObj.getDay();
+                            const newMeals = generateDemoMealsForDay(dayOfWeek, gender);
+                            
+                            let carbs = 0, protein = 0, fat = 0;
+                            newMeals.forEach(m => { carbs += m.c; protein += m.p; fat += m.f; });
+                            
+                            dayObj.meals = newMeals;
+                            dayObj.macros = { carbs, protein, fat };
+                        }
+                    }
+
+                    const lbm = w - (w * (rPct / 100));
+                    const dayTdee = (370 + (21.6 * lbm)) * actMult;
+                    const dayKcal = (dayObj.macros.carbs * 4) + (dayObj.macros.protein * 4) + (dayObj.macros.fat * 9);
+
+                    dayObj.calculated = {
+                        weight: w,
+                        tdee: dayTdee,
+                        consumedKcal: dayKcal,
+                        lbm: lbm,
+                        age: age
+                    };
+                }
+            });
+
+            if (isDemoMode && historyDB[activeDateStr]?.calculated?.weight) {
+                setMetricValToInput('weight', historyDB[activeDateStr].calculated.weight);
+            }
+
+            paivitaLaskelmat();
+            paivitaKumulatiivinenYhteenveto();
+        }
+
+        function paivitaLaskettuRasvaprosenttiKenttaan() {
+            const h = getMetricVal('height') || 0;
+            const w = getMetricVal('weight') || 0;
+            const waist = getMetricVal('waist') || 0;
+            const neck = getMetricVal('neck') || 0;
+            const hip = getMetricVal('hip') || 0;
+            const gender = document.getElementById('gender').value;
+
+            let rPct = 0;
+            if (w > 0 && ((gender === "male" && h > 0 && waist > neck && neck > 0) || (gender === "female" && h > 0 && (waist + hip) > neck && neck > 0 && hip > 0))) {
+                rPct = (gender === "male") 
+                    ? (495 / (1.0324 - 0.19077 * log10(waist - neck) + 0.15456 * log10(h)) - 450) 
+                    : (495 / (1.29579 - 0.35004 * log10(waist + hip - neck) + 0.22100 * log10(h)) - 450);
+                if (rPct < 3) rPct = 3;
+            }
+
+            const bfInput = document.getElementById('bodyFat');
+            if (!bfInput) return;
+            const lang = document.getElementById('langSelect')?.value || 'fi';
+            
+            if (rPct > 0) {
+                if (!bfInput.dataset.manualOverride) {
+                    bfInput.value = rPct.toFixed(1);
+                    bfInput.dataset.autoCalculated = "true";
+                }
+                const bfStr = rPct.toFixed(1) + " %";
+                const phText = (lang === 'en') ? `👉 AUTO-CALCULATED: ${bfStr} (Enter to override)` : `👉 LASKETTU ARVO: ${bfStr} (Syötä muuttaaksesi)`;
+                bfInput.placeholder = phText;
+            } else {
+                if (bfInput.dataset.autoCalculated === "true" && !bfInput.dataset.manualOverride) {
+                    bfInput.value = "";
+                    bfInput.dataset.autoCalculated = "false";
+                }
+                const origPh = (lang === 'en') ? "👉 ENTER BODY FAT % (IF KNOWN)" : "👉 SYÖTÄ RASVAPROSENTTI % (JOS TIEDOSSA)";
+                bfInput.placeholder = origPh;
+            }
+        }
+
+        function tallennaKayttajaParametrit(triggerSync = true) {
+            paivitaLaskettuRasvaprosenttiKenttaan();
+            if (isDemoMode) return; 
+            const params = {
+                gender: document.getElementById('gender').value,
+                age: document.getElementById('age').value,
+                height: document.getElementById('height').value,
+                weight: document.getElementById('weight').value,
+                waist: document.getElementById('waist').value,
+                neck: document.getElementById('neck').value,
+                hip: document.getElementById('hip').value,
+                bodyFat: document.getElementById('bodyFat')?.value || '',
+                activityLevel: document.getElementById('activityLevel').value,
+                strategyGoal: document.getElementById('strategyGoal').value,
+                customCalorieDelta: document.getElementById('customCalorieDelta').value
+            };
+            const oldParamsStr = localStorage.getItem('metabolic_v20_userParams');
+            const newParamsStr = JSON.stringify(params);
+            
+            if (oldParamsStr !== newParamsStr) {
+                localStorage.setItem('metabolic_v20_userParams', newParamsStr);
+                localStorage.setItem('metabolic_v20_lastUpdate', new Date().toISOString());
+                if (triggerSync && window.triggerAutoSyncToDrive) window.triggerAutoSyncToDrive();
+            }
+        }
+
+        function lataaKayttajaParametrit() {
+            const saved = localStorage.getItem('metabolic_v20_userParams');
+            if (saved) {
+                const p = JSON.parse(saved);
+                ['gender','age','height','weight','waist','neck','hip','bodyFat','activityLevel','strategyGoal','customCalorieDelta'].forEach(k => {
+                    if (p[k] !== undefined && document.getElementById(k)) document.getElementById(k).value = p[k];
+                });
+            }
+            paivitaLaskettuRasvaprosenttiKenttaan();
+        }
+
+        function siirryPaivissa(delta) {
+            const dateInput = document.getElementById('selectedDate');
+            if (!dateInput) return;
+            let currentStr = dateInput.value || activeDateStr || getTodayStr();
+            const parts = currentStr.split('-');
+            if (parts.length === 3) {
+                const year = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10) - 1;
+                const day = parseInt(parts[2], 10);
+                const d = new Date(year, month, day);
+                d.setDate(d.getDate() + delta);
+                
+                const newY = d.getFullYear();
+                const newM = String(d.getMonth() + 1).padStart(2, '0');
+                const newD = String(d.getDate()).padStart(2, '0');
+                const newStr = `${newY}-${newM}-${newD}`;
+                
+                dateInput.value = newStr;
+                vaihdaPaivaa();
+            }
+        }
+
+        window.addEventListener('keydown', function(e) {
+            const activeEl = document.activeElement;
+            if (activeEl) {
+                const tag = activeEl.tagName.toLowerCase();
+                if (tag === 'input' || tag === 'textarea' || tag === 'select' || activeEl.isContentEditable) {
+                    return;
+                }
+            }
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                siirryPaivissa(-1);
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                siirryPaivissa(1);
+            }
+        });
+
+        function paivitaKelluvatPaivamaaraPainikkeet() {
+            const dateInput = document.getElementById('selectedDate');
+            const dateVal = dateInput ? dateInput.value : (typeof activeDateStr !== 'undefined' ? activeDateStr : '');
+            if (!dateVal) return;
+
+            const parts = dateVal.split('-');
+            if (parts.length !== 3) return;
+
+            const year = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10);
+            const day = parseInt(parts[2], 10);
+
+            const dObj = new Date(year, month - 1, day);
+            const dayOfWeek = dObj.getDay();
+
+            const lang = document.getElementById('langSelect')?.value || 'fi';
+            const dayNamesFi = ["SU", "MA", "TI", "KE", "TO", "PE", "LA"];
+            const dayNamesEn = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+
+            const dayName = (lang === 'en') ? dayNamesEn[dayOfWeek] : dayNamesFi[dayOfWeek];
+            const formattedDate = `${String(day).padStart(2, '0')}.${String(month).padStart(2, '0')}.`;
+
+            const elNameLeft = document.getElementById('floatDateDayNameLeft');
+            const elStrLeft = document.getElementById('floatDateStrLeft');
+            const elNameRight = document.getElementById('floatDateDayNameRight');
+            const elStrRight = document.getElementById('floatDateStrRight');
+
+            if (elNameLeft) elNameLeft.innerText = dayName;
+            if (elStrLeft) elStrLeft.innerText = formattedDate;
+            if (elNameRight) elNameRight.innerText = dayName;
+            if (elStrRight) elStrRight.innerText = formattedDate;
+        }
+
+        function avaaPaivamaaratarkastelu() {
+            const el = document.getElementById('selectedDate');
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                if (typeof el.showPicker === 'function') {
+                    try { el.showPicker(); } catch(e) { el.focus(); }
+                } else {
+                    el.focus();
+                }
+            }
+        }
+
+        function vaihdaPaivaa() {
+            const inputVal = document.getElementById('selectedDate').value;
+            if (inputVal) {
+                if (editingMealIndex !== null) peruutaMuokkaus();
+                activeDateStr = inputVal;
+                lataaAktiivisenPaivanTiedot();
+            }
+            paivitaKelluvatPaivamaaraPainikkeet();
+        }
+
+        function sailytaPaivaDB() {
+            if (isDemoMode) return; 
+            if (activeDateStr && historyDB[activeDateStr]) {
+                historyDB[activeDateStr].updatedAt = new Date().toISOString();
+            }
+            localStorage.setItem('metabolic_v20_historyDB', JSON.stringify(historyDB));
+            localStorage.setItem('metabolic_v20_lastUpdate', new Date().toISOString());
+            paivitaKumulatiivinenYhteenveto();
+        }
+
+        function lataaAktiivisenPaivanTiedot() {
+            if (editingMealIndex !== null) peruutaMuokkaus();
+            if (!historyDB[activeDateStr]) {
+                historyDB[activeDateStr] = { macros: { carbs: 0, protein: 0, fat: 0 }, meals: [], calculated: null };
+            }
+
+            if (historyDB[activeDateStr].calculated && historyDB[activeDateStr].calculated.weight) {
+                setMetricValToInput('weight', historyDB[activeDateStr].calculated.weight);
+            } else {
+                const savedParams = localStorage.getItem('metabolic_v20_userParams');
+                if (savedParams) {
+                    const p = JSON.parse(savedParams);
+                    if (p.weight) document.getElementById('weight').value = p.weight;
+                }
+            }
+
+            paivitaLogiNaytto();
+            alustaKumulatiivisetPaivaykset();
+            paivitaKumulatiivinenYhteenveto();
+
+            if (historyDB[activeDateStr].meals.length > 0) {
+                lisaaAnnosV20(true);
+            } else {
+                paivitaLaskelmat();
+            }
+            paivitaKelluvatPaivamaaraPainikkeet();
+        }
+
+        function laskePaastoIkkuna(meals) {
+            if (!meals || meals.length === 0) {
+                return { eatWindow: 0.0, fastWindow: 24.0 };
+            }
+            if (meals.length === 1) {
+                return { eatWindow: 1.0, fastWindow: 23.0 };
+            }
+            let minM = 1440, maxM = -1;
+            meals.forEach(m => {
+                if (m.time) {
+                    const parts = m.time.split(':');
+                    if (parts.length === 2) {
+                        const mins = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+                        if (!isNaN(mins)) {
+                            if (mins < minM) minM = mins;
+                            if (mins > maxM) maxM = mins;
+                        }
+                    }
+                }
+            });
+            if (minM >= 1440 || maxM < 0) {
+                return { eatWindow: 1.0, fastWindow: 23.0 };
+            }
+            let eatWindow = (maxM - minM) / 60;
+            if (eatWindow <= 0) eatWindow = 1.0;
+            let fastWindow = Math.max(0, 24.0 - eatWindow);
+            return { eatWindow: eatWindow, fastWindow: fastWindow };
+        }
+
+        function haeAutofagiaStatus(fastHours, lang) {
+            const isEn = (lang === 'en');
+            if (fastHours < 12) {
+                return {
+                    text: isEn ? "🔴 ANABOLIC (Digestion active, no autophagy)" : "🔴 ANABOLINEN (Ruoansulatus aktiivinen, ei autofagiaa)",
+                    color: "#ff4444"
+                };
+            } else if (fastHours < 14) {
+                return {
+                    text: isEn ? "🟡 BASIC FASTING (Gut rest state achieved)" : "🟡 PERUSPAASTO (Suoliston lepotila saavutettu)",
+                    color: "#ffff00"
+                };
+            } else if (fastHours < 18) {
+                return {
+                    text: isEn ? "🟢 ACTIVE AUTOPHAGY (Cellular cleanup and recycling active)" : "🟢 AKTIIVINEN AUTOFAGIA (Solujen siivous ja kierrätys käynnissä)",
+                    color: "#00ffaa"
+                };
+            } else {
+                return {
+                    text: isEn ? "🟣 DEEP AUTOPHAGY (OMAD / Enhanced cellular cleanup)" : "🟣 SYVÄ AUTOFAGIA (OMAD / Tehostettu solusiivous)",
+                    color: "#e088ff"
+                };
+            }
+        }
+
+        function laskeInsuliiniAikaan(meals, t) {
+            let insulin = 5.0; 
+            if (!meals || !Array.isArray(meals)) return insulin;
+            meals.forEach(m => {
+                if (m.time) {
+                    const parts = m.time.split(':');
+                    const mealTime = parseInt(parts[0], 10) + (parseInt(parts[1] || '0', 10) / 60);
+                    const dt = t - mealTime;
+                    if (dt >= 0) {
+                        const c = m.c || 0, p = m.p || 0, f = m.f || 0;
+                        const totalM = c + p + f;
+                        const carbRatio = totalM > 0 ? (c / totalM) : 0;
+                        const buf = 1.0 + ((p * 0.01) + (f * 0.02));
+                        const insLoad = ((c * 1.0) + (p * 0.56) + (f * 0.10)) / buf;
+
+                        const tStart = 0.25 - (carbRatio * 0.0833);
+                        const tPeak = 1.0 - (carbRatio * 0.375);
+
+                        if (dt >= tStart) {
+                            let factor = 0;
+                            if (dt <= tPeak) {
+                                const u = (dt - tStart) / (tPeak - tStart);
+                                factor = (3 * u * u) - (2 * u * u * u);
+                            } else {
+                                const tau = dt - tPeak;
+                                const decayScale = 1.8 * buf;
+                                factor = Math.exp(-Math.pow(tau / decayScale, 1.4));
+                            }
+                            if (factor > 0) {
+                                insulin += insLoad * factor;
+                            }
+                        }
+                    }
+                }
+            });
+            return insulin;
+        }
+
+        function laskeRasvanpolttoAika(meals, maxHour = 24.0) {
+            if (!maxHour || maxHour <= 0) return { hours: 0, totalHours: maxHour, pct: 0 };
+            if (maxHour > 24.0) maxHour = 24.0;
+            
+            const totalMinutes = Math.round(maxHour * 60);
+            let fatBurnMinutes = 0;
+            
+            for (let m = 0; m < totalMinutes; m++) {
+                const t = (m + 0.5) / 60;
+                const ins = laskeInsuliiniAikaan(meals, t);
+                if (ins <= 35.0) {
+                    fatBurnMinutes++;
+                }
+            }
+            
+            const hours = fatBurnMinutes / 60;
+            const pct = (hours / maxHour) * 100;
+            return { hours, totalHours: maxHour, pct };
+        }
+
+        function muotoileHHMM(hours) {
+            let h = Math.floor(hours);
+            let m = Math.round((hours - h) * 60);
+            if (m >= 60) { h += 1; m = 0; }
+            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        }
+
+        function muotoileAikaJaProsentti(hours, totalHours, lang = 'fi') {
+            const hhmm = muotoileHHMM(hours);
+            const pct = totalHours > 0 ? ((hours / totalHours) * 100).toFixed(1) : '0.0';
+            const suffix = lang === 'en' ? 'of day' : 'vuorokaudesta';
+            return `${hhmm} / ${pct}% ${suffix}`;
+        }
+
+        function paivitaKumulatiivinenYhteenveto() {
+            let totalDays = 0, totalEnergyKcal = 0, totalCalorieSaldo = 0, mtorActiveDaysCount = 0, autophagyActiveDaysCount = 0;
+            let totalFatBurnHours = 0;
+
+            const startDate = document.getElementById('cumStartDate').value;
+            const endDate = document.getElementById('cumEndDate').value;
+            const lang = document.getElementById('langSelect').value;
+            const todayStr = (isDemoMode && demoDates[30]) ? demoDates[30] : getTodayStr();
+
+            Object.keys(historyDB).forEach(dKey => {
+                // Ignore ongoing incomplete day
+                if (dKey >= todayStr) return;
+
+                if (startDate && dKey < startDate) return;
+                if (endDate && dKey > endDate) return;
+
+                const dayObj = historyDB[dKey];
+                if (dayObj && dayObj.meals && dayObj.meals.length > 0) {
+                    totalDays++;
+                    const dayKcal = (dayObj.macros.carbs * 4) + (dayObj.macros.protein * 4) + (dayObj.macros.fat * 9);
+                    totalEnergyKcal += dayKcal;
+
+                    const fastingData = laskePaastoIkkuna(dayObj.meals);
+                    if (fastingData.fastWindow >= 14.0) {
+                        autophagyActiveDaysCount++;
+                    }
+
+                    const fbData = laskeRasvanpolttoAika(dayObj.meals, 24.0);
+                    totalFatBurnHours += fbData.hours;
+
+                    let dayTdee = 0;
+                    let lbm = 0;
+                    let age = parseInt(document.getElementById('age')?.value) || 45;
+
+                    if (dayObj.calculated && dayObj.calculated.tdee) {
+                        dayTdee = dayObj.calculated.tdee;
+                        lbm = dayObj.calculated.lbm || (dayObj.calculated.weight ? dayObj.calculated.weight * 0.8 : 70);
+                        if (dayObj.calculated.age) age = dayObj.calculated.age;
+                    } else {
+                        const w = dayObj.calculated?.weight || getMetricVal('weight') || 70;
+                        const h = getMetricVal('height') || 175;
+                        const waist = getMetricVal('waist') || 0;
+                        const neck = getMetricVal('neck') || 0;
+                        const hip = getMetricVal('hip') || 0;
+                        const gender = document.getElementById('gender').value;
+                        const actMult = parseFloat(document.getElementById('activityLevel').value) || 1.25;
+
+                        const userBodyFat = parseFloat(document.getElementById('bodyFat')?.value) || 0;
+                        let rPct = userBodyFat;
+                        if (rPct <= 0) {
+                            rPct = (gender === "male") ? 32.0 : 42.0;
+                            if ((gender === "male" && h > 0 && waist > neck && neck > 0) || (gender === "female" && h > 0 && (waist + hip) > neck && neck > 0 && hip > 0)) {
+                                rPct = (gender === "male") 
+                                    ? (495 / (1.0324 - 0.19077 * log10(waist - neck) + 0.15456 * log10(h)) - 450) 
+                                    : (495 / (1.29579 - 0.35004 * log10(waist + hip - neck) + 0.22100 * log10(h)) - 450);
+                                if (rPct < 3) rPct = 3;
+                            }
+                        }
+                        lbm = w - (w * (rPct / 100)); 
+                        dayTdee = (370 + (21.6 * lbm)) * actMult;
+                        dayObj.calculated = { weight: w, tdee: dayTdee, consumedKcal: dayKcal, lbm: lbm, age: age };
+                    }
+
+                    totalCalorieSaldo += (dayKcal - dayTdee);
+
+                    let ageMultiplier = 1.0;
+                    let minThreshold = 30.0;
+                    if (age >= 60) {
+                        ageMultiplier = 1.15;
+                        minThreshold = 35.0;
+                    } else if (age >= 50) {
+                        ageMultiplier = 1.08;
+                        minThreshold = 32.0;
+                    }
+
+                    const mtorThreshold = Math.max(minThreshold, lbm * 0.4 * ageMultiplier);
+                    if (dayObj.meals.some(m => m.p >= mtorThreshold)) mtorActiveDaysCount++;
+                }
+            });
+
+            document.getElementById('cumDaysCount').innerText = totalDays;
+            document.getElementById('cumEnergyTotal').innerText = Math.round(totalEnergyKcal);
+            
+            const deficitTitle = document.getElementById('cumDeficitTitle');
+            const deficitEl = document.getElementById('cumDeficitTotal');
+            const fatKgEl = document.getElementById('cumFatBurnedKg');
+            const fatLitersEl = document.getElementById('cumFatBurnedLiters');
+
+            const absVal = Math.abs(totalCalorieSaldo);
+            const fatKgVal = absVal / 7700;
+            const fatLitersVal = fatKgVal / 0.90;
+
+            const unitType = document.getElementById('unitSelect')?.value || 'metric';
+            const fbKgOut = unitType === 'imperial' ? (fatKgVal * 2.20462).toFixed(2) : fatKgVal.toFixed(2);
+            if(document.getElementById('cumFatBurnedUnit')) document.getElementById('cumFatBurnedUnit').innerText = unitType === 'imperial' ? 'lbs' : 'kg';
+
+            if (totalCalorieSaldo > 0) {
+                deficitTitle.innerHTML = lang === 'en' ? "⚠️ Accumulated calorie balance (<span class='alert-red'>surplus = weight gained</span>):" : "⚠️ Kertynyt kalorisaldo (<span class='alert-red'>plussalla = painoa tullut lisää</span>):";
+                deficitEl.innerText = "+" + Math.round(totalCalorieSaldo);
+                fatKgEl.innerText = "+" + fbKgOut;
+                fatLitersEl.innerText = "+" + fatLitersVal.toFixed(2);
+                deficitEl.className = "alert-red";
+                fatKgEl.className = "alert-red";
+                fatLitersEl.className = "alert-red";
+            } else if (totalCalorieSaldo < 0) {
+                deficitTitle.innerHTML = lang === 'en' ? "🟢 Accumulated calorie balance (<span class='alert-green'>negative = weight lost</span>):" : "🟢 Kertynyt kalorisaldo (<span class='alert-green'>negatiivinen = laihduttu</span>):";
+                deficitEl.innerText = Math.round(totalCalorieSaldo);
+                fatKgEl.innerText = "-" + fbKgOut;
+                fatLitersEl.innerText = "-" + fatLitersVal.toFixed(2);
+                deficitEl.className = "alert-green";
+                fatKgEl.className = "alert-green";
+                fatLitersEl.className = "alert-green";
+            } else {
+                deficitTitle.innerText = lang === 'en' ? "Accumulated calorie balance:" : "Kertynyt kalorisaldo:";
+                deficitEl.innerText = "0";
+                fatKgEl.innerText = "0.00";
+                fatLitersEl.innerText = "0.00";
+                deficitEl.className = "";
+                fatKgEl.className = "";
+                fatLitersEl.className = "";
+            }
+
+            document.getElementById('cumMtorDays').innerText = mtorActiveDaysCount;
+            const cumAutoEl = document.getElementById('cumAutophagyDays');
+            if (cumAutoEl) cumAutoEl.innerText = autophagyActiveDaysCount;
+
+            const cumFatBurnEl = document.getElementById('cumFatBurnAvgVal');
+            if (cumFatBurnEl) {
+                if (totalDays > 0) {
+                    const avgHours = totalFatBurnHours / totalDays;
+                    cumFatBurnEl.innerText = muotoileAikaJaProsentti(avgHours, 24.0, lang);
+                } else {
+                    cumFatBurnEl.innerText = lang === 'en' ? "00:00 / 0.0% of day" : "00:00 / 0.0% vuorokaudesta";
+                }
+            }
+        }
+
+        function log10(val) { return Math.log(val) / Math.LN10; }
+        function tarkistaCustomTavoite() { document.getElementById('customGoalContainer').style.display = (document.getElementById('strategyGoal').value === "custom") ? "block" : "none"; }
+
+        function paivitaLaskelmat() {
+            const w = getMetricVal('weight') || 0;
+            if (w > 0 && historyDB[activeDateStr]) {
+                lisaaAnnosV20(true);
+            }
+        }
+
+        function lisaaAnnosV20(isRefreshOnly = false) {
+            const w = getMetricVal('weight') || 0;
+            const h = getMetricVal('height') || 0;
+            const waist = getMetricVal('waist') || 0;
+            const neck = getMetricVal('neck') || 0;
+            const hip = getMetricVal('hip') || 0;
+            const gender = document.getElementById('gender').value;
+
+            const c = parseFloat(document.getElementById('carbs').value) || 0;
+            const p = parseFloat(document.getElementById('protein').value) || 0;
+            const f = parseFloat(document.getElementById('fat').value) || 0;
+
+            const lang = document.getElementById('langSelect').value;
+
+            if (isNaN(w) || w <= 0) { 
+                if (!isRefreshOnly) alert(lang === 'en' ? "Enter current weight (kg) to continue!" : "Syötä nykyinen paino (kg) jatkaaksesi!"); 
+                return; 
+            }
+
+            if (!historyDB[activeDateStr]) historyDB[activeDateStr] = { macros: { carbs: 0, protein: 0, fat: 0 }, meals: [], calculated: null };
+
+            if (!isRefreshOnly) {
+                if (editingMealIndex !== null && historyDB[activeDateStr] && historyDB[activeDateStr].meals && historyDB[activeDateStr].meals[editingMealIndex] !== undefined) {
+                    const mealTimeInput = document.getElementById('mealTime').value;
+                    let timeStr = mealTimeInput;
+                    if (!timeStr) {
+                        const now = new Date();
+                        timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+                    }
+
+                    historyDB[activeDateStr].meals[editingMealIndex] = { c: c, p: p, f: f, time: timeStr };
+
+                    let totC = 0, totP = 0, totF = 0;
+                    historyDB[activeDateStr].meals.forEach(m => {
+                        totC += (m.c || 0);
+                        totP += (m.p || 0);
+                        totF += (m.f || 0);
+                    });
+                    historyDB[activeDateStr].macros = { carbs: totC, protein: totP, fat: totF };
+
+                    document.getElementById('carbs').value = ""; 
+                    document.getElementById('protein').value = ""; 
+                    document.getElementById('fat').value = ""; 
+                    document.getElementById('mealTime').value = "";
+
+                    editingMealIndex = null;
+                    paivitaMuokkausUI();
+            updateLabelsForUnits();
+                    sailytaPaivaDB();
+                    if (window.triggerAutoSyncToDrive) window.triggerAutoSyncToDrive();
+                } else if (c > 0 || p > 0 || f > 0) {
+                    const mealTimeInput = document.getElementById('mealTime').value;
+                    let timeStr = mealTimeInput;
+                    if (!timeStr) {
+                        const now = new Date();
+                        timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+                    }
+
+                    historyDB[activeDateStr].macros.carbs += c;
+                    historyDB[activeDateStr].macros.protein += p;
+                    historyDB[activeDateStr].macros.fat += f;
+                    historyDB[activeDateStr].meals.push({ c: c, p: p, f: f, time: timeStr });
+
+                    document.getElementById('carbs').value = ""; document.getElementById('protein').value = ""; document.getElementById('fat').value = ""; document.getElementById('mealTime').value = "";
+
+                    sailytaPaivaDB();
+                    if (window.triggerAutoSyncToDrive) window.triggerAutoSyncToDrive();
+                }
+            }
+
+            const userBodyFat = parseFloat(document.getElementById('bodyFat')?.value) || 0;
+            let rPct = userBodyFat;
+            if (rPct <= 0) {
+                rPct = (gender === "male") ? 32.0 : 42.0;
+                if ((gender === "male" && h > 0 && waist > neck && neck > 0) || (gender === "female" && h > 0 && (waist + hip) > neck && neck > 0 && hip > 0)) {
+                    rPct = (gender === "male") 
+                        ? (495 / (1.0324 - 0.19077 * log10(waist - neck) + 0.15456 * log10(h)) - 450) 
+                        : (495 / (1.29579 - 0.35004 * log10(waist + hip - neck) + 0.22100 * log10(h)) - 450);
+                    if (rPct < 3) rPct = 3;
+                }
+            }
+
+            const actMult = parseFloat(document.getElementById('activityLevel').value) || 1.25;
+            const rMoor = w - (w * (rPct / 100)); 
+            const tdee = (370 + (21.6 * rMoor)) * actMult;
+
+            document.getElementById('resFatPct').innerText = rPct.toFixed(1);
+            
+            
+            const unitObj1 = document.getElementById('unitSelect')?.value || 'metric';
+            document.getElementById('resLean').innerText = unitObj1 === 'imperial' ? (rMoor * 2.20462).toFixed(1) : rMoor.toFixed(1);
+            if(document.getElementById('resLeanUnit')) document.getElementById('resLeanUnit').innerText = unitObj1 === 'imperial' ? 'lbs' : 'kg';
+
+            if (document.getElementById('estExpenditureVal')) {
+                document.getElementById('estExpenditureVal').innerText = Math.round(tdee);
+            }
+
+            const fatKg = w * (rPct / 100);
+            const fatLiters = fatKg / 0.90;
+            
+            
+            const unitObj2 = document.getElementById('unitSelect')?.value || 'metric';
+            const fatKgOut = unitObj2 === 'imperial' ? (fatKg * 2.20462).toFixed(1) : fatKg.toFixed(1);
+            const wUnit = unitObj2 === 'imperial' ? 'lbs' : 'kg';
+            document.getElementById('resFatVolCombined').innerText = `${fatKgOut} ${wUnit} (${fatLiters.toFixed(1)} ${lang === 'en' ? 'liters' : 'litraa'})`;
+
+
+            const strat = document.getElementById('strategyGoal').value;
+            let wkKg = 0;
+            let dailyDeficit = 0;
+
+            if (strat === 'lose_1pct') { wkKg = w * 0.01; dailyDeficit = (wkKg * 7700) / 7; }
+            else if (strat === 'lose_075pct') { wkKg = w * 0.0075; dailyDeficit = (wkKg * 7700) / 7; }
+            else if (strat === 'lose_05pct') { wkKg = w * 0.005; dailyDeficit = (wkKg * 7700) / 7; }
+            else if (strat === 'lose_025pct') { wkKg = w * 0.0025; dailyDeficit = (wkKg * 7700) / 7; }
+            else if (strat === 'maintain') { wkKg = 0; dailyDeficit = 0; }
+            else if (strat === 'custom') {
+                const delta = parseFloat(document.getElementById('customCalorieDelta').value) || 0;
+                dailyDeficit = -delta;
+                wkKg = Math.abs(delta * 7 / 7700);
+            }
+
+            
+            const unitObj = document.getElementById('unitSelect')?.value || 'metric';
+            document.getElementById('resWeeklyTarget').innerText = unitObj === 'imperial' ? (wkKg * 2.20462).toFixed(2) : wkKg.toFixed(2);
+            if(document.getElementById('resWeeklyTargetUnit')) document.getElementById('resWeeklyTargetUnit').innerText = (unitObj === 'imperial' ? 'lbs' : 'kg') + '/wk';
+
+            document.getElementById('resWeeklyVol').innerText = (wkKg / 0.90).toFixed(2);
+
+            const totalCarbs = historyDB[activeDateStr].macros.carbs;
+            const totalProt = historyDB[activeDateStr].macros.protein;
+            const totalFat = historyDB[activeDateStr].macros.fat;
+
+            const targetBudget = Math.max(0, tdee - dailyDeficit);
+            const kCals = (totalCarbs * 4) + (totalProt * 4) + (totalFat * 9);
+
+            document.getElementById('ledgerBudget').innerText = `${Math.round(targetBudget)} (${lang === 'en' ? 'Burn' : 'Kulutus'}: ${Math.round(tdee)})`;
+            document.getElementById('ledgerUsed').innerText = Math.round(kCals);
+            document.getElementById('ledgerLeft').innerText = Math.round(targetBudget - kCals);
+            const age = parseInt(document.getElementById('age').value) || 45;
+            const lbm = rMoor; // Rasvaton massa lasketaan koodissa nimellä rMoor
+
+            let ageMultiplier = 1.0;
+            let minThreshold = 30.0;
+            if (age >= 60) {
+            ageMultiplier = 1.15;
+            minThreshold = 35.0;
+            } else if (age >= 50) {
+            ageMultiplier = 1.08;
+            minThreshold = 32.0;
+    }
+
+
+            const mtorThreshold = Math.max(minThreshold, lbm * 0.4 * ageMultiplier);
+            document.getElementById('resMtorG').innerText = `${mtorThreshold.toFixed(1)} g ${lang === 'en' ? 'protein / meal' : 'proteiinia / ateria'}`;
+            document.getElementById('resDailyProt').innerText = `${totalProt.toFixed(1)} g`;
+
+            const curMeals = historyDB[activeDateStr] ? historyDB[activeDateStr].meals : [];
+            const fastingData = laskePaastoIkkuna(curMeals);
+            const autoStatus = haeAutofagiaStatus(fastingData.fastWindow, lang);
+
+            const resEatWinEl = document.getElementById('resEatingWindow');
+            const resFastWinEl = document.getElementById('resFastingWindow');
+            const resAutoStatusEl = document.getElementById('resAutophagyStatus');
+
+            if (resEatWinEl) resEatWinEl.innerText = `${fastingData.eatWindow.toFixed(1)} h`;
+            if (resFastWinEl) resFastWinEl.innerText = `${fastingData.fastWindow.toFixed(1)} h`;
+            if (resAutoStatusEl) {
+                resAutoStatusEl.innerText = autoStatus.text;
+                resAutoStatusEl.style.color = autoStatus.color;
+            }
+
+            const totalGL = totalCarbs * 0.6;
+            const iTot = (totalCarbs * 1.0) + (totalProt * 0.56) + (totalFat * 0.10);
+            const bufferD = 1.0 + ((totalProt * 0.01) + (totalFat * 0.02));
+            const iPeak = (iTot / bufferD).toFixed(1);
+
+            document.getElementById('resGlycemicLoad').innerText = totalGL.toFixed(1);
+            document.getElementById('resInsulinTotal').innerText = `${iTot.toFixed(1)} iAUC`;
+            document.getElementById('resInsulinBuffer').innerText = bufferD.toFixed(2);
+            document.getElementById('resInsulinPeak').innerText = `${iPeak} uIU/ml`;
+
+            let insulinStatus = lang === 'en' ? "🟢 LOW (Ketosis / Efficient fat burning active)" : "🟢 MATALA (Ketoosi / Tehokas rasvanpoltto käynnissä)";
+            if (iPeak > 80) insulinStatus = lang === 'en' ? "🔴 HIGH (Elevated insulin buffers fat burning)" : "🔴 KORKEA (Kohonnut insuliini puskuroi rasvanpolton)";
+            else if (iPeak > 35) insulinStatus = lang === 'en' ? "🟡 MODERATELY ACTIVE (Digestion active)" : "🟡 KOHTALAISEN AKTIIVINEN (Ruoansulattelu aktiivinen)";
+            document.getElementById('resInsulinStatus').innerText = insulinStatus;
+
+            const resFatBurnEl = document.getElementById('resFatBurnWindow');
+            if (resFatBurnEl) {
+                const todayStr = (isDemoMode && demoDates[30]) ? demoDates[30] : getTodayStr();
+                const isToday = (activeDateStr === todayStr);
+
+                if (isToday) {
+                    const now = new Date();
+                    const tNow = now.getHours() + (now.getMinutes() / 60);
+                    const elapsedHours = Math.max(0.1, tNow);
+                    const fbDataNow = laskeRasvanpolttoAika(curMeals, elapsedHours);
+                    const fbData24 = laskeRasvanpolttoAika(curMeals, 24.0);
+
+                    const nowStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+                    const hhmmNow = muotoileHHMM(fbDataNow.hours);
+                    const pctNow = fbDataNow.pct.toFixed(1);
+
+                    const hhmm24 = muotoileHHMM(fbData24.hours);
+                    const pct24 = fbData24.pct.toFixed(1);
+
+                    if (lang === 'en') {
+                        resFatBurnEl.innerText = `${hhmmNow} / ${pctNow}% (by ${nowStr}) | Full 24h: ${hhmm24} / ${pct24}%`;
+                    } else {
+                        resFatBurnEl.innerText = `${hhmmNow} / ${pctNow}% (klo ${nowStr} mennessä) | Koko 24h: ${hhmm24} / ${pct24}%`;
+                    }
+                    resFatBurnEl.className = fbDataNow.pct >= 50 ? "alert-green" : "alert-orange";
+                } else {
+                    const fbData24 = laskeRasvanpolttoAika(curMeals, 24.0);
+                    resFatBurnEl.innerText = muotoileAikaJaProsentti(fbData24.hours, 24.0, lang);
+                    resFatBurnEl.className = fbData24.hours >= 12.0 ? "alert-green" : "alert-orange";
+                }
+            }
+
+            historyDB[activeDateStr].calculated = { weight: w, tdee: tdee, consumedKcal: kCals, lbm: rMoor, age: age };
+            sailytaPaivaDB();
+            paivitaLogiNaytto();
+            document.getElementById('outputBox').style.display = "block";
+            piirraKuvaaja24H();
+        }
+
+        function paivitaLogiNaytto() {
+            const tl = document.getElementById('mealTimeline'); 
+            if (!tl) return;
+            tl.innerHTML = "";
+            const curData = historyDB[activeDateStr];
+            const lang = document.getElementById('langSelect')?.value || 'fi';
+            const t = translations[lang] || translations.fi;
+
+            if (curData && curData.meals && curData.meals.length > 0) {
+                document.getElementById('logBox').style.display = "block";
+                curData.meals.forEach((m, idx) => {
+                    const gl = m.c * 0.6;
+                    const buf = 1.0 + ((m.p * 0.01) + (m.f * 0.02));
+                    const iTot = (m.c * 1.0) + (m.p * 0.56) + (m.f * 0.10);
+                    const iPeak = iTot / buf;
+
+                    const mealWord = lang === 'en' ? 'Meal' : 'Ateria';
+                    const editWord = t.editMealBtn || (lang === 'en' ? '✏️ Edit' : '✏️ Muokkaa');
+                    const deleteWord = t.deleteMealBtn || (lang === 'en' ? '🗑️ Delete' : '🗑️ Poista');
+                    const cLabel = lang === 'en' ? 'C' : 'HH';
+                    const pLabel = 'P';
+                    const fLabel = lang === 'en' ? 'F' : 'R';
+
+                    const isEditingThis = (editingMealIndex === idx);
+                    const d = document.createElement('div'); 
+                    d.className = 'meal-log-item';
+                    if (isEditingThis) {
+                        d.style.border = '1px solid #00ffff';
+                        d.style.background = 'rgba(0, 255, 255, 0.15)';
+                    }
+                    const safeTime = String(m.time).replace(/[<>&"']/g, x => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[x]));
+                    d.innerHTML = `<strong>${mealWord} ${idx + 1} (${safeTime})</strong> — ${cLabel}: ${m.c}g | ${pLabel}: ${m.p}g | ${fLabel}: ${m.f}g &nbsp;|&nbsp; <span style="color:#ffff00;">GL: ${gl.toFixed(1)}</span> | <span style="color:#88ffff;">D: ${buf.toFixed(2)}x</span> | <span style="color:#ff88ff;">Peak: ${iPeak.toFixed(1)} uIU/ml</span>
+                    <span style="margin-left: 8px; display: inline-block;">
+                        <button type="button" onclick="muokkaaAnnos(${idx})" style="display:inline-block; width:auto; padding:2px 6px; font-size:11px; margin-top:0; background:#003344; color:#00ffff; border:1px solid #00ffff; cursor:pointer;">${editWord}</button>
+                        <button type="button" onclick="poistaAnnos(${idx})" style="display:inline-block; width:auto; padding:2px 6px; font-size:11px; margin-top:0; background:#440000; color:#ffaaaa; border:1px solid #ff4444; cursor:pointer;">${deleteWord}</button>
+                    </span>`;
+                    tl.appendChild(d);
+                });
+                const cLabel = lang === 'en' ? 'C' : 'HH';
+                const pLabel = 'P';
+                const fLabel = lang === 'en' ? 'F' : 'R';
+                document.getElementById('logMacros').innerText = `${cLabel}: ${curData.macros.carbs.toFixed(1)}g | ${pLabel}: ${curData.macros.protein.toFixed(1)}g | ${fLabel}: ${curData.macros.fat.toFixed(1)}g`;
+            } else { 
+                document.getElementById('logBox').style.display = "none"; 
+            }
+        }
+
+        function poistaAnnos(idx) {
+            if (!historyDB[activeDateStr] || !historyDB[activeDateStr].meals) return;
+            historyDB[activeDateStr].meals.splice(idx, 1);
+
+            if (editingMealIndex === idx) {
+                editingMealIndex = null;
+                if (document.getElementById('carbs')) document.getElementById('carbs').value = "";
+                if (document.getElementById('protein')) document.getElementById('protein').value = "";
+                if (document.getElementById('fat')) document.getElementById('fat').value = "";
+                if (document.getElementById('mealTime')) document.getElementById('mealTime').value = "";
+                paivitaMuokkausUI();
+            updateLabelsForUnits();
+            } else if (editingMealIndex !== null && editingMealIndex > idx) {
+                editingMealIndex--;
+            }
+
+            let totC = 0, totP = 0, totF = 0;
+            historyDB[activeDateStr].meals.forEach(m => {
+                totC += (m.c || 0);
+                totP += (m.p || 0);
+                totF += (m.f || 0);
+            });
+            historyDB[activeDateStr].macros = { carbs: totC, protein: totP, fat: totF };
+
+            sailytaPaivaDB();
+            paivitaLogiNaytto();
+            paivitaLaskelmat();
+            if (window.triggerAutoSyncToDrive) window.triggerAutoSyncToDrive();
+        }
+
+        function muokkaaAnnos(idx) {
+            if (!historyDB[activeDateStr] || !historyDB[activeDateStr].meals || !historyDB[activeDateStr].meals[idx]) return;
+            const m = historyDB[activeDateStr].meals[idx];
+            editingMealIndex = idx;
+            if (document.getElementById('carbs')) document.getElementById('carbs').value = (m.c !== undefined && m.c !== null) ? m.c : '';
+            if (document.getElementById('protein')) document.getElementById('protein').value = (m.p !== undefined && m.p !== null) ? m.p : '';
+            if (document.getElementById('fat')) document.getElementById('fat').value = (m.f !== undefined && m.f !== null) ? m.f : '';
+            if (document.getElementById('mealTime') && m.time) {
+                document.getElementById('mealTime').value = m.time;
+            }
+            paivitaMuokkausUI();
+            updateLabelsForUnits();
+        }
+
+        function peruutaMuokkaus() {
+            editingMealIndex = null;
+            if (document.getElementById('carbs')) document.getElementById('carbs').value = "";
+            if (document.getElementById('protein')) document.getElementById('protein').value = "";
+            if (document.getElementById('fat')) document.getElementById('fat').value = "";
+            if (document.getElementById('mealTime')) document.getElementById('mealTime').value = "";
+            paivitaMuokkausUI();
+            updateLabelsForUnits();
+        }
+
+        function paivitaMuokkausUI() {
+            const lang = document.getElementById('langSelect')?.value || 'fi';
+            const t = translations[lang] || translations.fi;
+            const logBtn = document.getElementById('logMealBtn');
+            const cancelBtn = document.getElementById('cancelEditBtn');
+
+            if (editingMealIndex !== null) {
+                if (logBtn) logBtn.innerText = t.updateMealBtn || (lang === 'en' ? 'Update meal ✏️' : 'Päivitä ateria ✏️');
+                if (cancelBtn) cancelBtn.style.display = 'block';
+            } else {
+                if (logBtn) logBtn.innerText = t.logMealBtn || (lang === 'en' ? 'Log and calculate balance 📥' : 'Kirjaa ja laske tase 📥');
+                if (cancelBtn) cancelBtn.style.display = 'none';
+            }
+            paivitaLogiNaytto();
+        }
+
+        function lataaSuosikit() {
+            const selectEl = document.getElementById('favoriteSelect');
+            if (!selectEl) return;
+            const lang = document.getElementById('langSelect')?.value || 'fi';
+            const t = translations[lang] || translations.fi;
+
+            const favs = JSON.parse(localStorage.getItem('metabolic_v20_favorites')) || [];
+            
+            const cLabel = lang === 'en' ? 'C' : 'HH';
+            const pLabel = 'P';
+            const fLabel = lang === 'en' ? 'F' : 'R';
+
+            let html = `<option value="" data-i18n="favoriteDefault">${t.favoriteDefault || '-- Valitse suosikkiateria --'}</option>`;
+            favs.forEach((fav, idx) => {
+                const safeName = String(fav.name).replace(/[<>&"']/g, m => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[m]));
+                html += `<option value="${idx}">${safeName} (${cLabel}: ${fav.c}g, ${pLabel}: ${fav.p}g, ${fLabel}: ${fav.f}g)</option>`;
+            });
+            selectEl.innerHTML = html;
+        }
+
+        function tallennaSuosikki() {
+            const lang = document.getElementById('langSelect')?.value || 'fi';
+            const t = translations[lang] || translations.fi;
+
+            const c = parseFloat(document.getElementById('carbs').value) || 0;
+            const p = parseFloat(document.getElementById('protein').value) || 0;
+            const f = parseFloat(document.getElementById('fat').value) || 0;
+
+            if (c <= 0 && p <= 0 && f <= 0) {
+                alert(t.favAlertEmpty || "Syötä ainakin jokin makro (hiilihydraatit, proteiini tai rasva) ennen tallennusta!");
+                return;
+            }
+
+            const name = prompt(t.favPromptName || "Anna suosikkiaterialle nimi:");
+            if (!name || !name.trim()) return;
+
+            const favs = JSON.parse(localStorage.getItem('metabolic_v20_favorites')) || [];
+            favs.push({ name: name.trim(), c: c, p: p, f: f });
+            localStorage.setItem('metabolic_v20_favorites', JSON.stringify(favs));
+            lataaSuosikit();
+        }
+
+        function valitseSuosikki(val) {
+            if (val === "" || val === null || val === undefined) return;
+            const idx = parseInt(val, 10);
+            if (isNaN(idx)) return;
+
+            const favs = JSON.parse(localStorage.getItem('metabolic_v20_favorites')) || [];
+            if (favs[idx]) {
+                const fav = favs[idx];
+                document.getElementById('carbs').value = fav.c !== undefined ? fav.c : '';
+                document.getElementById('protein').value = fav.p !== undefined ? fav.p : '';
+                document.getElementById('fat').value = fav.f !== undefined ? fav.f : '';
+            }
+        }
+
+        function poistaSuosikki() {
+            const selectEl = document.getElementById('favoriteSelect');
+            if (!selectEl) return;
+            const val = selectEl.value;
+            const lang = document.getElementById('langSelect')?.value || 'fi';
+            const t = translations[lang] || translations.fi;
+
+            if (val === "" || val === null || val === undefined) {
+                alert(t.favAlertSelectDelete || "Valitse poistettava suosikkiateria valikosta!");
+                return;
+            }
+
+            const idx = parseInt(val, 10);
+            if (isNaN(idx)) return;
+
+            let favs = JSON.parse(localStorage.getItem('metabolic_v20_favorites')) || [];
+            if (idx >= 0 && idx < favs.length) {
+                favs.splice(idx, 1);
+                localStorage.setItem('metabolic_v20_favorites', JSON.stringify(favs));
+                lataaSuosikit();
+            }
+        }
+
+        function piirraKuvaaja24H() {
+            const canvas = document.getElementById('dynamicsChart');
+            if (!canvas || !canvas.getContext) return;
+            const ctx = canvas.getContext('2d');
+            const W = canvas.width, H = canvas.height;
+            const lang = document.getElementById('langSelect').value;
+            ctx.clearRect(0, 0, W, H);
+
+            ctx.strokeStyle = '#003300';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < W; x += W / 24) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H - 25); ctx.stroke();
+            }
+            for (let y = 0; y < H - 25; y += 35) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+            }
+
+            ctx.fillStyle = '#00ff00';
+            ctx.font = '10px Courier New';
+            for (let i = 0; i <= 24; i += 2) {
+                const xPos = (i / 24) * W;
+                if (i < 24) {
+                    ctx.fillText(`${String(i).padStart(2, '0')}:00`, xPos + 4, H - 8);
+                }
+            }
+
+            const meals = historyDB[activeDateStr]?.meals || [];
+
+            function getInsulinAtTime(t) {
+                return laskeInsuliiniAikaan(meals, t);
+            }
+
+            function getGLAtTime(t) {
+                let gl = 0.0;
+                meals.forEach(m => {
+                    if (m.time) {
+                        const parts = m.time.split(':');
+                        const mealTime = parseInt(parts[0], 10) + (parseInt(parts[1] || '0', 10) / 60);
+                        const dt = t - mealTime;
+                        if (dt >= 0) {
+                            const totalM = m.c + m.p + m.f;
+                            const carbRatio = totalM > 0 ? (m.c / totalM) : 0;
+                            const buf = 1.0 + ((m.p * 0.01) + (m.f * 0.02));
+                            const glLoad = m.c * 0.6;
+
+                            // GL Latency and peak timing:
+                            // High-carb: rise starts ~10 min (0.167h), peak ~30 min (0.5h)
+                            // Low-carb: rise starts ~15 min (0.25h), peak ~45 min (0.75h)
+                            const tStart = 0.25 - (carbRatio * 0.0833);
+                            const tPeak = 0.75 - (carbRatio * 0.25);
+
+                            if (dt >= tStart && glLoad > 0) {
+                                let factor = 0;
+                                if (dt <= tPeak) {
+                                    // Smooth sigmoidal up-slope
+                                    const u = (dt - tStart) / (tPeak - tStart);
+                                    factor = (3 * u * u) - (2 * u * u * u);
+                                } else {
+                                    // Smooth tail decay
+                                    const tau = dt - tPeak;
+                                    const decayScale = 1.1 * buf;
+                                    factor = Math.exp(-Math.pow(tau / decayScale, 1.4));
+                                }
+                                if (factor > 0) {
+                                    gl += glLoad * factor;
+                                }
+                            }
+                        }
+                    }
+                });
+                return gl;
+            }
+
+            const STEPS = 288;
+            let insulinSamples = [];
+            let glSamples = [];
+            for (let s = 0; s <= STEPS; s++) {
+                const t = (s / STEPS) * 24;
+                insulinSamples.push(getInsulinAtTime(t));
+                glSamples.push(getGLAtTime(t));
+            }
+
+            const maxVal = Math.max(90, ...insulinSamples, ...glSamples);
+
+            const thresholdY = (H - 30) - ((35 / maxVal) * (H - 60));
+            ctx.beginPath();
+            ctx.strokeStyle = '#ff0000';
+            ctx.setLineDash([5, 5]);
+            ctx.lineWidth = 1.5;
+            ctx.moveTo(0, thresholdY);
+            ctx.lineTo(W, thresholdY);
+            ctx.stroke();
+            ctx.setLineDash([]); 
+            ctx.fillStyle = '#ff5555';
+            ctx.fillText(lang === 'en' ? 'THRESHOLD (35 uIU/ml)' : 'KYNNSYSTASO (35 uIU/ml)', W - 180, thresholdY - 4);
+
+            if (activeDateStr === getTodayStr()) {
+                const now = new Date();
+                const currentFraction = now.getHours() + (now.getMinutes() / 60);
+                const currentX = (currentFraction / 24) * W;
+
+                ctx.beginPath();
+                ctx.strokeStyle = '#00ffff';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([3, 3]);
+                ctx.moveTo(currentX, 0);
+                ctx.lineTo(currentX, H - 25);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                ctx.fillStyle = '#00ffff';
+                ctx.font = 'bold 10px Courier New';
+                ctx.fillText(lang === 'en' ? '◀ NOW' : '◀ NYT', currentX + 4, 15);
+            }
+
+            ctx.beginPath();
+            ctx.strokeStyle = '#ffff00';
+            ctx.lineWidth = 2;
+            for (let s = 0; s <= STEPS; s++) {
+                const t = (s / STEPS) * 24;
+                const x = (t / 24) * W;
+                const gl = glSamples[s];
+                const y = (H - 30) - ((gl / maxVal) * (H - 60));
+                if (s === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 2.5;
+            for (let s = 0; s <= STEPS; s++) {
+                const t = (s / STEPS) * 24;
+                const x = (t / 24) * W;
+                const ins = insulinSamples[s];
+                const y = (H - 30) - ((ins / maxVal) * (H - 60));
+                if (s === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            ctx.lineTo(W, H - 25);
+            ctx.lineTo(0, H - 25);
+            ctx.fillStyle = 'rgba(0, 255, 0, 0.12)';
+            ctx.fill();
+        }
+
+        function nollaaValittuPaiva() {
+            if (editingMealIndex !== null) peruutaMuokkaus();
+            historyDB[activeDateStr] = { macros: { carbs: 0, protein: 0, fat: 0 }, meals: [], calculated: null };
+            sailytaPaivaDB();
+            paivitaLogiNaytto();
+            document.getElementById('outputBox').style.display = "none";
+            if (window.triggerAutoSyncToDrive) window.triggerAutoSyncToDrive();
+        }
+
+        function haeVarmuuskopioPayload() {
+            if (!isDemoMode) {
+                tallennaKayttajaParametrit(false);
+            }
+            const realHistoryDB = isDemoMode 
+                ? (JSON.parse(localStorage.getItem('metabolic_v20_historyDB')) || {})
+                : historyDB;
+            const realUserParams = isDemoMode
+                ? (JSON.parse(localStorage.getItem('metabolic_v20_userParams')) || {})
+                : JSON.parse(localStorage.getItem('metabolic_v20_userParams') || '{}');
+
+            return {
+                app: "metabolic_calculator_v20",
+                version: "1.0",
+                exportedAt: localStorage.getItem('metabolic_v20_lastUpdate') || new Date().toISOString(),
+                lang: localStorage.getItem('metabolic_v20_lang') || 'fi',
+                userParams: realUserParams,
+                historyDB: realHistoryDB
+            };
+        }
+
+        function palautaVarmuuskopioPayload(imported) {
+            if (!imported || (typeof imported !== 'object')) return false;
+
+            if (isDemoMode) {
+                toggleDemoMode();
+            }
+
+            let hasValidData = false;
+
+            if (imported.historyDB && typeof imported.historyDB === 'object') {
+                historyDB = imported.historyDB;
+                localStorage.setItem('metabolic_v20_historyDB', JSON.stringify(historyDB));
+                hasValidData = true;
+            }
+
+            if (imported.userParams && typeof imported.userParams === 'object') {
+                localStorage.setItem('metabolic_v20_userParams', JSON.stringify(imported.userParams));
+                lataaKayttajaParametrit();
+                hasValidData = true;
+            }
+
+            if (imported.lang) {
+                localStorage.setItem('metabolic_v20_lang', imported.lang);
+                if (document.getElementById('langSelect')) {
+                    document.getElementById('langSelect').value = imported.lang;
+                    switchLanguage(imported.lang);
+                }
+            }
+
+            if (hasValidData) {
+                alustaKumulatiivisetPaivaykset();
+                lataaAktiivisenPaivanTiedot();
+                tarkistaSukupuoli();
+                tarkistaCustomTavoite();
+                paivitaKaikkienPaivienLaskelmat();
+            }
+
+            return hasValidData;
+        }
+
+        window.haeVarmuuskopioPayload = haeVarmuuskopioPayload;
+        window.palautaVarmuuskopioPayload = palautaVarmuuskopioPayload;
+
+        function vieVarmuuskopioData() {
+            const backupData = haeVarmuuskopioPayload();
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+            const downloadAnchor = document.createElement('a');
+            const today = getTodayStr();
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `metabolinen_laskuri_varmuuskopio_${today}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function tuoVarmuuskopioData(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    const lang = document.getElementById('langSelect').value;
+                    const success = palautaVarmuuskopioPayload(imported);
+                    if (!success) {
+                        alert(lang === 'en' ? "Error: The file does not contain valid calculator backup data!" : "Virhe: Tiedosto ei sisällä kelvollista laskurin varmuuskopiodataa!");
+                        return;
+                    }
+                    if (window.triggerAutoSyncToDrive) window.triggerAutoSyncToDrive();
+                    alert(lang === 'en' ? "Backup imported and data updated successfully!" : "Varmuuskopio tuotu ja tiedot päivitetty onnistuneesti!");
+                } catch (err) {
+                    console.error("Import error:", err);
+                    const lang = document.getElementById('langSelect').value;
+                    alert(lang === 'en' ? "Failed to parse JSON backup file. Please make sure it is a valid backup file." : "Virhe tiedoston tuonnissa! Tarkista, että tiedosto on kelvollinen JSON-varmuuskopio.");
+                } finally {
+                    event.target.value = '';
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function nollaaKaikkiTiedot() {
+            const lang = document.getElementById('langSelect').value;
+            const vahvistus = confirm(
+                lang === 'en' ? 
+                "⚠️ WARNING!\n\nAll saved data (profile, settings, meals, and history) will be completely deleted.\n\nThis is an IRREVERSIBLE ACTION!\n\nDo you still want to proceed?" :
+                "⚠️ VAROITUS!\n\nKaikki tallennetut tiedot (profiili, asetukset, ateriat ja historia) poistetaan kokonaan.\n\nTämä on PERUUTTAMATON TAPAHTUMA!\n\nHaluatko tehdä sen siitä huolimatta?"
+            );
+            
+            if (vahvistus) {
+                localStorage.clear();
+                alert(lang === 'en' ? "System successfully reset!" : "Järjestelmä nollattu onnistuneesti!");
+                location.reload();
+            }
+        }
+    </script>
+
+    <script type="module">
+        let gisTokenClient = null;
+        let cachedAccessToken = null;
+        let currentUser = null;
+        let driveFileSyncTimeout = null;
+
+        const DRIVE_FOLDER_NAME = 'Metabolic Calculator Backups';
+        const DRIVE_FILE_NAME = 'metabolic_calculator_backup.json';
+        const DEFAULT_CLIENT_ID = '859528638907-30p83takq9j1a1k44urmd5oq9jbbuep8.apps.googleusercontent.com';
+
+        function saveDriveSession(token, userObj, expiresInSeconds = 3599) {
+            if (token) cachedAccessToken = token;
+            if (userObj) currentUser = userObj;
+            if (!currentUser) currentUser = { displayName: 'Google Drive User', email: '' };
+            const expiresAt = Date.now() + (expiresInSeconds * 1000);
+
+            try {
+                if (token) localStorage.setItem('metabolic_drive_token', token);
+                localStorage.setItem('metabolic_drive_token_expires', expiresAt.toString());
+                localStorage.setItem('metabolic_drive_user', JSON.stringify({
+                    displayName: currentUser.displayName || currentUser.email || 'Google Drive User',
+                    email: currentUser.email || '',
+                    photoURL: currentUser.photoURL || ''
+                }));
+                localStorage.setItem('metabolic_drive_logged_in', 'true');
+            } catch (e) {
+                console.warn('Storage save notice:', e);
+            }
+        }
+
+        function clearDriveSession() {
+            cachedAccessToken = null;
+            currentUser = null;
+            try {
+                localStorage.removeItem('metabolic_drive_token');
+                localStorage.removeItem('metabolic_drive_token_expires');
+                localStorage.removeItem('metabolic_drive_user');
+                localStorage.removeItem('metabolic_drive_logged_in');
+            } catch (e) {}
+        }
+
+        function loadSavedDriveSession() {
+            try {
+                const isLoggedIn = localStorage.getItem('metabolic_drive_logged_in') === 'true';
+                if (!isLoggedIn) return false;
+
+                const token = localStorage.getItem('metabolic_drive_token');
+                const expiresAt = parseInt(localStorage.getItem('metabolic_drive_token_expires') || '0', 10);
+                const savedUserStr = localStorage.getItem('metabolic_drive_user');
+                const savedUser = savedUserStr ? JSON.parse(savedUserStr) : { displayName: 'Google Drive User', email: '' };
+
+                currentUser = savedUser;
+                updateUIForUser(currentUser);
+
+                if (token && expiresAt > (Date.now() + 60000)) {
+                    cachedAccessToken = token;
+                    return true;
+                }
+            } catch (e) {
+                console.warn('Session load notice:', e);
+            }
+            return false;
+        }
+
+        function setupGisOAuth(clientId) {
+            const activeClientId = clientId || DEFAULT_CLIENT_ID;
+            if (window.google && window.google.accounts && window.google.accounts.oauth2) {
+                gisTokenClient = window.google.accounts.oauth2.initTokenClient({
+                    client_id: activeClientId,
+                    scope: 'https://www.googleapis.com/auth/drive.file',
+                    callback: async (tokenResponse) => {
+                        if (tokenResponse.error) {
+                            console.warn('GIS Token error:', tokenResponse);
+                            const lang = document.getElementById('langSelect')?.value || 'fi';
+                            setDriveStatusUI('error', (lang === 'en' ? 'Sign-in notice: ' : 'Kirjautumisilmoitus: ') + (tokenResponse.error_description || tokenResponse.error));
+                            const bn = document.getElementById('braveNotice');
+                            const tb = document.getElementById('openInNewTabBtn');
+                            if (bn) bn.style.display = 'block';
+                            if (tb) tb.style.display = 'block';
+                            return;
+                        }
+                        if (tokenResponse.access_token) {
+                            const expiresSec = tokenResponse.expires_in ? parseInt(tokenResponse.expires_in, 10) : 3599;
+                            saveDriveSession(tokenResponse.access_token, currentUser || { displayName: 'Google Drive User', email: '' }, expiresSec);
+                            updateUIForUser(currentUser);
+                            await synkkaaOnSignIn();
+                        }
+                    }
+                });
+            } else {
+                setTimeout(() => setupGisOAuth(activeClientId), 500);
+            }
+        }
+
+        async function getOrCreateDriveFolder(token) {
+            const q = encodeURIComponent(`name = '${DRIVE_FOLDER_NAME}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`);
+            const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!res.ok) throw new Error(`Drive folder search error ${res.status}`);
+            const data = await res.json();
+            if (data.files && data.files.length > 0) {
+                return data.files[0].id;
+            }
+
+            const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    name: DRIVE_FOLDER_NAME,
+                    mimeType: 'application/vnd.google-apps.folder'
+                })
+            });
+            if (!createRes.ok) throw new Error(`Folder creation error ${createRes.status}`);
+            const createdFolder = await createRes.json();
+            return createdFolder.id;
+        }
+
+        async function initGoogleDriveSync() {
+            let clientId = DEFAULT_CLIENT_ID;
+            setupGisOAuth(clientId);
+
+            // Restore saved session on page load
+            const hasValidToken = loadSavedDriveSession();
+            if (hasValidToken) {
+                synkkaaOnSignIn();
+            } else if (localStorage.getItem('metabolic_drive_logged_in') === 'true') {
+                // Was logged in previously, try background renewal
+                setTimeout(async () => {
+                    try {
+                        await ensureAccessToken();
+                        synkkaaOnSignIn();
+                    } catch(e) {
+                        console.warn('Silent token refresh on load notice:', e);
+                        const lang = document.getElementById('langSelect')?.value || 'fi';
+                        setDriveStatusUI('warning', lang === 'en' ? 'Connection expired. Click "Sync Now" to renew.' : 'Yhteys vanhentunut. Napsauta "Synkronoitoi nyt" uudistaaksesi.');
+                    }
+                }, 1000);
+            }
+
+            // Show new tab button and Brave notice if in an iframe or if Brave is detected
+            const isInIframe = window.self !== window.top;
+            const bn = document.getElementById('braveNotice');
+            const tb = document.getElementById('openInNewTabBtn');
+
+            if (isInIframe || (navigator.brave && typeof navigator.brave.isBrave === 'function')) {
+                if (bn) bn.style.display = 'block';
+                if (tb) tb.style.display = 'block';
+            }
+
+            const signBtn = document.getElementById('googleSignInBtn');
+            if (signBtn) {
+                signBtn.addEventListener('click', async () => {
+                    const lang = document.getElementById('langSelect')?.value || 'fi';
+                    setDriveStatusUI('loading', lang === 'en' ? 'Signing in to Google...' : 'Kirjaudutaan Google-tilille...');
+
+                    if (gisTokenClient) {
+                        try {
+                            gisTokenClient.requestAccessToken({ prompt: 'select_account' });
+                            return;
+                        } catch (gisErr) {
+                            console.warn('GIS token request failed:', gisErr);
+                        }
+                    }
+
+                    if (window.self !== window.top) {
+                        setDriveStatusUI('warning', lang === 'en' ? 'Sign-in requires a top-level window. Opening new tab...' : 'Kirjautuminen vaatii pääikkunan. Avataan uusi välilehti...');
+                        window.open(window.location.href, '_blank');
+                    }
+                });
+            }
+        }
+
+        function updateUIForUser(user) {
+            const loggedOutUI = document.getElementById('driveLoggedOutUI');
+            const loggedInUI = document.getElementById('driveLoggedInUI');
+            if (loggedOutUI) loggedOutUI.style.display = 'none';
+            if (loggedInUI) loggedInUI.style.display = 'block';
+            
+            const nameEl = document.getElementById('userName');
+            const emailEl = document.getElementById('userEmail');
+            if (nameEl) nameEl.textContent = user.displayName || user.email || 'Google User';
+            if (emailEl) emailEl.textContent = user.email || '';
+            
+            const avatar = document.getElementById('userAvatar');
+            if (avatar) {
+                if (user.photoURL) {
+                    avatar.src = user.photoURL;
+                    avatar.style.display = 'block';
+                } else {
+                    avatar.style.display = 'none';
+                }
+            }
+        }
+
+        let lastDriveSyncTime = null;
+        let isSyncingToDrive = false;
+
+        function updateUIForLoggedOut() {
+            const loggedOutUI = document.getElementById('driveLoggedOutUI');
+            const loggedInUI = document.getElementById('driveLoggedInUI');
+            if (loggedOutUI) loggedOutUI.style.display = 'block';
+            if (loggedInUI) loggedInUI.style.display = 'none';
+            
+            lastDriveSyncTime = null;
+            const lang = document.getElementById('langSelect')?.value || 'fi';
+            const headerText = document.getElementById('headerDriveStatusText');
+            const headerBadge = document.getElementById('headerDriveBadge');
+            if (headerText) headerText.textContent = lang === 'en' ? 'Not connected' : 'Ei kirjauduttu';
+            if (headerBadge) {
+                headerBadge.style.borderColor = '#333';
+                headerBadge.style.color = '#888';
+                headerBadge.title = '';
+            }
+        }
+
+        function setDriveStatusUI(type, message) {
+            const statusEl = document.getElementById('driveSyncStatus');
+            const headerText = document.getElementById('headerDriveStatusText');
+            const headerBadge = document.getElementById('headerDriveBadge');
+            const lang = document.getElementById('langSelect')?.value || 'fi';
+            
+            if (statusEl) statusEl.textContent = message;
+            
+            if (type === 'success') {
+                lastDriveSyncTime = new Date();
+                const nowStr = lastDriveSyncTime.toLocaleTimeString(lang === 'en' ? 'en-US' : 'fi-FI', { hour: '2-digit', minute: '2-digit' });
+                if (statusEl) statusEl.style.color = '#00ff00';
+                if (headerText) headerText.textContent = lang === 'en' ? `🟢 Synced (${nowStr})` : `🟢 Synkronoitu (${nowStr})`;
+                if (headerBadge) {
+                    headerBadge.style.borderColor = '#00ff00';
+                    headerBadge.style.color = '#00ff00';
+                    headerBadge.title = lang === 'en' ? `Google Drive synced at ${nowStr}` : `Google Drive synkronoitu klo ${nowStr}`;
+                }
+            } else if (type === 'loading') {
+                if (statusEl) statusEl.style.color = '#ffff00';
+                if (headerText) {
+                    if (lastDriveSyncTime) {
+                        const nowStr = lastDriveSyncTime.toLocaleTimeString(lang === 'en' ? 'en-US' : 'fi-FI', { hour: '2-digit', minute: '2-digit' });
+                        headerText.textContent = `🔄 (${nowStr})`;
+                    } else {
+                        headerText.textContent = lang === 'en' ? '🔄 Syncing...' : '🔄 Synkronoidaan...';
+                    }
+                }
+                if (headerBadge) {
+                    headerBadge.style.borderColor = '#ffff00';
+                    headerBadge.style.color = '#ffff00';
+                }
+            } else if (type === 'warning') {
+                if (statusEl) statusEl.style.color = '#ffaa00';
+                if (headerText) headerText.textContent = lang === 'en' ? '⚠️ Connect Drive' : '⚠️ Yhdistä Drive';
+                if (headerBadge) {
+                    headerBadge.style.borderColor = '#ffaa00';
+                    headerBadge.style.color = '#ffaa00';
+                    headerBadge.title = '';
+                }
+            } else {
+                if (statusEl) statusEl.style.color = '#ff4444';
+                if (headerText) headerText.textContent = lang === 'en' ? '❌ Error' : '❌ Virhe';
+                if (headerBadge) {
+                    headerBadge.style.borderColor = '#ff4444';
+                    headerBadge.style.color = '#ff4444';
+                    headerBadge.title = '';
+                }
+            }
+        }
+
+        async function ensureAccessToken() {
+            const tokenExpires = parseInt(localStorage.getItem('metabolic_drive_token_expires') || '0', 10);
+            if (cachedAccessToken && tokenExpires > (Date.now() + 60000)) {
+                return cachedAccessToken;
+            }
+
+            // 1. Try GIS token client silent request first
+            if (gisTokenClient) {
+                try {
+                    const token = await new Promise((resolve, reject) => {
+                        const originalCallback = gisTokenClient.callback;
+                        gisTokenClient.callback = (res) => {
+                            if (originalCallback) originalCallback(res);
+                            if (res && res.access_token) {
+                                const expiresSec = res.expires_in ? parseInt(res.expires_in, 10) : 3599;
+                                saveDriveSession(res.access_token, currentUser, expiresSec);
+                                resolve(res.access_token);
+                            } else {
+                                reject(new Error(res?.error_description || res?.error || 'Silent token request failed.'));
+                            }
+                        };
+                        try {
+                            gisTokenClient.requestAccessToken({ prompt: '' });
+                        } catch (e) {
+                            reject(e);
+                        }
+                    });
+                    return token;
+                } catch (silentErr) {
+                    console.warn('Silent token refresh notice:', silentErr);
+                }
+            }
+
+            // 2. Fallback: prompt for account selection via GIS
+            if (gisTokenClient) {
+                return new Promise((resolve, reject) => {
+                    const originalCallback = gisTokenClient.callback;
+                    gisTokenClient.callback = (res) => {
+                        if (originalCallback) originalCallback(res);
+                        if (res && res.access_token) {
+                            const expiresSec = res.expires_in ? parseInt(res.expires_in, 10) : 3599;
+                            saveDriveSession(res.access_token, currentUser, expiresSec);
+                            resolve(res.access_token);
+                        } else {
+                            reject(new Error('Access token request was cancelled or blocked.'));
+                        }
+                    };
+                    try {
+                        gisTokenClient.requestAccessToken({ prompt: 'select_account' });
+                    } catch (e) {
+                        reject(e);
+                    }
+                });
+            }
+
+            throw new Error('Google Identity Services client not initialized');
+        }
+
+        async function findDriveBackupFile(token, folderId) {
+            if (folderId) {
+                const q = encodeURIComponent(`name = '${DRIVE_FILE_NAME}' and '${folderId}' in parents and trashed = false`);
+                const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.files && data.files.length > 0) return data.files[0];
+                }
+            }
+
+            const fallbackQ = encodeURIComponent(`(name = '${DRIVE_FILE_NAME}' or name = 'metabolinen_laskuri_data.json') and trashed = false`);
+            const fallbackRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${fallbackQ}&fields=files(id,name,modifiedTime)`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (fallbackRes.ok) {
+                const fallbackData = await fallbackRes.json();
+                if (fallbackData.files && fallbackData.files.length > 0) return fallbackData.files[0];
+            }
+            return null;
+        }
+
+        function mergeMealsArrays(mealsA = [], mealsB = []) {
+            const merged = [];
+            const usedIndicesB = new Set();
+
+            function isSameMeal(m1, m2) {
+                if (!m1 || !m2) return false;
+                const time1 = m1.time || "";
+                const time2 = m2.time || "";
+                const c1 = Number(m1.c) || 0;
+                const c2 = Number(m2.c) || 0;
+                const p1 = Number(m1.p) || 0;
+                const p2 = Number(m2.p) || 0;
+                const f1 = Number(m1.f) || 0;
+                const f2 = Number(m2.f) || 0;
+                return time1 === time2 && c1 === c2 && p1 === p2 && f1 === f2;
+            }
+
+            mealsA.forEach(m1 => {
+                merged.push({ ...m1 });
+                for (let i = 0; i < mealsB.length; i++) {
+                    if (!usedIndicesB.has(i) && isSameMeal(m1, mealsB[i])) {
+                        usedIndicesB.add(i);
+                        break;
+                    }
+                }
+            });
+
+            let addedFromB = 0;
+            mealsB.forEach((m2, i) => {
+                if (!usedIndicesB.has(i)) {
+                    merged.push({ ...m2 });
+                    addedFromB++;
+                }
+            });
+
+            merged.sort((a, b) => (a.time || "00:00").localeCompare(b.time || "00:00"));
+
+            return { mergedMeals: merged, addedFromB };
+        }
+
+        function yhdistaVarmuuskopioData(localPayload, drivePayload) {
+            if (!drivePayload || typeof drivePayload !== 'object') {
+                return { mergedPayload: localPayload, localUpdated: false, driveUpdated: true };
+            }
+            if (!localPayload || typeof localPayload !== 'object') {
+                return { mergedPayload: drivePayload, localUpdated: true, driveUpdated: false };
+            }
+
+            const localDB = localPayload.historyDB || {};
+            const driveDB = drivePayload.historyDB || {};
+
+            const localExportedAt = localPayload.exportedAt || "";
+            const driveExportedAt = drivePayload.exportedAt || "";
+
+            const allDateKeys = new Set([...Object.keys(localDB), ...Object.keys(driveDB)]);
+
+            const mergedDB = {};
+            let localUpdated = false;
+            let driveUpdated = false;
+
+            allDateKeys.forEach(dateStr => {
+                const localDay = localDB[dateStr];
+                const driveDay = driveDB[dateStr];
+
+                if (localDay && !driveDay) {
+                    mergedDB[dateStr] = JSON.parse(JSON.stringify(localDay));
+                    driveUpdated = true;
+                } else if (!localDay && driveDay) {
+                    mergedDB[dateStr] = JSON.parse(JSON.stringify(driveDay));
+                    localUpdated = true;
+                } else {
+                    const timeLocal = localDay.updatedAt || localExportedAt || "";
+                    const timeDrive = driveDay.updatedAt || driveExportedAt || "";
+
+                    if (timeLocal > timeDrive) {
+                        mergedDB[dateStr] = JSON.parse(JSON.stringify(localDay));
+                        driveUpdated = true;
+                    } else if (timeDrive > timeLocal) {
+                        mergedDB[dateStr] = JSON.parse(JSON.stringify(driveDay));
+                        localUpdated = true;
+                    } else {
+                        const strLocal = JSON.stringify(localDay.meals || []);
+                        const strDrive = JSON.stringify(driveDay.meals || []);
+                        if (strLocal === strDrive) {
+                            mergedDB[dateStr] = JSON.parse(JSON.stringify(localDay));
+                        } else {
+                            const mealsA = localDay.meals || [];
+                            const mealsB = driveDay.meals || [];
+
+                            const mergeAtoB = mergeMealsArrays(mealsA, mealsB);
+                            const mergeBtoA = mergeMealsArrays(mealsB, mealsA);
+
+                            if (mergeAtoB.addedFromB > 0) localUpdated = true;
+                            if (mergeBtoA.addedFromB > 0) driveUpdated = true;
+
+                            const finalMeals = mergeAtoB.mergedMeals;
+                            let totalC = 0, totalP = 0, totalF = 0;
+                            finalMeals.forEach(m => {
+                                totalC += Number(m.c) || 0;
+                                totalP += Number(m.p) || 0;
+                                totalF += Number(m.f) || 0;
+                            });
+
+                            const mergedCalc = { ...(driveDay.calculated || {}), ...(localDay.calculated || {}) };
+
+                            mergedDB[dateStr] = {
+                                macros: { carbs: totalC, protein: totalP, fat: totalF },
+                                meals: finalMeals,
+                                calculated: Object.keys(mergedCalc).length > 0 ? mergedCalc : null,
+                                updatedAt: localDay.updatedAt || driveDay.updatedAt || new Date().toISOString()
+                            };
+                        }
+                    }
+                }
+            });
+
+            const localParams = localPayload.userParams || {};
+            const driveParams = drivePayload.userParams || {};
+            const strLocalParams = JSON.stringify(localParams);
+            const strDriveParams = JSON.stringify(driveParams);
+            let mergedParams;
+            
+            if (strLocalParams !== strDriveParams) {
+                if (localExportedAt > driveExportedAt) {
+                    mergedParams = { ...driveParams, ...localParams };
+                    driveUpdated = true;
+                } else {
+                    mergedParams = { ...localParams, ...driveParams };
+                    localUpdated = true;
+                }
+            } else {
+                mergedParams = { ...localParams };
+            }
+
+            const mergedPayload = {
+                app: "metabolic_calculator_v20",
+                version: "1.0",
+                exportedAt: (localExportedAt >= driveExportedAt ? localExportedAt : driveExportedAt) || new Date().toISOString(),
+                lang: localPayload.lang || drivePayload.lang || 'fi',
+                userParams: mergedParams,
+                historyDB: mergedDB
+            };
+
+            return {
+                mergedPayload,
+                localUpdated,
+                driveUpdated
+            };
+        }
+
+        async function kirjoitaPayloadDriveen(payload, token, folderId, existing) {
+            const jsonStr = JSON.stringify(payload, null, 2);
+            if (existing) {
+                return fetch(`https://www.googleapis.com/upload/drive/v3/files/${existing.id}?uploadType=media`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: jsonStr
+                });
+            } else {
+                const metadata = {
+                    name: DRIVE_FILE_NAME,
+                    parents: [folderId],
+                    mimeType: 'application/json'
+                };
+                const boundary = '-------314159265358979323846';
+                const delimiter = "\r\n--" + boundary + "\r\n";
+                const close_delim = "\r\n--" + boundary + "--";
+                const multipartBody =
+                    delimiter +
+                    'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+                    JSON.stringify(metadata) +
+                    delimiter +
+                    'Content-Type: application/json\r\n\r\n' +
+                    jsonStr +
+                    close_delim;
+
+                return fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': `multipart/related; boundary=${boundary}`
+                    },
+                    body: multipartBody
+                });
+            }
+        }
+
+        async function tallennaGoogleDriveen() {
+            if (isDemoMode) {
+                console.warn('Google Drive sync blocked: Demo mode is active.');
+                const lang = document.getElementById('langSelect')?.value || 'fi';
+                setDriveStatusUI('warning', lang === 'en' ? '⚠️ Demo mode active - Drive save blocked' : '⚠️ Esittelytila päällä - tallennus suljettu');
+                return false;
+            }
+            if (isSyncingToDrive) return false;
+            isSyncingToDrive = true;
+            const lang = document.getElementById('langSelect')?.value || 'fi';
+            try {
+                setDriveStatusUI('loading', lang === 'en' ? '🔄 Saving to Google Drive...' : '🔄 Tallennetaan Google Driveen...');
+                const token = await ensureAccessToken();
+                const folderId = await getOrCreateDriveFolder(token);
+                const existing = await findDriveBackupFile(token, folderId);
+
+                const localPayload = window.haeVarmuuskopioPayload ? window.haeVarmuuskopioPayload() : {};
+                let payloadToSave = localPayload;
+
+                if (existing) {
+                    try {
+                        const fetchRes = await fetch(`https://www.googleapis.com/drive/v3/files/${existing.id}?alt=media`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (fetchRes.ok) {
+                            const driveData = await fetchRes.json();
+                            const { mergedPayload, localUpdated } = yhdistaVarmuuskopioData(localPayload, driveData);
+                            payloadToSave = mergedPayload;
+                            if (localUpdated && window.palautaVarmuuskopioPayload) {
+                                window.palautaVarmuuskopioPayload(mergedPayload);
+                            }
+                        }
+                    } catch (mergeErr) {
+                        console.warn('Drive read before save notice:', mergeErr);
+                    }
+                }
+
+                const res = await kirjoitaPayloadDriveen(payloadToSave, token, folderId, existing);
+                if (!res.ok) throw new Error(`Drive save status ${res.status}`);
+
+                const nowStr = new Date().toLocaleTimeString(lang === 'en' ? 'en-US' : 'fi-FI', { hour: '2-digit', minute: '2-digit' });
+                setDriveStatusUI('success', lang === 'en' ? `🟢 Synced to Google Drive (${nowStr})` : `🟢 Synkronoitu Google Driveen (${nowStr})`);
+                return true;
+            } catch (err) {
+                console.error('Drive save error:', err);
+                setDriveStatusUI('error', lang === 'en' ? '❌ Drive save failed: ' + err.message : '❌ Tallennus Driveen epäonnistui: ' + err.message);
+                return false;
+            } finally {
+                isSyncingToDrive = false;
+            }
+        }
+
+        async function lataaGoogleDrivesta() {
+            if (isDemoMode) {
+                toggleDemoMode();
+            }
+            if (isSyncingToDrive) return;
+            isSyncingToDrive = true;
+            const lang = document.getElementById('langSelect')?.value || 'fi';
+            try {
+                setDriveStatusUI('loading', lang === 'en' ? '🔄 Fetching from Google Drive...' : '🔄 Haetaan Google Drivestä...');
+                const token = await ensureAccessToken();
+                const folderId = await getOrCreateDriveFolder(token);
+                const existing = await findDriveBackupFile(token, folderId);
+
+                if (!existing) {
+                    alert(lang === 'en' ? 'No backup file found in Google Drive! Creating a new backup...' : 'Google Drivestä ei löytynyt varmuuskopiotiedostoa! Luodaan uusi varmuuskopio...');
+                    isSyncingToDrive = false;
+                    await tallennaGoogleDriveen();
+                    return;
+                }
+
+                const res = await fetch(`https://www.googleapis.com/drive/v3/files/${existing.id}?alt=media`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!res.ok) throw new Error(`Download error ${res.status}`);
+                const driveData = await res.json();
+
+                const localPayload = window.haeVarmuuskopioPayload ? window.haeVarmuuskopioPayload() : {};
+                const { mergedPayload, localUpdated, driveUpdated } = yhdistaVarmuuskopioData(localPayload, driveData);
+
+                if (window.palautaVarmuuskopioPayload) {
+                    window.palautaVarmuuskopioPayload(mergedPayload);
+                }
+
+                if (driveUpdated) {
+                    await kirjoitaPayloadDriveen(mergedPayload, token, folderId, existing);
+                }
+
+                const nowStr = new Date().toLocaleTimeString(lang === 'en' ? 'en-US' : 'fi-FI', { hour: '2-digit', minute: '2-digit' });
+                setDriveStatusUI('success', lang === 'en' ? `🟢 Synced with Google Drive (${nowStr})` : `🟢 Synkronoitu Google Driven kanssa (${nowStr})`);
+                alert(lang === 'en' ? 'Data merged and synchronized successfully with Google Drive!' : 'Tiedot yhdistetty ja synkronoitu onnistuneesti Google Driven kanssa!');
+            } catch (err) {
+                console.error('Drive fetch error:', err);
+                setDriveStatusUI('error', lang === 'en' ? '❌ Drive load failed: ' + err.message : '❌ Lataus Drivestä epäonnistui: ' + err.message);
+                alert(lang === 'en' ? 'Failed to fetch from Google Drive: ' + err.message : 'Virhe ladattaessa Drivestä: ' + err.message);
+            } finally {
+                isSyncingToDrive = false;
+            }
+        }
+
+        async function synkkaaOnSignIn() {
+            if (isDemoMode) {
+                console.warn('Google Drive initial sync skipped: Demo mode is active.');
+                return;
+            }
+            if (isSyncingToDrive) return;
+            isSyncingToDrive = true;
+            try {
+                const token = await ensureAccessToken();
+                const folderId = await getOrCreateDriveFolder(token);
+                const existing = await findDriveBackupFile(token, folderId);
+
+                const localPayload = window.haeVarmuuskopioPayload ? window.haeVarmuuskopioPayload() : {};
+
+                if (existing) {
+                    const res = await fetch(`https://www.googleapis.com/drive/v3/files/${existing.id}?alt=media`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (res.ok) {
+                        const driveData = await res.json();
+                        const { mergedPayload, localUpdated, driveUpdated } = yhdistaVarmuuskopioData(localPayload, driveData);
+
+                        if (localUpdated && window.palautaVarmuuskopioPayload) {
+                            window.palautaVarmuuskopioPayload(mergedPayload);
+                        }
+
+                        if (driveUpdated) {
+                            await kirjoitaPayloadDriveen(mergedPayload, token, folderId, existing);
+                        }
+
+                        const lang = document.getElementById('langSelect')?.value || 'fi';
+                        const nowStr = new Date().toLocaleTimeString(lang === 'en' ? 'en-US' : 'fi-FI', { hour: '2-digit', minute: '2-digit' });
+                        setDriveStatusUI('success', lang === 'en' ? `🟢 Synced with Google Drive (${nowStr})` : `🟢 Synkronoitu Google Driven kanssa (${nowStr})`);
+                    }
+                } else {
+                    isSyncingToDrive = false;
+                    await tallennaGoogleDriveen();
+                    return;
+                }
+            } catch (e) {
+                console.warn('Initial sync error:', e);
+            } finally {
+                isSyncingToDrive = false;
+            }
+        }
+
+        function debouncedAutoSyncToDrive() {
+            if (isDemoMode) return;
+            if (!currentUser && !cachedAccessToken) return;
+            if (isSyncingToDrive) return;
+            if (driveFileSyncTimeout) clearTimeout(driveFileSyncTimeout);
+            driveFileSyncTimeout = setTimeout(() => {
+                if (isDemoMode) return;
+                if (isSyncingToDrive) return;
+                tallennaGoogleDriveen().catch(err => console.warn('Auto sync error:', err));
+            }, 2000);
+        }
+
+        async function kirjauduUlosGoogle() {
+            const lang = document.getElementById('langSelect')?.value || 'fi';
+            
+            if (cachedAccessToken && window.google && window.google.accounts && window.google.accounts.oauth2) {
+                try {
+                    window.google.accounts.oauth2.revoke(cachedAccessToken, () => {});
+                } catch (e) {}
+            }
+
+            clearDriveSession();
+            updateUIForLoggedOut();
+            alert(lang === 'en' ? 'Logged out from Google Drive.' : 'Kirjauduttu ulos Google-tililtä.');
+        }
+
+        window.synkkaaGoogleDriveManuaalisesti = tallennaGoogleDriveen;
+        window.lataaGoogleDrivesta = lataaGoogleDrivesta;
+        window.kirjauduUlosGoogle = kirjauduUlosGoogle;
+        window.triggerAutoSyncToDrive = debouncedAutoSyncToDrive;
+
+        window.addEventListener('DOMContentLoaded', initGoogleDriveSync);
+
+        window.forceAppRefresh = function forceAppRefresh() {
+            window.location.href = window.location.href.split('?')[0] + '?t=' + new Date().getTime();
+        }
+    </script>
+</body>
+</html>
