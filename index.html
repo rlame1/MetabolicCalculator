@@ -2139,6 +2139,18 @@
             document.getElementById('resMtorG').innerText = `${mtorThreshold.toFixed(1)} g ${lang === 'en' ? 'protein / meal' : 'proteiinia / ateria'}`;
             document.getElementById('resDailyProt').innerText = `${totalProt.toFixed(1)} g`;
 
+            const proteinTarget = lbm * 1.2;
+            const targetText = lang === 'en' ? 'Target' : 'Tavoite';
+            const protEl = document.getElementById('resProtProtection');
+            if (protEl) {
+                protEl.innerText = `${totalProt.toFixed(1)} g / ${proteinTarget.toFixed(1)} g (${targetText})`;
+                if (totalProt >= proteinTarget) {
+                    protEl.style.color = '#00ff00';
+                } else {
+                    protEl.style.color = ''; // Neutraali jos ei pääse
+                }
+            }
+
             const curMeals = historyDB[activeDateStr] ? historyDB[activeDateStr].meals : [];
             const fastingData = laskePaastoIkkuna(curMeals);
             const autoStatus = haeAutofagiaStatus(fastingData.fastWindow, lang);
