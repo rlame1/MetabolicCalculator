@@ -2196,7 +2196,8 @@
                         d.style.background = 'rgba(0, 255, 255, 0.15)';
                     }
                     const safeTime = String(m.time).replace(/[<>&"']/g, x => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[x]));
-                    d.innerHTML = `<strong>${mealWord} ${idx + 1} (${safeTime})</strong> — ${cLabel}: ${m.c}g | ${pLabel}: ${m.p}g | ${fLabel}: ${m.f}g &nbsp;|&nbsp; <span style="color:#ffff00;">GL: ${gl.toFixed(1)}</span> | <span style="color:#88ffff;">D: ${buf.toFixed(2)}x</span> | <span style="color:#ff88ff;">Peak: ${iPeak.toFixed(1)} uIU/ml</span>
+                    const mealKcal = (m.c * 4) + (m.p * 4) + (m.f * 9);
+                    d.innerHTML = `<strong>${mealWord} ${idx + 1} (${safeTime})</strong> — ${cLabel}: ${m.c}g | ${pLabel}: ${m.p}g | ${fLabel}: ${m.f}g | <strong>${mealKcal.toFixed(0)} kcal</strong> &nbsp;|&nbsp; <span style="color:#ffff00;">GL: ${gl.toFixed(1)}</span> | <span style="color:#88ffff;">D: ${buf.toFixed(2)}x</span> | <span style="color:#ff88ff;">Peak: ${iPeak.toFixed(1)} uIU/ml</span>
                     <span style="margin-left: 8px; display: inline-block;">
                         <button type="button" onclick="muokkaaAnnos(${idx})" style="display:inline-block; width:auto; padding:2px 6px; font-size:11px; margin-top:0; background:#003344; color:#00ffff; border:1px solid #00ffff; cursor:pointer;">${editWord}</button>
                         <button type="button" onclick="poistaAnnos(${idx})" style="display:inline-block; width:auto; padding:2px 6px; font-size:11px; margin-top:0; background:#440000; color:#ffaaaa; border:1px solid #ff4444; cursor:pointer;">${deleteWord}</button>
