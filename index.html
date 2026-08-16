@@ -335,7 +335,7 @@
 
             <p><span class="result-title" data-i18n="cumDays">Seurattuja päiviä yhteensä:</span> <span id="cumDaysCount" class="alert-green">0</span></p>
             <p><span class="result-title" data-i18n="cumEnergy">Nautittu kokonaisenergia:</span> <span id="cumEnergyTotal" class="alert-orange">0</span> kcal</p>
-            <p><span id="cumDeficitTitle" class="result-title" data-i18n="cumDeficit">Kertynyt kalorisaldo:</span> <span id="cumDeficitTotal" style="font-weight:bold;">0</span> kcal (<span id="cumFatBurnedKg">0.00</span> <span id="cumFatBurnedUnit">kg</span> / <span id="cumFatBurnedLiters">0.00</span> litraa rasvaa)</p>
+            <p><span id="cumDeficitTitle" class="result-title" data-i18n="cumDeficit">Kertynyt kalorisaldo:</span> <span id="cumDeficitTotal" style="font-weight:bold;">0</span> kcal (<span id="cumFatBurnedKg">0.00</span> <span id="cumFatBurnedUnit">kg</span> / <span id="cumFatBurnedLiters">0.00</span> <span id="cumFatBurnedLitersUnit">litraa rasvaa</span>)</p>
             <p style="font-size: 11px; color: #888; margin-top: -6px; margin-bottom: 10px;" data-i18n="cumSaldoExpl">(Plussalla [+] = Syöty yli kulutuksen, painoa tullut lisää | Negatiivinen [-] = Syöty alle kulutuksen, laihduttu)</p>
             <p><span class="result-title" data-i18n="cumMtor">Lihassuoja (mTOR) aktivoitu:</span> <span id="cumMtorDays" class="alert-yellow">0</span> päiviä</p>
             <p><span class="result-title" data-i18n="cumAutophagy">Aktiivinen autofagia (≥14 h paasto):</span> <span id="cumAutophagyDays" class="alert-green">0</span> päiviä</p>
@@ -356,20 +356,20 @@
             <input type="number" id="age" inputmode="numeric"  placeholder="👉 SYÖTÄ TIETO (IKÄ)" oninput="tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();">
             
             <label id="lblHeight">Pituus (cm) [Vapaaehtoinen]:</label> 
-            <input type="number" id="height" inputmode="decimal" step="any"  placeholder="👉 SYÖTÄ TIETO (PITUUS CM)" oninput="tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();">
+            <input type="number" id="height" inputmode="decimal" step="any"  placeholder="👉 SYÖTÄ TIETO (PITUUS CM)" oninput="paivitaMittaKentta(this); tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();">
             
             <label id="lblWeight">Nykyinen Paino (kg):</label> 
-            <input type="number" id="weight" inputmode="decimal" step="any"  placeholder="👉 SYÖTÄ TIETO (PAINO KG)" oninput="tallennaKayttajaParametrit(); paivitaLaskelmat();">
+            <input type="number" id="weight" inputmode="decimal" step="any"  placeholder="👉 SYÖTÄ TIETO (PAINO KG)" oninput="paivitaMittaKentta(this); tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat(); paivitaLaskelmat();">
             
             <label id="lblWaist">Vyötärön ympärys (cm) [Vapaaehtoinen]:</label> 
-            <input type="number" id="waist" inputmode="decimal" step="any"  placeholder="👉 SYÖTÄ TIETO (VYÖTÄRÖ CM)" oninput="tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();">
+            <input type="number" id="waist" inputmode="decimal" step="any"  placeholder="👉 SYÖTÄ TIETO (VYÖTÄRÖ CM)" oninput="paivitaMittaKentta(this); tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();">
             
             <label id="lblNeck">Niskan ympärys (cm) [Vapaaehtoinen]:</label> 
-            <input type="number" id="neck" inputmode="decimal" step="any"  placeholder="👉 SYÖTÄ TIETO (NISKA CM)" oninput="tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();">
+            <input type="number" id="neck" inputmode="decimal" step="any"  placeholder="👉 SYÖTÄ TIETO (NISKA CM)" oninput="paivitaMittaKentta(this); tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();">
             
             <div id="hipContainer" style="display:none;">
                 <label id="lblHip">Lantion ympärys (cm) [Naisilla vapaaehtoinen]:</label> 
-                <input type="number" id="hip" inputmode="decimal" step="any"  placeholder="👉 SYÖTÄ TIETO (LANTIO CM)" oninput="tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();">
+                <input type="number" id="hip" inputmode="decimal" step="any"  placeholder="👉 SYÖTÄ TIETO (LANTIO CM)" oninput="paivitaMittaKentta(this); tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();">
             </div>
 
             <label data-i18n="bodyFatLabel">Oma rasvaprosentti (%) [Ohjelma laskee jos pituus, niska ja vyötärö (ja naisilla lantio) annettu. Tai syötä oma:]</label> 
@@ -451,7 +451,7 @@
                 <p><span class="result-title" data-i18n="fatPctLabel">Rasvaprosentti:</span> <span id="resFatPct" class="alert-orange"></span> %</p>
                 <p><span class="result-title" data-i18n="leanLabel">Rasvaton moottorisi (Lean Mass):</span> <span id="resLean"></span> <span id="resLeanUnit">kg</span></p>
                 <p><span class="result-title" data-i18n="fatVolLabel">Kudosrasvasi (KG / litraa):</span> <span id="resFatVolCombined" class="alert-green" style="font-weight:bold;"></span></p>
-                <p><span class="result-title" data-i18n="weeklyTargetLabel">Valittu viikkotavoite:</span> <span id="resWeeklyTarget"></span> <span id="resWeeklyTargetUnit">kg/wk</span> (<span id="resWeeklyVol"></span> litraa)</p>
+                <p><span class="result-title" data-i18n="weeklyTargetLabel">Valittu viikkotavoite:</span> <span id="resWeeklyTarget"></span> <span id="resWeeklyTargetUnit">kg/wk</span> (<span id="resWeeklyVol"></span> <span id="resWeeklyVolUnit">litraa</span>)</p>
                 <hr style="border-color:#00ff00;">
             </div>
 
@@ -826,12 +826,16 @@
         let demoDates = {};
         let editingMealIndex = null;
 
+        let currentUnit = 'metric';
+
         window.onload = function() { 
             const savedLang = detectInitialLanguage();
             document.getElementById('langSelect').value = savedLang;
             switchLanguage(savedLang);
 
             const initialUnit = detectInitialUnit();
+            currentUnit = initialUnit;
+            localStorage.setItem('metabolic_v20_units', initialUnit);
             document.getElementById('unitSelect').value = initialUnit;
             updateLabelsForUnits();
 
@@ -849,16 +853,38 @@
             alustaKumulatiivisetPaivaykset();
         };
 
+        function paivitaMittaKentta(el) {
+            if (!el) return;
+            const val = parseFloat(el.value);
+            const id = el.id;
+            if (isNaN(val) || el.value.trim() === "" || val <= 0) {
+                delete el.dataset.exactMetric;
+                delete el.dataset.exactImperial;
+                return;
+            }
+            const unit = document.getElementById('unitSelect')?.value || currentUnit || 'metric';
+            if (unit === 'imperial') {
+                el.dataset.exactImperial = val;
+                el.dataset.exactMetric = (id === 'weight') ? (val / 2.20462) : (val * 2.54);
+            } else {
+                el.dataset.exactMetric = val;
+                const rawImp = (id === 'weight') ? val * 2.20462 : val / 2.54;
+                el.dataset.exactImperial = Number(rawImp.toFixed(1));
+            }
+        }
 
         function getMetricVal(id) {
             const el = document.getElementById(id);
-            const val = parseFloat(el.value) || 0;
+            if (!el) return 0;
+            const val = parseFloat(el.value);
+            if (isNaN(val) || val <= 0) return 0;
             
-            const unit = document.getElementById('unitSelect')?.value || 'metric';
+            const unit = document.getElementById('unitSelect')?.value || currentUnit || 'metric';
             if (unit === 'imperial') {
                 const storedImp = parseFloat(el.dataset.exactImperial);
-                if (!isNaN(storedImp) && Math.abs(val - storedImp) < 0.001) {
-                    return parseFloat(el.dataset.exactMetric);
+                const storedMet = parseFloat(el.dataset.exactMetric);
+                if (!isNaN(storedImp) && !isNaN(storedMet) && Math.abs(val - storedImp) < 0.001) {
+                    return storedMet;
                 }
                 if (id === 'weight') return val / 2.20462;
                 if (['height', 'waist', 'neck', 'hip'].includes(id)) return val * 2.54;
@@ -873,14 +899,15 @@
 
         function setMetricValToInput(id, metricVal) {
             const el = document.getElementById(id);
-            if (metricVal === null || metricVal === undefined || metricVal === "") { 
+            if (!el) return;
+            if (metricVal === null || metricVal === undefined || metricVal === "" || isNaN(metricVal) || metricVal <= 0) { 
                 el.value = ""; 
                 delete el.dataset.exactMetric;
                 delete el.dataset.exactImperial;
                 return; 
             }
             
-            const unit = document.getElementById('unitSelect')?.value || 'metric';
+            const unit = document.getElementById('unitSelect')?.value || currentUnit || 'metric';
             let finalVal;
             const rawImp = (id === 'weight') ? metricVal * 2.20462 : metricVal / 2.54;
             if (unit === 'imperial') {
@@ -890,33 +917,36 @@
             }
             
             el.dataset.exactMetric = metricVal;
-            el.dataset.exactImperial = (unit === 'imperial') ? finalVal : Number(rawImp.toFixed(1));
+            el.dataset.exactImperial = Number(rawImp.toFixed(1));
             el.value = finalVal;
         }
 
         function switchUnits(newUnit) {
-            const oldUnit = localStorage.getItem('metabolic_v20_units') || 'metric';
-            if (newUnit === oldUnit) return;
+            if (!newUnit) return;
+            const oldUnit = currentUnit || localStorage.getItem('metabolic_v20_units') || 'metric';
             
             const ids = ['weight', 'height', 'waist', 'neck', 'hip'];
             
             ids.forEach(id => {
                 const el = document.getElementById(id);
+                if (!el) return;
                 const val = parseFloat(el.value);
-                if (isNaN(val) && el.value === '') return;
+                if (isNaN(val) || el.value.trim() === '') {
+                    el.value = '';
+                    delete el.dataset.exactMetric;
+                    delete el.dataset.exactImperial;
+                    return;
+                }
                 
                 let m;
                 if (oldUnit === 'imperial') {
                     const storedImp = parseFloat(el.dataset.exactImperial);
-                    if (!isNaN(storedImp) && Math.abs(val - storedImp) < 0.001) {
-                        m = parseFloat(el.dataset.exactMetric);
+                    const storedMet = parseFloat(el.dataset.exactMetric);
+                    if (!isNaN(storedImp) && !isNaN(storedMet) && Math.abs(val - storedImp) < 0.001) {
+                        m = storedMet;
                     } else {
                         m = (id === 'weight') ? val / 2.20462 : val * 2.54;
                     }
-                    const finalVal = Number.isInteger(m) ? m : Number(m.toFixed(1));
-                    el.dataset.exactMetric = finalVal;
-                    el.dataset.exactImperial = val;
-                    el.value = finalVal;
                 } else {
                     const storedMet = parseFloat(el.dataset.exactMetric);
                     if (!isNaN(storedMet) && Math.abs(val - storedMet) < 0.001) {
@@ -924,25 +954,37 @@
                     } else {
                         m = val;
                     }
-                    const imp = (id === 'weight') ? m * 2.20462 : m / 2.54;
-                    const finalVal = Number(imp.toFixed(1));
+                }
+
+                if (newUnit === 'imperial') {
+                    const rawImp = (id === 'weight') ? m * 2.20462 : m / 2.54;
+                    const finalVal = Number(rawImp.toFixed(1));
                     el.dataset.exactMetric = m;
                     el.dataset.exactImperial = finalVal;
+                    el.value = finalVal;
+                } else {
+                    const finalVal = Number.isInteger(m) ? m : Number(m.toFixed(1));
+                    el.dataset.exactMetric = m;
+                    el.dataset.exactImperial = Number(((id === 'weight') ? m * 2.20462 : m / 2.54).toFixed(1));
                     el.value = finalVal;
                 }
             });
             
+            currentUnit = newUnit;
             localStorage.setItem('metabolic_v20_units', newUnit);
-            updateLabelsForUnits();
+            const uSelect = document.getElementById('unitSelect');
+            if (uSelect) uSelect.value = newUnit;
             
+            updateLabelsForUnits();
             tallennaKayttajaParametrit(true);
             paivitaKaikkienPaivienLaskelmat();
+            paivitaLaskelmat();
+            paivitaKumulatiivinenYhteenveto();
         }
 
         function updateLabelsForUnits() {
-            
             const lang = document.getElementById('langSelect')?.value || 'fi';
-            const unit = document.getElementById('unitSelect')?.value || 'metric';
+            const unit = document.getElementById('unitSelect')?.value || currentUnit || 'metric';
             const isEn = lang === 'en';
             const isImperial = unit === 'imperial';
             
@@ -973,6 +1015,32 @@
             
             const ul = document.querySelector('label[data-i18n="unitLabel"]');
             if (ul) ul.innerText = isEn ? "📏 UNIT:" : "📏 YKSIKÖT:";
+
+            const fatVolLabels = document.querySelectorAll('[data-i18n="fatVolLabel"]');
+            fatVolLabels.forEach(el => {
+                el.innerText = isEn 
+                    ? (isImperial ? "Body fat tissue (LBS / quarts):" : "Body fat tissue (KG / liters):") 
+                    : (isImperial ? "Kudosrasvasi (LBS / kvartsia):" : "Kudosrasvasi (KG / litraa):");
+            });
+
+            const leanUnit = document.getElementById('resLeanUnit');
+            if (leanUnit) leanUnit.innerText = isImperial ? 'lbs' : 'kg';
+
+            const weeklyTargetUnit = document.getElementById('resWeeklyTargetUnit');
+            if (weeklyTargetUnit) weeklyTargetUnit.innerText = (isImperial ? 'lbs' : 'kg') + (isEn ? '/wk' : '/vko');
+
+            const weeklyVolUnit = document.getElementById('resWeeklyVolUnit');
+            if (weeklyVolUnit) weeklyVolUnit.innerText = isImperial ? (isEn ? 'quarts' : 'kvartsia') : (isEn ? 'liters' : 'litraa');
+
+            const cumFatBurnedUnit = document.getElementById('cumFatBurnedUnit');
+            if (cumFatBurnedUnit) cumFatBurnedUnit.innerText = isImperial ? 'lbs' : 'kg';
+
+            const cumLitersUnit = document.getElementById('cumFatBurnedLitersUnit');
+            if (cumLitersUnit) {
+                cumLitersUnit.innerText = isImperial 
+                    ? (isEn ? "quarts of fat" : "kvartsia rasvaa") 
+                    : (isEn ? "liters of fat" : "litraa rasvaa");
+            }
         }
 
         function detectInitialLanguage() {
@@ -1563,11 +1631,7 @@
                 });
                 ['height','weight','waist','neck','hip'].forEach(k => {
                     if (p[k] !== undefined && document.getElementById(k)) {
-                        if (p._v === 2) {
-                            setMetricValToInput(k, p[k]);
-                        } else {
-                            document.getElementById(k).value = p[k];
-                        }
+                        setMetricValToInput(k, p[k]);
                     }
                 });
             }
@@ -1690,7 +1754,7 @@
                 const savedParams = localStorage.getItem('metabolic_v20_userParams');
                 if (savedParams) {
                     const p = JSON.parse(savedParams);
-                    if (p.weight) document.getElementById('weight').value = p.weight;
+                    if (p.weight) setMetricValToInput('weight', p.weight);
                 }
             }
 
@@ -1924,15 +1988,22 @@
             const fatKgVal = absVal / 7700;
             const fatLitersVal = fatKgVal / 0.90;
 
-            const unitType = document.getElementById('unitSelect')?.value || 'metric';
-            const fbKgOut = unitType === 'imperial' ? (fatKgVal * 2.20462).toFixed(2) : fatKgVal.toFixed(2);
-            if(document.getElementById('cumFatBurnedUnit')) document.getElementById('cumFatBurnedUnit').innerText = unitType === 'imperial' ? 'lbs' : 'kg';
+            const unitType = document.getElementById('unitSelect')?.value || currentUnit || 'metric';
+            const isImperial = unitType === 'imperial';
+            const fbKgOut = isImperial ? (fatKgVal * 2.20462).toFixed(2) : fatKgVal.toFixed(2);
+            const fbVolVal = isImperial ? (fatLitersVal * 1.05669) : fatLitersVal;
+            const fbVolOut = fbVolVal.toFixed(2);
+            if(document.getElementById('cumFatBurnedUnit')) document.getElementById('cumFatBurnedUnit').innerText = isImperial ? 'lbs' : 'kg';
+            const cumLitersUnit = document.getElementById('cumFatBurnedLitersUnit');
+            if (cumLitersUnit) {
+                cumLitersUnit.innerText = isImperial ? (lang === 'en' ? "quarts of fat" : "kvartsia rasvaa") : (lang === 'en' ? "liters of fat" : "litraa rasvaa");
+            }
 
             if (totalCalorieSaldo > 0) {
                 deficitTitle.innerHTML = lang === 'en' ? "⚠️ Accumulated calorie balance (<span class='alert-red'>surplus = weight gained</span>):" : "⚠️ Kertynyt kalorisaldo (<span class='alert-red'>plussalla = painoa tullut lisää</span>):";
                 deficitEl.innerText = "+" + Math.round(totalCalorieSaldo);
                 fatKgEl.innerText = "+" + fbKgOut;
-                fatLitersEl.innerText = "+" + fatLitersVal.toFixed(2);
+                fatLitersEl.innerText = "+" + fbVolOut;
                 deficitEl.className = "alert-red";
                 fatKgEl.className = "alert-red";
                 fatLitersEl.className = "alert-red";
@@ -1940,7 +2011,7 @@
                 deficitTitle.innerHTML = lang === 'en' ? "🟢 Accumulated calorie balance (<span class='alert-green'>negative = weight lost</span>):" : "🟢 Kertynyt kalorisaldo (<span class='alert-green'>negatiivinen = laihduttu</span>):";
                 deficitEl.innerText = Math.round(totalCalorieSaldo);
                 fatKgEl.innerText = "-" + fbKgOut;
-                fatLitersEl.innerText = "-" + fatLitersVal.toFixed(2);
+                fatLitersEl.innerText = "-" + fbVolOut;
                 deficitEl.className = "alert-green";
                 fatKgEl.className = "alert-green";
                 fatLitersEl.className = "alert-green";
@@ -1994,7 +2065,8 @@
             const lang = document.getElementById('langSelect').value;
 
             if (isNaN(w) || w <= 0) { 
-                if (!isRefreshOnly) alert(lang === 'en' ? "Enter current weight (kg) to continue!" : "Syötä nykyinen paino (kg) jatkaaksesi!"); 
+                const wUnitName = (document.getElementById('unitSelect')?.value || currentUnit) === 'imperial' ? 'lbs' : 'kg';
+                if (!isRefreshOnly) alert(lang === 'en' ? `Enter current weight (${wUnitName}) to continue!` : `Syötä nykyinen paino (${wUnitName}) jatkaaksesi!`); 
                 return; 
             }
 
@@ -2068,7 +2140,7 @@
             document.getElementById('resFatPct').innerText = rPct.toFixed(1);
             
             
-            const unitObj1 = document.getElementById('unitSelect')?.value || 'metric';
+            const unitObj1 = document.getElementById('unitSelect')?.value || currentUnit || 'metric';
             document.getElementById('resLean').innerText = unitObj1 === 'imperial' ? (rMoor * 2.20462).toFixed(1) : rMoor.toFixed(1);
             if(document.getElementById('resLeanUnit')) document.getElementById('resLeanUnit').innerText = unitObj1 === 'imperial' ? 'lbs' : 'kg';
 
@@ -2079,11 +2151,13 @@
             const fatKg = w * (rPct / 100);
             const fatLiters = fatKg / 0.90;
             
-            
-            const unitObj2 = document.getElementById('unitSelect')?.value || 'metric';
-            const fatKgOut = unitObj2 === 'imperial' ? (fatKg * 2.20462).toFixed(1) : fatKg.toFixed(1);
-            const wUnit = unitObj2 === 'imperial' ? 'lbs' : 'kg';
-            document.getElementById('resFatVolCombined').innerText = `${fatKgOut} ${wUnit} (${fatLiters.toFixed(1)} ${lang === 'en' ? 'liters' : 'litraa'})`;
+            const unitObj2 = document.getElementById('unitSelect')?.value || currentUnit || 'metric';
+            const isImperial2 = unitObj2 === 'imperial';
+            const fatKgOut = isImperial2 ? (fatKg * 2.20462).toFixed(1) : fatKg.toFixed(1);
+            const fatVolOut = isImperial2 ? (fatLiters * 1.05669).toFixed(1) : fatLiters.toFixed(1);
+            const fatVolUnitStr = isImperial2 ? (lang === 'en' ? 'quarts' : 'kvartsia') : (lang === 'en' ? 'liters' : 'litraa');
+            const wUnit = isImperial2 ? 'lbs' : 'kg';
+            document.getElementById('resFatVolCombined').innerText = `${fatKgOut} ${wUnit} (${fatVolOut} ${fatVolUnitStr})`;
 
 
             const strat = document.getElementById('strategyGoal').value;
@@ -2102,11 +2176,15 @@
             }
 
             
-            const unitObj = document.getElementById('unitSelect')?.value || 'metric';
-            document.getElementById('resWeeklyTarget').innerText = unitObj === 'imperial' ? (wkKg * 2.20462).toFixed(2) : wkKg.toFixed(2);
-            if(document.getElementById('resWeeklyTargetUnit')) document.getElementById('resWeeklyTargetUnit').innerText = (unitObj === 'imperial' ? 'lbs' : 'kg') + '/wk';
+            const unitObj = document.getElementById('unitSelect')?.value || currentUnit || 'metric';
+            const isImperialWk = unitObj === 'imperial';
+            document.getElementById('resWeeklyTarget').innerText = isImperialWk ? (wkKg * 2.20462).toFixed(2) : wkKg.toFixed(2);
+            if(document.getElementById('resWeeklyTargetUnit')) document.getElementById('resWeeklyTargetUnit').innerText = (isImperialWk ? 'lbs' : 'kg') + (lang === 'en' ? '/wk' : '/vko');
 
-            document.getElementById('resWeeklyVol').innerText = (wkKg / 0.90).toFixed(2);
+            const wkVol = isImperialWk ? (wkKg / 0.90 * 1.05669) : (wkKg / 0.90);
+            document.getElementById('resWeeklyVol').innerText = wkVol.toFixed(2);
+            const weeklyVolUnit = document.getElementById('resWeeklyVolUnit');
+            if (weeklyVolUnit) weeklyVolUnit.innerText = isImperialWk ? (lang === 'en' ? 'quarts' : 'kvartsia') : (lang === 'en' ? 'liters' : 'litraa');
 
             const totalCarbs = historyDB[activeDateStr].macros.carbs;
             const totalProt = historyDB[activeDateStr].macros.protein;
