@@ -230,11 +230,11 @@
                     <span class="gsi-material-button-contents" data-i18n="signInWithGoogle">Kirjaudu sisään Googlella</span>
                   </div>
                 </button>
-                <button id="openInNewTabBtn" type="button" onclick="window.open(window.location.href, '_blank')" style="display: none; width: 100%; background: #112233; color: #00ffff; border: 1px solid #00ffff; padding: 10px; margin-top: 8px; font-size: 12px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-family: inherit;">
+                <button id="openInNewTabBtn" type="button" onclick="window.open(window.location.href, '_blank')" style="display: none; width: 100%; background: #112233; color: #00ffff; border: 1px solid #00ffff; padding: 10px; margin-top: 8px; font-size: 12px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-family: inherit;" data-i18n="openInNewTabBtnText">
                     🔗 AVAA SOVELLUS UUTEEN VÄLILEHTEEN ↗
                 </button>
                 <p id="braveNotice" style="display: none; font-size: 11px; color: #ffaa00; margin-top: 8px; line-height: 1.4; background: #221100; border: 1px solid #ffaa00; padding: 6px 10px; border-radius: 4px;" data-i18n="braveNoticeText">
-                    🦁 <strong>Brave / Ikkuna-ohje:</strong><br>1) Jos sovellus on kehyssivulla (iframe), <a href="javascript:void(0)" onclick="window.open(window.location.href,'_blank')" style="color:#00ffff; text-decoration:underline; font-weight:bold;">Avaa uuteen välilehteen ↗</a>.<br>2) Brave-asetus: <em>Asetukset ➔ Yksityisyys ja turvallisuus ➔ Salli Google-kirjautumispainikkeet kolmannen osapuolen sivustoilla</em>.
+                    💡 <strong>Kehyssivu- / Selainohje:</strong><br>Jos kirjautumisikkuna ei aukea tai selain estää ponnahdusikkunan:<br>1) <a href="javascript:void(0)" onclick="window.open(window.location.href,'_blank')" style="color:#00ffff; text-decoration:underline; font-weight:bold;">Avaa sovellus uuteen välilehteen ↗</a> ja kirjaudu siellä.<br>2) Salli selaimen ponnahdusikkunat (pop-up). Brave-käyttäjät: <em>Asetukset ➔ Yksityisyys ja turvallisuus ➔ Salli Google-kirjautumispainikkeet kolmannen osapuolen sivustoilla</em>.
                 </p>
             </div>
 
@@ -372,8 +372,19 @@
                 <input type="number" id="hip" inputmode="decimal" step="any"  placeholder="👉 SYÖTÄ TIETO (LANTIO CM)" oninput="paivitaMittaKentta(this); tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();">
             </div>
 
-            <label data-i18n="bodyFatLabel">Oma rasvaprosentti (%) [U.S. Navy (Hodgdon &amp; Beckett) -menetelmä laskee automaattisesti pituudesta, niskasta ja vyötäröstä (sekä naisilla lantiosta). Tai syötä oma:]</label> 
-            <input type="number" id="bodyFat" inputmode="decimal" step="any"  placeholder="👉 SYÖTÄ RASVAPROSENTTI % (JOS TIEDOSSA)" oninput="this.dataset.manualOverride = this.value ? 'true' : ''; tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();">
+            <div style="margin-top: 10px; margin-bottom: 8px;">
+                <label id="lblBfMethod" style="color: #00ff00; font-weight: bold; font-size: 13px;" data-i18n="bfMethodLabel">Rasvaprosentin laskentamenetelmä:</label>
+                <select id="bfMethod" onchange="vaihdaRasvaprosenttiMenetelma(this.value); tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();" style="width: 100%; font-size: 13px; padding: 8px; background: #000; color: #00ff00; border: 1px solid #00ff00; margin-top: 4px; border-radius: 4px;">
+                    <option value="army2023" selected data-i18n="bfOptArmy">🪖 U.S. Army / DoD (Vyötärö & paino)</option>
+                    <option value="navy_adjusted" data-i18n="bfOptNavyAdj">⚓ U.S. Navy - Niskakorjattu (Pituus, vyötärö & niska)</option>
+                    <option value="cun_bae" data-i18n="bfOptCunBae">🔬 Kliininen CUN-BAE (Paino, pituus & ikä / BMI)</option>
+                    <option value="manual" data-i18n="bfOptManual">✍️ Syötän arvon itse (Oma mittaus / InBody / DEXA)</option>
+                </select>
+            </div>
+
+            <label id="bodyFatLabel" data-i18n="bodyFatLabel">Oma rasvaprosentti (%):</label> 
+            <input type="number" id="bodyFat" inputmode="decimal" step="0.1" min="3" max="75" placeholder="👉 SYÖTÄ TAI VALITSE MENETELMÄ YLTÄ" oninput="kasitteleOmaRasvaprosenttiSyote(this); tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();">
+            <div id="bfFormulaNotice" style="font-size: 11px; color: #88cc88; margin-top: 4px; margin-bottom: 8px; line-height: 1.3;"></div>
         </div>
     </details>
 
@@ -564,7 +575,12 @@
                 waistLabel: "Vyötärön ympärys (cm) [Vapaaehtoinen]:",
                 neckLabel: "Niskan ympärys (cm) [Vapaaehtoinen]:",
                 hipLabel: "Lantion ympärys (cm) [Naisilla vapaaehtoinen]:",
-                bodyFatLabel: "Oma rasvaprosentti (%) [U.S. Navy (Hodgdon & Beckett) -menetelmä laskee automaattisesti pituudesta, niskasta ja vyötäröstä (sekä naisilla lantiosta). Tai syötä oma:]",
+                bfMethodLabel: "Rasvaprosentin laskentamenetelmä:",
+                bfOptArmy: "🪖 U.S. Army / DoD (Vyötärö & paino)",
+                bfOptNavyAdj: "⚓ U.S. Navy - Niskakorjattu (Pituus, vyötärö & niska)",
+                bfOptCunBae: "🔬 Kliininen CUN-BAE (Paino, pituus & ikä / BMI)",
+                bfOptManual: "✍️ Syötän arvon itse (Oma mittaus / InBody / DEXA)",
+                bodyFatLabel: "Oma rasvaprosentti (%):",
                 activityLabel: "Aktiivisuustason kerroin:",
                 act1: "Passiivinen (istumatyö, vähän/ei liikuntaa) [1.2]",
                 act2: "Perusaktiivinen (vakio oletus) [1.25]",
@@ -662,7 +678,8 @@
                 phCarbs: "👉 SYÖTÄ TIETO (HIILIHYDRAATIT G)",
                 phProtein: "👉 SYÖTÄ TIETO (PROTEIINI G)",
                 phFat: "👉 SYÖTÄ TIETO (RASVA G)",
-                braveNoticeText: "🦁 <strong>Brave / Ikkuna-ohje:</strong><br>1) Jos sovellus on kehyssivulla (iframe), <a href=\"javascript:void(0)\" onclick=\"window.open(window.location.href,'_blank')\" style=\"color:#00ffff; text-decoration:underline; font-weight:bold;\">Avaa uuteen välilehteen ↗</a>.<br>2) Brave-asetus: <em>Asetukset ➔ Yksityisyys ja turvallisuus ➔ Salli Google-kirjautumispainikkeet kolmannen osapuolen sivustoilla</em>."
+                openInNewTabBtnText: "🔗 AVAA SOVELLUS UUTEEN VÄLILEHTEEN ↗",
+                braveNoticeText: "💡 <strong>Kehyssivu- / Selainohje:</strong><br>Jos kirjautumisikkuna ei aukea tai selain estää ponnahdusikkunan:<br>1) <a href=\"javascript:void(0)\" onclick=\"window.open(window.location.href,'_blank')\" style=\"color:#00ffff; text-decoration:underline; font-weight:bold;\">Avaa sovellus uuteen välilehteen ↗</a> ja kirjaudu siellä.<br>2) Salli selaimen ponnahdusikkunat (pop-up). Brave-käyttäjät: <em>Asetukset ➔ Yksityisyys ja turvallisuus ➔ Salli Google-kirjautumispainikkeet kolmannen osapuolen sivustoilla</em>."
             },
             en: {
                 langLabel: "🌐 LANGUAGE:",
@@ -725,7 +742,12 @@
                 waistLabel: "Waist circumference (cm) [Optional]:",
                 neckLabel: "Neck circumference (cm) [Optional]:",
                 hipLabel: "Hip circumference (cm) [Female optional]:",
-                bodyFatLabel: "Own body fat percentage (%) [Auto-calculated using U.S. Navy (Hodgdon & Beckett) method from height, neck, and waist (+ hip for women). Or enter own:]",
+                bfMethodLabel: "Body fat calculation method:",
+                bfOptArmy: "🪖 U.S. Army / DoD (Waist & Weight)",
+                bfOptNavyAdj: "⚓ U.S. Navy - Neck Adjusted (Height, Waist & Neck)",
+                bfOptCunBae: "🔬 Clinical CUN-BAE (Weight, Height & Age / BMI)",
+                bfOptManual: "✍️ Enter value manually (Self-measurement / InBody / DEXA)",
+                bodyFatLabel: "Body fat percentage (%):",
                 activityLabel: "Activity level multiplier:",
                 act1: "Sedentary (desk job, little/no exercise) [1.2]",
                 act2: "Basal active (default) [1.25]",
@@ -816,7 +838,8 @@
                 phCarbs: "👉 ENTER DATA (CARBS G)",
                 phProtein: "👉 ENTER DATA (PROTEIN G)",
                 phFat: "👉 ENTER DATA (FAT G)",
-                braveNoticeText: "🦁 <strong>Brave / Frame note:</strong><br>1) If app is inside an iframe, <a href=\"javascript:void(0)\" onclick=\"window.open(window.location.href,'_blank')\" style=\"color:#00ffff; text-decoration:underline; font-weight:bold;\">Open in a new tab ↗</a>.<br>2) Brave setting: <em>Settings ➔ Privacy & security ➔ Allow Google login buttons on third-party sites</em>."
+                openInNewTabBtnText: "🔗 OPEN APP IN A NEW TAB ↗",
+                braveNoticeText: "💡 <strong>Preview Frame / Browser Note:</strong><br>If the sign-in window does not appear or your browser blocked the popup:<br>1) <a href=\"javascript:void(0)\" onclick=\"window.open(window.location.href,'_blank')\" style=\"color:#00ffff; text-decoration:underline; font-weight:bold;\">Open app in a new tab ↗</a> and sign in there.<br>2) Allow browser popups for this site. Brave users: <em>Settings ➔ Privacy & security ➔ Allow Google login buttons on third-party sites</em>."
             }
         };
 
@@ -1172,6 +1195,7 @@
             }
 
             lataaSuosikit();
+            paivitaLaskettuRasvaprosenttiKenttaan();
             paivitaLaskelmat();
             paivitaKumulatiivinenYhteenveto();
             paivitaKelluvatPaivamaaraPainikkeet();
@@ -1489,29 +1513,122 @@
             }
         }
 
-        function laskeUSNavyRasvaprosentti(gender, h, waist, neck, hip) {
-            if (!h || h <= 0 || !waist || waist <= 0 || !neck || neck <= 0) return 0;
-            if (gender === 'female' && (!hip || hip <= 0)) return 0;
+        function laskeRasvaprosentti(method, gender, h, w, waist, neck, hip, age) {
+            if (!h || h <= 0 || !w || w <= 0) return 0;
+            const bmi = w / Math.pow(h / 100, 2);
+            const sexCun = (gender === 'female') ? 1 : 0;
+            age = parseInt(age) || 45;
+            method = method || 'army2023';
 
-            let rPct = 0;
-            if (gender === 'male') {
-                if (waist <= neck) return 0;
-                // U.S. Navy Body Composition Assessment / Hodgdon & Beckett (Report 84-11)
-                const D = 1.0324 - 0.19077 * Math.log10(waist - neck) + 0.15456 * Math.log10(h);
-                if (D <= 0) return 0;
-                rPct = (495 / D) - 450;
-            } else {
-                if ((waist + hip) <= neck) return 0;
-                // U.S. Navy Body Composition Assessment / Hodgdon & Beckett (Report 84-29)
-                const D = 1.29579 - 0.35004 * Math.log10(waist + hip - neck) + 0.22100 * Math.log10(h);
-                if (D <= 0) return 0;
-                rPct = (495 / D) - 450;
+            // 1. U.S. Army / DoD (Department of Defense Standard) - Oletus
+            // Calculated from waist and weight
+            if (method === 'army2023') {
+                if (!waist || waist <= 0) return 0;
+                const w_lbs = w * 2.20462262;
+                const waist_in = waist / 2.54;
+                const army = (gender === 'male')
+                    ? (-26.97 - (0.12 * w_lbs) + (1.99 * waist_in))
+                    : (-9.15 - (0.015 * w_lbs) + (1.27 * waist_in));
+                if (isNaN(army) || !isFinite(army)) return 0;
+                return Math.max(3, Math.min(65, army));
             }
 
-            if (isNaN(rPct) || !isFinite(rPct)) return 0;
-            if (rPct < 3) rPct = 3;
-            if (rPct > 65) rPct = 65;
-            return rPct;
+            // 2. U.S. Navy - Niskakorjattu (Hodgdon & Beckett with neck fat compensation)
+            // Calculated from height, waist, and neck (and hip for females)
+            if (method === 'navy_adjusted') {
+                if (!waist || waist <= 0 || !neck || neck <= 0) return 0;
+                const leanNeck = (gender === 'male') ? (h * 0.21) : (h * 0.185);
+                const effNeck = Math.min(neck, leanNeck);
+                if (gender === 'male') {
+                    if (waist <= effNeck) return 0;
+                    const D = 1.0324 - 0.19077 * Math.log10(waist - effNeck) + 0.15456 * Math.log10(h);
+                    if (D <= 0) return 0;
+                    const rPct = (495 / D) - 450;
+                    return Math.max(3, Math.min(65, rPct));
+                } else {
+                    if (!hip || hip <= 0 || (waist + hip) <= effNeck) return 0;
+                    const D = 1.29579 - 0.35004 * Math.log10(waist + hip - effNeck) + 0.22100 * Math.log10(h);
+                    if (D <= 0) return 0;
+                    const rPct = (495 / D) - 450;
+                    return Math.max(3, Math.min(65, rPct));
+                }
+            }
+
+            // 3. Clinica Universidad de Navarra - Body Adiposity Estimator (CUN-BAE)
+            // Calculated from weight, height (BMI), and age
+            if (method === 'cun_bae') {
+                const cun = -44.988 + (0.503 * age) + (10.689 * sexCun) + (3.172 * bmi) 
+                    - (0.026 * Math.pow(bmi, 2)) + (0.181 * bmi * sexCun) - (0.02 * bmi * age) 
+                    - (0.005 * Math.pow(bmi, 2) * sexCun) + (0.00021 * Math.pow(bmi, 2) * age);
+                if (isNaN(cun) || !isFinite(cun)) return 0;
+                return Math.max(3, Math.min(65, cun));
+            }
+
+            // Legacy fallback if 'navy' is provided: map to neck-adjusted Navy
+            if (method === 'navy') {
+                return laskeRasvaprosentti('navy_adjusted', gender, h, w, waist, neck, hip, age);
+            }
+
+            return 0;
+        }
+
+        function laskeUSNavyRasvaprosentti(gender, h, waist, neck, hip) {
+            return laskeRasvaprosentti('navy_adjusted', gender, h, 70, waist, neck, hip, 45);
+        }
+
+        function vaihdaRasvaprosenttiMenetelma(uusiMenetelma) {
+            const bfInput = document.getElementById('bodyFat');
+            if (uusiMenetelma === 'manual') {
+                if (bfInput) {
+                    bfInput.dataset.manualOverride = 'true';
+                    bfInput.dataset.autoCalculated = 'false';
+                    setTimeout(() => {
+                        if (bfInput) {
+                            bfInput.focus();
+                            if (bfInput.value) bfInput.select();
+                        }
+                    }, 50);
+                }
+            } else {
+                if (bfInput) {
+                    bfInput.dataset.manualOverride = '';
+                    bfInput.dataset.autoCalculated = 'true';
+                }
+            }
+            paivitaLaskettuRasvaprosenttiKenttaan();
+            tallennaKayttajaParametrit();
+            paivitaKaikkienPaivienLaskelmat();
+        }
+
+        function kasitteleOmaRasvaprosenttiSyote(input) {
+            const val = parseFloat(input.value);
+            const methodSelect = document.getElementById('bfMethod');
+            if (!isNaN(val) && val > 0) {
+                input.dataset.manualOverride = 'true';
+                input.dataset.autoCalculated = 'false';
+                if (methodSelect && methodSelect.value !== 'manual') {
+                    methodSelect.value = 'manual';
+                }
+            } else {
+                input.dataset.manualOverride = '';
+            }
+            paivitaLaskettuRasvaprosenttiKenttaan();
+        }
+
+        function nollaaManuaalinenRasvaprosentti() {
+            const methodSelect = document.getElementById('bfMethod');
+            if (methodSelect && methodSelect.value === 'manual') {
+                methodSelect.value = 'army2023';
+            }
+            const bfInput = document.getElementById('bodyFat');
+            if (bfInput) {
+                bfInput.dataset.manualOverride = '';
+                bfInput.dataset.autoCalculated = 'false';
+                bfInput.value = '';
+            }
+            paivitaLaskettuRasvaprosenttiKenttaan();
+            tallennaKayttajaParametrit();
+            paivitaKaikkienPaivienLaskelmat();
         }
 
         function haeNykyinenRasvaprosenttiJaLahde() {
@@ -1522,31 +1639,40 @@
             const neck = getMetricVal('neck') || 0;
             const hip = getMetricVal('hip') || 0;
             const age = parseInt(document.getElementById('age')?.value) || 45;
+            const method = document.getElementById('bfMethod')?.value || 'army2023';
 
             const bfInput = document.getElementById('bodyFat');
-            const isManual = bfInput && bfInput.dataset.manualOverride === 'true' && parseFloat(bfInput.value) > 0;
+            const isManual = (method === 'manual') || (bfInput && bfInput.dataset.manualOverride === 'true' && parseFloat(bfInput.value) > 0);
 
             if (isManual) {
-                return {
-                    rPct: parseFloat(bfInput.value),
-                    method: 'manual'
-                };
+                const manualVal = parseFloat(bfInput?.value);
+                if (!isNaN(manualVal) && manualVal > 0) {
+                    return {
+                        rPct: manualVal,
+                        method: 'manual',
+                        sourceMethod: 'manual'
+                    };
+                }
             }
 
-            // U.S. Navy (Hodgdon & Beckett) formula
-            const navyBf = laskeUSNavyRasvaprosentti(gender, h, waist, neck, hip);
-            if (navyBf > 0) {
-                return {
-                    rPct: navyBf,
-                    method: 'navy'
-                };
+            if (method !== 'manual') {
+                // Calculate based on selected method
+                const calcBf = laskeRasvaprosentti(method, gender, h, w, waist, neck, hip, age);
+                if (calcBf > 0) {
+                    return {
+                        rPct: calcBf,
+                        method: method,
+                        sourceMethod: method
+                    };
+                }
             }
 
             const rawBfVal = parseFloat(bfInput?.value);
             if (!isNaN(rawBfVal) && rawBfVal > 0) {
                 return {
                     rPct: rawBfVal,
-                    method: 'manual'
+                    method: 'manual',
+                    sourceMethod: method
                 };
             }
 
@@ -1562,11 +1688,13 @@
             }
             return {
                 rPct: fallback,
-                method: 'fallback'
+                method: 'fallback',
+                sourceMethod: method
             };
         }
 
         function paivitaKaikkienPaivienLaskelmat() {
+            paivitaLaskettuRasvaprosenttiKenttaan();
             const gender = document.getElementById('gender').value;
             const age = parseInt(document.getElementById('age').value) || 45;
             const actMult = parseFloat(document.getElementById('activityLevel').value) || 1.25;
@@ -1623,26 +1751,84 @@
 
         function paivitaLaskettuRasvaprosenttiKenttaan() {
             const h = getMetricVal('height') || 0;
+            const w = getMetricVal('weight') || 0;
             const waist = getMetricVal('waist') || 0;
             const neck = getMetricVal('neck') || 0;
             const hip = getMetricVal('hip') || 0;
             const gender = document.getElementById('gender')?.value || 'male';
+            const age = parseInt(document.getElementById('age')?.value) || 45;
+            const method = document.getElementById('bfMethod')?.value || 'army2023';
 
-            const navyBf = laskeUSNavyRasvaprosentti(gender, h, waist, neck, hip);
             const bfInput = document.getElementById('bodyFat');
+            const noticeEl = document.getElementById('bfFormulaNotice');
             if (!bfInput) return;
             const lang = document.getElementById('langSelect')?.value || 'fi';
-            
-            if (navyBf > 0) {
-                const bfStr = navyBf.toFixed(1) + " %";
-                if (bfInput.dataset.manualOverride !== 'true') {
-                    bfInput.value = navyBf.toFixed(1);
-                    bfInput.dataset.autoCalculated = "true";
-                }
+
+            if (method === 'manual') {
+                const manualVal = parseFloat(bfInput.value);
+                const hasVal = (!isNaN(manualVal) && manualVal > 0);
                 const phText = (lang === 'en')
-                    ? `👉 U.S. Navy (Hodgdon & Beckett): ${bfStr} (Enter to override)`
-                    : `👉 U.S. Navy (Hodgdon & Beckett): ${bfStr} (Syötä oma muuttaaksesi)`;
+                    ? "👉 Enter your measured body fat % (e.g. 24.5)"
+                    : "👉 Syötä oma mitattu rasvaprosentti % (esim. 24.5)";
                 bfInput.placeholder = phText;
+                if (noticeEl) {
+                    if (hasVal) {
+                        noticeEl.innerHTML = (lang === 'en')
+                            ? `✍️ <strong>Manual entry:</strong> Using custom entered value (${manualVal.toFixed(1)} %).`
+                            : `✍️ <strong>Oma syöte:</strong> Käytetään itse syötettyä arvoa (${manualVal.toFixed(1)} %).`;
+                    } else {
+                        noticeEl.innerHTML = (lang === 'en')
+                            ? `✍️ <strong>Manual entry:</strong> Please enter your body fat percentage in the field above.`
+                            : `✍️ <strong>Oma syöte:</strong> Kirjoita haluamasi rasvaprosentti yllä olevaan kenttään.`;
+                    }
+                    noticeEl.style.color = "#00ff00";
+                }
+                return;
+            }
+
+            const calcBf = laskeRasvaprosentti(method, gender, h, w, waist, neck, hip, age);
+
+            const methodNames = {
+                army2023: (lang === 'en') ? "U.S. Army DoD" : "U.S. Army DoD",
+                navy_adjusted: (lang === 'en') ? "U.S. Navy (Neck-Adjusted)" : "U.S. Navy (Niskakorjattu)",
+                cun_bae: (lang === 'en') ? "Clinical CUN-BAE" : "Kliininen CUN-BAE"
+            };
+            const currentMethodName = methodNames[method] || method;
+
+            if (calcBf > 0) {
+                const bfStr = calcBf.toFixed(1) + " %";
+                bfInput.value = calcBf.toFixed(1);
+                bfInput.dataset.autoCalculated = "true";
+                bfInput.dataset.manualOverride = "";
+
+                const phText = (lang === 'en')
+                    ? `👉 ${currentMethodName}: ${bfStr}`
+                    : `👉 ${currentMethodName}: ${bfStr}`;
+                bfInput.placeholder = phText;
+
+                if (noticeEl) {
+                    if (method === 'army2023') {
+                        noticeEl.innerHTML = (lang === 'en')
+                            ? `⭐ <strong>Default standard (U.S. Army DoD):</strong> Calculated from waist circumference and body weight (${bfStr}).`
+                            : `⭐ <strong>Oletusmenetelmä (U.S. Army DoD):</strong> Lasketaan vyötärön ympäryksestä ja kehonpainosta (${bfStr}).`;
+                        noticeEl.style.color = "#00ff00";
+                    } else if (method === 'navy_adjusted') {
+                        noticeEl.innerHTML = (lang === 'en')
+                            ? `✅ <strong>Neck-Adjusted U.S. Navy:</strong> Calculated from height, waist circumference, and neck (${bfStr}) with neck fat compensation.`
+                            : `✅ <strong>Niskakorjattu U.S. Navy:</strong> Lasketaan pituudesta, vyötärön ympäryksestä ja niskasta (${bfStr}) huomioiden niskan rasvakudoksen korjaus.`;
+                        noticeEl.style.color = "#00ff00";
+                    } else if (method === 'cun_bae') {
+                        noticeEl.innerHTML = (lang === 'en')
+                            ? `✅ <strong>Clinical standard (CUN-BAE):</strong> Calculated from body weight, height (BMI), and age (${bfStr}).`
+                            : `✅ <strong>Kliininen CUN-BAE:</strong> Lasketaan kehonpainosta, pituudesta (BMI) ja iästä (${bfStr}).`;
+                        noticeEl.style.color = "#00ff00";
+                    } else {
+                        noticeEl.innerHTML = (lang === 'en')
+                            ? `ℹ️ Calculated using ${currentMethodName} (${bfStr}).`
+                            : `ℹ️ Laskettu menetelmällä ${currentMethodName} (${bfStr}).`;
+                        noticeEl.style.color = "#88cc88";
+                    }
+                }
             } else {
                 if (bfInput.dataset.autoCalculated === "true" && bfInput.dataset.manualOverride !== 'true') {
                     bfInput.value = "";
@@ -1650,6 +1836,7 @@
                 }
                 const origPh = (lang === 'en') ? "👉 ENTER BODY FAT % (IF KNOWN)" : "👉 SYÖTÄ RASVAPROSENTTI % (JOS TIEDOSSA)";
                 bfInput.placeholder = origPh;
+                if (noticeEl) noticeEl.innerHTML = "";
             }
         }
 
@@ -1666,6 +1853,7 @@
                 waist: getMetricVal('waist'),
                 neck: getMetricVal('neck'),
                 hip: getMetricVal('hip'),
+                bfMethod: document.getElementById('bfMethod')?.value || 'army2023',
                 bodyFat: bfInput?.value || '',
                 bodyFatManualOverride: bfInput?.dataset.manualOverride === 'true' ? 'true' : '',
                 activityLevel: document.getElementById('activityLevel').value,
@@ -1686,8 +1874,14 @@
             const saved = localStorage.getItem('metabolic_v20_userParams');
             if (saved) {
                 const p = JSON.parse(saved);
-                ['gender','age','bodyFat','activityLevel','strategyGoal','customCalorieDelta'].forEach(k => {
-                    if (p[k] !== undefined && document.getElementById(k)) document.getElementById(k).value = p[k];
+                ['gender','age','bfMethod','activityLevel','strategyGoal','customCalorieDelta'].forEach(k => {
+                    if (p[k] !== undefined && document.getElementById(k)) {
+                        if (k === 'bfMethod' && (p[k] === 'deurenberg' || p[k] === 'navy')) {
+                            document.getElementById(k).value = 'army2023';
+                        } else {
+                            document.getElementById(k).value = p[k];
+                        }
+                    }
                 });
                 ['height','weight','waist','neck','hip'].forEach(k => {
                     if (p[k] !== undefined && document.getElementById(k)) {
@@ -1695,8 +1889,13 @@
                     }
                 });
                 const bfInput = document.getElementById('bodyFat');
-                if (bfInput && p.bodyFatManualOverride === 'true') {
+                const isStaleFlawedValue = (p.bodyFat === '36.7' && !p.bfMethod);
+                if (bfInput && (p.bfMethod === 'manual' || p.bodyFatManualOverride === 'true') && !isStaleFlawedValue) {
                     bfInput.dataset.manualOverride = 'true';
+                    bfInput.value = p.bodyFat || '';
+                } else if (bfInput && isStaleFlawedValue) {
+                    bfInput.dataset.manualOverride = '';
+                    bfInput.value = '';
                 }
             }
             paivitaLaskettuRasvaprosenttiKenttaan();
@@ -2181,12 +2380,18 @@
             const methodEl = document.getElementById('resFatPctMethod');
             if (methodEl) {
                 const lang = document.getElementById('langSelect')?.value || 'fi';
-                if (bfResult.method === 'navy') {
-                    methodEl.innerText = "(U.S. Navy / Hodgdon & Beckett)";
-                    methodEl.style.color = "#00ff00";
-                } else if (bfResult.method === 'manual') {
+                if (bfResult.method === 'manual') {
                     methodEl.innerText = (lang === 'en') ? "(Manual entry)" : "(Oma syöte)";
-                    methodEl.style.color = "#888";
+                    methodEl.style.color = "#aaa";
+                } else if (bfResult.method === 'navy_adjusted') {
+                    methodEl.innerText = (lang === 'en') ? "(Navy - Neck-Adjusted)" : "(Navy - Niskakorjattu)";
+                    methodEl.style.color = "#00ff00";
+                } else if (bfResult.method === 'cun_bae') {
+                    methodEl.innerText = (lang === 'en') ? "(Clinical CUN-BAE)" : "(Kliininen CUN-BAE)";
+                    methodEl.style.color = "#00ff00";
+                } else if (bfResult.method === 'army2023') {
+                    methodEl.innerText = "(U.S. Army DoD)";
+                    methodEl.style.color = "#00ff00";
                 } else {
                     methodEl.innerText = (lang === 'en') ? "(Est. BMI)" : "(Arvio BMI)";
                     methodEl.style.color = "#888";
@@ -2886,6 +3091,83 @@
             return false;
         }
 
+        function showPopupBlockedNotice() {
+            const tb = document.getElementById('openInNewTabBtn');
+            const bn = document.getElementById('braveNotice');
+            if (tb) {
+                tb.style.display = 'block';
+                tb.style.borderColor = '#ffaa00';
+                tb.style.background = '#221100';
+                tb.style.color = '#ffdd55';
+            }
+            if (bn) {
+                bn.style.display = 'block';
+            }
+        }
+
+        function hidePopupBlockedNotice() {
+            const tb = document.getElementById('openInNewTabBtn');
+            const bn = document.getElementById('braveNotice');
+            const isInIframe = window.self !== window.top;
+            if (!isInIframe) {
+                if (tb) tb.style.display = 'none';
+                if (bn) bn.style.display = 'none';
+            }
+        }
+
+        function requestGisToken(promptMode = 'select_account') {
+            return new Promise((resolve, reject) => {
+                if (!gisTokenClient) {
+                    return reject(new Error('Google Identity Services client not initialized'));
+                }
+                let settled = false;
+                const prevCallback = gisTokenClient.callback;
+                const prevErrorCallback = gisTokenClient.error_callback;
+
+                const cleanup = () => {
+                    gisTokenClient.callback = prevCallback;
+                    gisTokenClient.error_callback = prevErrorCallback;
+                };
+
+                gisTokenClient.callback = (res) => {
+                    if (settled) return;
+                    settled = true;
+                    cleanup();
+                    if (res && res.access_token) {
+                        const expiresSec = res.expires_in ? parseInt(res.expires_in, 10) : 3599;
+                        saveDriveSession(res.access_token, currentUser || { displayName: 'Google Drive User', email: '' }, expiresSec);
+                        resolve(res.access_token);
+                    } else {
+                        reject(new Error(res?.error_description || res?.error || 'Kirjautuminen peruutettiin'));
+                    }
+                };
+
+                gisTokenClient.error_callback = (err) => {
+                    if (settled) return;
+                    settled = true;
+                    cleanup();
+                    console.warn('GIS request error_callback:', err);
+                    const isBlocked = (err && (err.type === 'popup_failed_to_open' || (err.message && err.message.includes('popup'))));
+                    if (isBlocked) {
+                        showPopupBlockedNotice();
+                        const lang = document.getElementById('langSelect')?.value || 'fi';
+                        setDriveStatusUI('warning', lang === 'en'
+                            ? '⚠️ Popup blocked! Open in a new tab below to sign in.'
+                            : '⚠️ Ponnahdusikkuna estetty! Avaa uuteen välilehteen alla olevasta painikkeesta.');
+                    }
+                    reject(new Error(isBlocked ? 'POPUP_BLOCKED' : (err?.type || 'Kirjautumisikkunan avaus epäonnistui')));
+                };
+
+                try {
+                    gisTokenClient.requestAccessToken({ prompt: promptMode });
+                } catch (e) {
+                    settled = true;
+                    cleanup();
+                    reject(e);
+                }
+            });
+        }
+
         function setupGisOAuth(clientId) {
             const activeClientId = clientId || DEFAULT_CLIENT_ID;
             if (window.google && window.google.accounts && window.google.accounts.oauth2) {
@@ -2897,18 +3179,26 @@
                             console.warn('GIS Token error:', tokenResponse);
                             const lang = document.getElementById('langSelect')?.value || 'fi';
                             setDriveStatusUI('error', (lang === 'en' ? 'Sign-in notice: ' : 'Kirjautumisilmoitus: ') + (tokenResponse.error_description || tokenResponse.error));
-                            const bn = document.getElementById('braveNotice');
-                            const tb = document.getElementById('openInNewTabBtn');
-                            if (bn) bn.style.display = 'block';
-                            if (tb) tb.style.display = 'block';
+                            showPopupBlockedNotice();
                             return;
                         }
                         if (tokenResponse.access_token) {
                             const expiresSec = tokenResponse.expires_in ? parseInt(tokenResponse.expires_in, 10) : 3599;
                             saveDriveSession(tokenResponse.access_token, currentUser || { displayName: 'Google Drive User', email: '' }, expiresSec);
                             updateUIForUser(currentUser);
+                            hidePopupBlockedNotice();
                             await synkkaaOnSignIn();
                         }
+                    },
+                    error_callback: (error) => {
+                        console.warn('GIS init error_callback:', error);
+                        const lang = document.getElementById('langSelect')?.value || 'fi';
+                        const isPopupBlocked = (error && (error.type === 'popup_failed_to_open' || (error.message && error.message.includes('popup'))));
+                        setDriveStatusUI('warning', isPopupBlocked
+                            ? (lang === 'en' ? '⚠️ Popup blocked! Open in a new tab below to sign in.' : '⚠️ Ponnahdusikkuna estetty! Avaa uuteen välilehteen alla olevasta painikkeesta.')
+                            : (lang === 'en' ? 'Sign-in notice: ' + (error?.type || 'Window error') : 'Kirjautumisilmoitus: ' + (error?.type || 'Ikkunavirhe'))
+                        );
+                        showPopupBlockedNotice();
                     }
                 });
             } else {
@@ -2952,17 +3242,10 @@
             if (hasValidToken) {
                 synkkaaOnSignIn();
             } else if (localStorage.getItem('metabolic_drive_logged_in') === 'true') {
-                // Was logged in previously, try background renewal
-                setTimeout(async () => {
-                    try {
-                        await ensureAccessToken();
-                        synkkaaOnSignIn();
-                    } catch(e) {
-                        console.warn('Silent token refresh on load notice:', e);
-                        const lang = document.getElementById('langSelect')?.value || 'fi';
-                        setDriveStatusUI('warning', lang === 'en' ? 'Connection expired. Click "Sync Now" to renew.' : 'Yhteys vanhentunut. Napsauta "Synkronoitoi nyt" uudistaaksesi.');
-                    }
-                }, 1000);
+                // Was logged in previously, but session expired.
+                // Do NOT call unprompted popup requests on page load!
+                const lang = document.getElementById('langSelect')?.value || 'fi';
+                setDriveStatusUI('warning', lang === 'en' ? '⚠️ Session expired. Click "Sync Now" to renew.' : '⚠️ Yhteys vanhentunut. Napsauta "Synkronoi nyt" uudistaaksesi.');
             }
 
             // Show new tab button and Brave notice if in an iframe or if Brave is detected
@@ -2979,19 +3262,29 @@
             if (signBtn) {
                 signBtn.addEventListener('click', async () => {
                     const lang = document.getElementById('langSelect')?.value || 'fi';
-                    setDriveStatusUI('loading', lang === 'en' ? 'Signing in to Google...' : 'Kirjaudutaan Google-tilille...');
+                    setDriveStatusUI('loading', lang === 'en' ? 'Opening Google sign-in...' : 'Avataan Google-kirjautumista...');
 
                     if (gisTokenClient) {
                         try {
-                            gisTokenClient.requestAccessToken({ prompt: 'select_account' });
-                            return;
+                            const token = await requestGisToken('select_account');
+                            if (token) {
+                                updateUIForUser(currentUser);
+                                hidePopupBlockedNotice();
+                                await synkkaaOnSignIn();
+                                return;
+                            }
                         } catch (gisErr) {
-                            console.warn('GIS token request failed:', gisErr);
+                            console.warn('GIS sign-in request failed:', gisErr);
+                            showPopupBlockedNotice();
+                            if (gisErr.message === 'POPUP_BLOCKED') {
+                                return;
+                            }
                         }
                     }
 
                     if (window.self !== window.top) {
                         setDriveStatusUI('warning', lang === 'en' ? 'Sign-in requires a top-level window. Opening new tab...' : 'Kirjautuminen vaatii pääikkunan. Avataan uusi välilehti...');
+                        showPopupBlockedNotice();
                         window.open(window.location.href, '_blank');
                     }
                 });
@@ -3092,62 +3385,35 @@
             }
         }
 
-        async function ensureAccessToken() {
+        async function ensureAccessToken(interactive = false) {
             const tokenExpires = parseInt(localStorage.getItem('metabolic_drive_token_expires') || '0', 10);
             if (cachedAccessToken && tokenExpires > (Date.now() + 60000)) {
                 return cachedAccessToken;
             }
 
-            // 1. Try GIS token client silent request first
-            if (gisTokenClient) {
-                try {
-                    const token = await new Promise((resolve, reject) => {
-                        const originalCallback = gisTokenClient.callback;
-                        gisTokenClient.callback = (res) => {
-                            if (originalCallback) originalCallback(res);
-                            if (res && res.access_token) {
-                                const expiresSec = res.expires_in ? parseInt(res.expires_in, 10) : 3599;
-                                saveDriveSession(res.access_token, currentUser, expiresSec);
-                                resolve(res.access_token);
-                            } else {
-                                reject(new Error(res?.error_description || res?.error || 'Silent token request failed.'));
-                            }
-                        };
-                        try {
-                            gisTokenClient.requestAccessToken({ prompt: '' });
-                        } catch (e) {
-                            reject(e);
-                        }
-                    });
-                    return token;
-                } catch (silentErr) {
-                    console.warn('Silent token refresh notice:', silentErr);
+            // If non-interactive (timer / auto-sync), NEVER trigger an automatic popup window
+            if (!interactive) {
+                const lang = document.getElementById('langSelect')?.value || 'fi';
+                setDriveStatusUI('warning', lang === 'en' 
+                    ? '⚠️ Session expired. Click "Sync Now" to renew.' 
+                    : '⚠️ Yhteys vanhentunut. Napsauta "Synkronoi nyt" uudistaaksesi.');
+                throw new Error('NON_INTERACTIVE_EXPIRED');
+            }
+
+            // Interactive request: triggered by user click (Sync Now, Load From Drive)
+            try {
+                const token = await requestGisToken('select_account');
+                return token;
+            } catch (err) {
+                if (err.message === 'POPUP_BLOCKED') {
+                    const lang = document.getElementById('langSelect')?.value || 'fi';
+                    setDriveStatusUI('warning', lang === 'en'
+                        ? '⚠️ Popup blocked! Open in a new tab below to sign in.'
+                        : '⚠️ Ponnahdusikkuna estetty! Avaa uuteen välilehteen alla olevasta painikkeesta.');
+                    showPopupBlockedNotice();
                 }
+                throw err;
             }
-
-            // 2. Fallback: prompt for account selection via GIS
-            if (gisTokenClient) {
-                return new Promise((resolve, reject) => {
-                    const originalCallback = gisTokenClient.callback;
-                    gisTokenClient.callback = (res) => {
-                        if (originalCallback) originalCallback(res);
-                        if (res && res.access_token) {
-                            const expiresSec = res.expires_in ? parseInt(res.expires_in, 10) : 3599;
-                            saveDriveSession(res.access_token, currentUser, expiresSec);
-                            resolve(res.access_token);
-                        } else {
-                            reject(new Error('Access token request was cancelled or blocked.'));
-                        }
-                    };
-                    try {
-                        gisTokenClient.requestAccessToken({ prompt: 'select_account' });
-                    } catch (e) {
-                        reject(e);
-                    }
-                });
-            }
-
-            throw new Error('Google Identity Services client not initialized');
         }
 
         async function findDriveBackupFile(token, folderId) {
@@ -3363,7 +3629,7 @@
             }
         }
 
-        async function tallennaGoogleDriveen() {
+        async function tallennaGoogleDriveen(interactive = false) {
             if (isDemoMode) {
                 console.warn('Google Drive sync blocked: Demo mode is active.');
                 const lang = document.getElementById('langSelect')?.value || 'fi';
@@ -3375,7 +3641,7 @@
             const lang = document.getElementById('langSelect')?.value || 'fi';
             try {
                 setDriveStatusUI('loading', lang === 'en' ? '🔄 Saving to Google Drive...' : '🔄 Tallennetaan Google Driveen...');
-                const token = await ensureAccessToken();
+                const token = await ensureAccessToken(interactive);
                 const folderId = await getOrCreateDriveFolder(token);
                 const existing = await findDriveBackupFile(token, folderId);
 
@@ -3407,6 +3673,9 @@
                 setDriveStatusUI('success', lang === 'en' ? `🟢 Synced to Google Drive (${nowStr})` : `🟢 Synkronoitu Google Driveen (${nowStr})`);
                 return true;
             } catch (err) {
+                if (err?.message === 'NON_INTERACTIVE_EXPIRED') {
+                    return false;
+                }
                 console.error('Drive save error:', err);
                 setDriveStatusUI('error', lang === 'en' ? '❌ Drive save failed: ' + err.message : '❌ Tallennus Driveen epäonnistui: ' + err.message);
                 return false;
@@ -3424,14 +3693,14 @@
             const lang = document.getElementById('langSelect')?.value || 'fi';
             try {
                 setDriveStatusUI('loading', lang === 'en' ? '🔄 Fetching from Google Drive...' : '🔄 Haetaan Google Drivestä...');
-                const token = await ensureAccessToken();
+                const token = await ensureAccessToken(true);
                 const folderId = await getOrCreateDriveFolder(token);
                 const existing = await findDriveBackupFile(token, folderId);
 
                 if (!existing) {
                     alert(lang === 'en' ? 'No backup file found in Google Drive! Creating a new backup...' : 'Google Drivestä ei löytynyt varmuuskopiotiedostoa! Luodaan uusi varmuuskopio...');
                     isSyncingToDrive = false;
-                    await tallennaGoogleDriveen();
+                    await tallennaGoogleDriveen(true);
                     return;
                 }
 
@@ -3473,7 +3742,7 @@
             if (isSyncingToDrive) return;
             isSyncingToDrive = true;
             try {
-                const token = await ensureAccessToken();
+                const token = await ensureAccessToken(false);
                 const folderId = await getOrCreateDriveFolder(token);
                 const existing = await findDriveBackupFile(token, folderId);
 
@@ -3501,11 +3770,11 @@
                     }
                 } else {
                     isSyncingToDrive = false;
-                    await tallennaGoogleDriveen();
+                    await tallennaGoogleDriveen(false);
                     return;
                 }
             } catch (e) {
-                console.warn('Initial sync error:', e);
+                console.warn('Initial sync notice:', e);
             } finally {
                 isSyncingToDrive = false;
             }
@@ -3519,7 +3788,11 @@
             driveFileSyncTimeout = setTimeout(() => {
                 if (isDemoMode) return;
                 if (isSyncingToDrive) return;
-                tallennaGoogleDriveen().catch(err => console.warn('Auto sync error:', err));
+                tallennaGoogleDriveen(false).catch(err => {
+                    if (err?.message !== 'NON_INTERACTIVE_EXPIRED') {
+                        console.warn('Auto sync notice:', err);
+                    }
+                });
             }, 2000);
         }
 
@@ -3537,7 +3810,9 @@
             alert(lang === 'en' ? 'Logged out from Google Drive.' : 'Kirjauduttu ulos Google-tililtä.');
         }
 
-        window.synkkaaGoogleDriveManuaalisesti = tallennaGoogleDriveen;
+        window.synkkaaGoogleDriveManuaalisesti = function() {
+            tallennaGoogleDriveen(true);
+        };
         window.lataaGoogleDrivesta = lataaGoogleDrivesta;
         window.kirjauduUlosGoogle = kirjauduUlosGoogle;
         window.triggerAutoSyncToDrive = debouncedAutoSyncToDrive;
