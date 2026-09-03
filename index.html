@@ -372,7 +372,7 @@
                 <input type="number" id="hip" inputmode="decimal" step="any"  placeholder="👉 SYÖTÄ TIETO (LANTIO CM)" oninput="paivitaMittaKentta(this); tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();">
             </div>
 
-            <label data-i18n="bodyFatLabel">Oma rasvaprosentti (%) [Ohjelma laskee jos pituus, niska ja vyötärö (ja naisilla lantio) annettu. Tai syötä oma:]</label> 
+            <label data-i18n="bodyFatLabel">Oma rasvaprosentti (%) [U.S. Navy (Hodgdon &amp; Beckett) -menetelmä laskee automaattisesti pituudesta, niskasta ja vyötäröstä (sekä naisilla lantiosta). Tai syötä oma:]</label> 
             <input type="number" id="bodyFat" inputmode="decimal" step="any"  placeholder="👉 SYÖTÄ RASVAPROSENTTI % (JOS TIEDOSSA)" oninput="this.dataset.manualOverride = this.value ? 'true' : ''; tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();">
         </div>
     </details>
@@ -448,7 +448,7 @@
         <summary data-i18n="sec4Title">5. LAHJOMATON TASE &amp; ANALYTIIKKA</summary>
         <div class="details-content">
             <div>
-                <p><span class="result-title" data-i18n="fatPctLabel">Rasvaprosentti:</span> <span id="resFatPct" class="alert-orange"></span> %</p>
+                <p><span class="result-title" data-i18n="fatPctLabel">Rasvaprosentti:</span> <span id="resFatPct" class="alert-orange"></span> % <span id="resFatPctMethod" style="font-size:12px; font-weight:normal; color:#00ff00;"></span></p>
                 <p><span class="result-title" data-i18n="leanLabel">Rasvaton moottorisi (Lean Mass):</span> <span id="resLean"></span> <span id="resLeanUnit">kg</span></p>
                 <p><span class="result-title" data-i18n="fatVolLabel">Kudosrasvasi (KG / litraa):</span> <span id="resFatVolCombined" class="alert-green" style="font-weight:bold;"></span></p>
                 <p><span class="result-title" data-i18n="weeklyTargetLabel">Valittu viikkotavoite:</span> <span id="resWeeklyTarget"></span> <span id="resWeeklyTargetUnit">kg/wk</span> (<span id="resWeeklyVol"></span> <span id="resWeeklyVolUnit">litraa</span>)</p>
@@ -564,7 +564,7 @@
                 waistLabel: "Vyötärön ympärys (cm) [Vapaaehtoinen]:",
                 neckLabel: "Niskan ympärys (cm) [Vapaaehtoinen]:",
                 hipLabel: "Lantion ympärys (cm) [Naisilla vapaaehtoinen]:",
-                bodyFatLabel: "Oma rasvaprosentti (%) [Ohjelma laskee jos pituus, niska ja vyötärö (ja naisilla lantio) annettu. Tai syötä oma:]",
+                bodyFatLabel: "Oma rasvaprosentti (%) [U.S. Navy (Hodgdon & Beckett) -menetelmä laskee automaattisesti pituudesta, niskasta ja vyötäröstä (sekä naisilla lantiosta). Tai syötä oma:]",
                 activityLabel: "Aktiivisuustason kerroin:",
                 act1: "Passiivinen (istumatyö, vähän/ei liikuntaa) [1.2]",
                 act2: "Perusaktiivinen (vakio oletus) [1.25]",
@@ -725,7 +725,7 @@
                 waistLabel: "Waist circumference (cm) [Optional]:",
                 neckLabel: "Neck circumference (cm) [Optional]:",
                 hipLabel: "Hip circumference (cm) [Female optional]:",
-                bodyFatLabel: "Own body fat percentage (%) [Auto-calculated if height, neck, waist (+hip) are given. Or enter own:]",
+                bodyFatLabel: "Own body fat percentage (%) [Auto-calculated using U.S. Navy (Hodgdon & Beckett) method from height, neck, and waist (+ hip for women). Or enter own:]",
                 activityLabel: "Activity level multiplier:",
                 act1: "Sedentary (desk job, little/no exercise) [1.2]",
                 act2: "Basal active (default) [1.25]",
@@ -1489,26 +1489,90 @@
             }
         }
 
-        function paivitaKaikkienPaivienLaskelmat() {
-            const gender = document.getElementById('gender').value;
+        function laskeUSNavyRasvaprosentti(gender, h, waist, neck, hip) {
+            if (!h || h <= 0 || !waist || waist <= 0 || !neck || neck <= 0) return 0;
+            if (gender === 'female' && (!hip || hip <= 0)) return 0;
+
+            let rPct = 0;
+            if (gender === 'male') {
+                if (waist <= neck) return 0;
+                // U.S. Navy Body Composition Assessment / Hodgdon & Beckett (Report 84-11)
+                const D = 1.0324 - 0.19077 * Math.log10(waist - neck) + 0.15456 * Math.log10(h);
+                if (D <= 0) return 0;
+                rPct = (495 / D) - 450;
+            } else {
+                if ((waist + hip) <= neck) return 0;
+                // U.S. Navy Body Composition Assessment / Hodgdon & Beckett (Report 84-29)
+                const D = 1.29579 - 0.35004 * Math.log10(waist + hip - neck) + 0.22100 * Math.log10(h);
+                if (D <= 0) return 0;
+                rPct = (495 / D) - 450;
+            }
+
+            if (isNaN(rPct) || !isFinite(rPct)) return 0;
+            if (rPct < 3) rPct = 3;
+            if (rPct > 65) rPct = 65;
+            return rPct;
+        }
+
+        function haeNykyinenRasvaprosenttiJaLahde() {
+            const gender = document.getElementById('gender')?.value || 'male';
             const h = getMetricVal('height') || 0;
+            const w = getMetricVal('weight') || 0;
             const waist = getMetricVal('waist') || 0;
             const neck = getMetricVal('neck') || 0;
             const hip = getMetricVal('hip') || 0;
-            const userBodyFat = parseFloat(document.getElementById('bodyFat')?.value) || 0;
+            const age = parseInt(document.getElementById('age')?.value) || 45;
+
+            const bfInput = document.getElementById('bodyFat');
+            const isManual = bfInput && bfInput.dataset.manualOverride === 'true' && parseFloat(bfInput.value) > 0;
+
+            if (isManual) {
+                return {
+                    rPct: parseFloat(bfInput.value),
+                    method: 'manual'
+                };
+            }
+
+            // U.S. Navy (Hodgdon & Beckett) formula
+            const navyBf = laskeUSNavyRasvaprosentti(gender, h, waist, neck, hip);
+            if (navyBf > 0) {
+                return {
+                    rPct: navyBf,
+                    method: 'navy'
+                };
+            }
+
+            const rawBfVal = parseFloat(bfInput?.value);
+            if (!isNaN(rawBfVal) && rawBfVal > 0) {
+                return {
+                    rPct: rawBfVal,
+                    method: 'manual'
+                };
+            }
+
+            // Fallback estimation from BMI if height and weight exist, otherwise standard population baseline
+            let fallback = (gender === 'male') ? 18.0 : 25.0;
+            if (h > 0 && w > 0) {
+                const bmi = w / Math.pow(h / 100, 2);
+                const sexVal = (gender === 'male') ? 1 : 0;
+                const est = (1.20 * bmi) + (0.23 * age) - (10.8 * sexVal) - 5.4;
+                if (est >= 5 && est <= 60) {
+                    fallback = est;
+                }
+            }
+            return {
+                rPct: fallback,
+                method: 'fallback'
+            };
+        }
+
+        function paivitaKaikkienPaivienLaskelmat() {
+            const gender = document.getElementById('gender').value;
             const age = parseInt(document.getElementById('age').value) || 45;
             const actMult = parseFloat(document.getElementById('activityLevel').value) || 1.25;
 
-            let rPct = userBodyFat;
-            if (rPct <= 0) {
-                rPct = (gender === "male") ? 32.0 : 42.0;
-                if ((gender === "male" && h > 0 && waist > neck && neck > 0) || (gender === "female" && h > 0 && (waist + hip) > neck && neck > 0 && hip > 0)) {
-                    rPct = (gender === "male") 
-                        ? (495 / (1.0324 - 0.19077 * log10(waist - neck) + 0.15456 * log10(h)) - 450) 
-                        : (495 / (1.29579 - 0.35004 * log10(waist + hip - neck) + 0.22100 * log10(h)) - 450);
-                    if (rPct < 3) rPct = 3;
-                }
-            }
+            const bfResult = haeNykyinenRasvaprosenttiJaLahde();
+            const rPct = bfResult.rPct;
 
             Object.keys(historyDB).forEach(dKey => {
                 const dayObj = historyDB[dKey];
@@ -1559,34 +1623,28 @@
 
         function paivitaLaskettuRasvaprosenttiKenttaan() {
             const h = getMetricVal('height') || 0;
-            const w = getMetricVal('weight') || 0;
             const waist = getMetricVal('waist') || 0;
             const neck = getMetricVal('neck') || 0;
             const hip = getMetricVal('hip') || 0;
-            const gender = document.getElementById('gender').value;
+            const gender = document.getElementById('gender')?.value || 'male';
 
-            let rPct = 0;
-            if (w > 0 && ((gender === "male" && h > 0 && waist > neck && neck > 0) || (gender === "female" && h > 0 && (waist + hip) > neck && neck > 0 && hip > 0))) {
-                rPct = (gender === "male") 
-                    ? (495 / (1.0324 - 0.19077 * log10(waist - neck) + 0.15456 * log10(h)) - 450) 
-                    : (495 / (1.29579 - 0.35004 * log10(waist + hip - neck) + 0.22100 * log10(h)) - 450);
-                if (rPct < 3) rPct = 3;
-            }
-
+            const navyBf = laskeUSNavyRasvaprosentti(gender, h, waist, neck, hip);
             const bfInput = document.getElementById('bodyFat');
             if (!bfInput) return;
             const lang = document.getElementById('langSelect')?.value || 'fi';
             
-            if (rPct > 0) {
-                if (!bfInput.dataset.manualOverride) {
-                    bfInput.value = rPct.toFixed(1);
+            if (navyBf > 0) {
+                const bfStr = navyBf.toFixed(1) + " %";
+                if (bfInput.dataset.manualOverride !== 'true') {
+                    bfInput.value = navyBf.toFixed(1);
                     bfInput.dataset.autoCalculated = "true";
                 }
-                const bfStr = rPct.toFixed(1) + " %";
-                const phText = (lang === 'en') ? `👉 AUTO-CALCULATED: ${bfStr} (Enter to override)` : `👉 LASKETTU ARVO: ${bfStr} (Syötä muuttaaksesi)`;
+                const phText = (lang === 'en')
+                    ? `👉 U.S. Navy (Hodgdon & Beckett): ${bfStr} (Enter to override)`
+                    : `👉 U.S. Navy (Hodgdon & Beckett): ${bfStr} (Syötä oma muuttaaksesi)`;
                 bfInput.placeholder = phText;
             } else {
-                if (bfInput.dataset.autoCalculated === "true" && !bfInput.dataset.manualOverride) {
+                if (bfInput.dataset.autoCalculated === "true" && bfInput.dataset.manualOverride !== 'true') {
                     bfInput.value = "";
                     bfInput.dataset.autoCalculated = "false";
                 }
@@ -1598,6 +1656,7 @@
         function tallennaKayttajaParametrit(triggerSync = true) {
             paivitaLaskettuRasvaprosenttiKenttaan();
             if (isDemoMode) return; 
+            const bfInput = document.getElementById('bodyFat');
             const params = {
                 _v: 2,
                 gender: document.getElementById('gender').value,
@@ -1607,7 +1666,8 @@
                 waist: getMetricVal('waist'),
                 neck: getMetricVal('neck'),
                 hip: getMetricVal('hip'),
-                bodyFat: document.getElementById('bodyFat')?.value || '',
+                bodyFat: bfInput?.value || '',
+                bodyFatManualOverride: bfInput?.dataset.manualOverride === 'true' ? 'true' : '',
                 activityLevel: document.getElementById('activityLevel').value,
                 strategyGoal: document.getElementById('strategyGoal').value,
                 customCalorieDelta: document.getElementById('customCalorieDelta').value
@@ -1634,6 +1694,10 @@
                         setMetricValToInput(k, p[k]);
                     }
                 });
+                const bfInput = document.getElementById('bodyFat');
+                if (bfInput && p.bodyFatManualOverride === 'true') {
+                    bfInput.dataset.manualOverride = 'true';
+                }
             }
             paivitaLaskettuRasvaprosenttiKenttaan();
         }
@@ -1936,24 +2000,9 @@
                         if (dayObj.calculated.age) age = dayObj.calculated.age;
                     } else {
                         const w = dayObj.calculated?.weight || getMetricVal('weight') || 70;
-                        const h = getMetricVal('height') || 175;
-                        const waist = getMetricVal('waist') || 0;
-                        const neck = getMetricVal('neck') || 0;
-                        const hip = getMetricVal('hip') || 0;
-                        const gender = document.getElementById('gender').value;
                         const actMult = parseFloat(document.getElementById('activityLevel').value) || 1.25;
-
-                        const userBodyFat = parseFloat(document.getElementById('bodyFat')?.value) || 0;
-                        let rPct = userBodyFat;
-                        if (rPct <= 0) {
-                            rPct = (gender === "male") ? 32.0 : 42.0;
-                            if ((gender === "male" && h > 0 && waist > neck && neck > 0) || (gender === "female" && h > 0 && (waist + hip) > neck && neck > 0 && hip > 0)) {
-                                rPct = (gender === "male") 
-                                    ? (495 / (1.0324 - 0.19077 * log10(waist - neck) + 0.15456 * log10(h)) - 450) 
-                                    : (495 / (1.29579 - 0.35004 * log10(waist + hip - neck) + 0.22100 * log10(h)) - 450);
-                                if (rPct < 3) rPct = 3;
-                            }
-                        }
+                        const bfResult = haeNykyinenRasvaprosenttiJaLahde();
+                        const rPct = bfResult.rPct;
                         lbm = w - (w * (rPct / 100)); 
                         dayTdee = (370 + (21.6 * lbm)) * actMult;
                         dayObj.calculated = { weight: w, tdee: dayTdee, consumedKcal: dayKcal, lbm: lbm, age: age };
@@ -2121,23 +2170,28 @@
                 }
             }
 
-            const userBodyFat = parseFloat(document.getElementById('bodyFat')?.value) || 0;
-            let rPct = userBodyFat;
-            if (rPct <= 0) {
-                rPct = (gender === "male") ? 32.0 : 42.0;
-                if ((gender === "male" && h > 0 && waist > neck && neck > 0) || (gender === "female" && h > 0 && (waist + hip) > neck && neck > 0 && hip > 0)) {
-                    rPct = (gender === "male") 
-                        ? (495 / (1.0324 - 0.19077 * log10(waist - neck) + 0.15456 * log10(h)) - 450) 
-                        : (495 / (1.29579 - 0.35004 * log10(waist + hip - neck) + 0.22100 * log10(h)) - 450);
-                    if (rPct < 3) rPct = 3;
-                }
-            }
+            const bfResult = haeNykyinenRasvaprosenttiJaLahde();
+            const rPct = bfResult.rPct;
 
             const actMult = parseFloat(document.getElementById('activityLevel').value) || 1.25;
             const rMoor = w - (w * (rPct / 100)); 
             const tdee = (370 + (21.6 * rMoor)) * actMult;
 
             document.getElementById('resFatPct').innerText = rPct.toFixed(1);
+            const methodEl = document.getElementById('resFatPctMethod');
+            if (methodEl) {
+                const lang = document.getElementById('langSelect')?.value || 'fi';
+                if (bfResult.method === 'navy') {
+                    methodEl.innerText = "(U.S. Navy / Hodgdon & Beckett)";
+                    methodEl.style.color = "#00ff00";
+                } else if (bfResult.method === 'manual') {
+                    methodEl.innerText = (lang === 'en') ? "(Manual entry)" : "(Oma syöte)";
+                    methodEl.style.color = "#888";
+                } else {
+                    methodEl.innerText = (lang === 'en') ? "(Est. BMI)" : "(Arvio BMI)";
+                    methodEl.style.color = "#888";
+                }
+            }
             
             
             const unitObj1 = document.getElementById('unitSelect')?.value || currentUnit || 'metric';
