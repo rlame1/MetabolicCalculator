@@ -1701,11 +1701,17 @@
 
             const bfResult = haeNykyinenRasvaprosenttiJaLahde();
             const rPct = bfResult.rPct;
+            const inputWeight = getMetricVal('weight') || 0;
 
             Object.keys(historyDB).forEach(dKey => {
                 const dayObj = historyDB[dKey];
                 if (dayObj) {
-                    let w = dayObj.calculated?.weight || getMetricVal('weight') || 70;
+                    let w;
+                    if (dKey === activeDateStr && inputWeight > 0) {
+                        w = inputWeight;
+                    } else {
+                        w = dayObj.calculated?.weight || inputWeight || 70;
+                    }
                     
                     if (isDemoMode) {
                         const idx = Object.keys(demoDates).find(k => demoDates[k] === dKey);
@@ -1731,8 +1737,13 @@
                     const dayTdee = (370 + (21.6 * lbm)) * actMult;
                     const dayKcal = (dayObj.macros.carbs * 4) + (dayObj.macros.protein * 4) + (dayObj.macros.fat * 9);
 
+                    const prevWeight = dayObj.calculated?.weight;
+                    const prevWeightTime = dayObj.calculated?.weightUpdatedAt;
+                    const isWeightChanged = (prevWeight !== undefined && prevWeight !== null && prevWeight !== w);
+
                     dayObj.calculated = {
                         weight: w,
+                        weightUpdatedAt: (isWeightChanged || !prevWeightTime) ? new Date().toISOString() : prevWeightTime,
                         tdee: dayTdee,
                         consumedKcal: dayKcal,
                         lbm: lbm,
@@ -1844,12 +1855,22 @@
             paivitaLaskettuRasvaprosenttiKenttaan();
             if (isDemoMode) return; 
             const bfInput = document.getElementById('bodyFat');
+            const newWeight = getMetricVal('weight');
+            const oldParamsRaw = localStorage.getItem('metabolic_v20_userParams');
+            const oldParams = oldParamsRaw ? JSON.parse(oldParamsRaw) : {};
+
+            const nowIso = new Date().toISOString();
+            const weightChanged = (oldParams.weight !== undefined && oldParams.weight !== null && oldParams.weight !== newWeight);
+            const weightUpdatedAt = (weightChanged || !oldParams.weightUpdatedAt) ? nowIso : oldParams.weightUpdatedAt;
+
             const params = {
                 _v: 2,
                 gender: document.getElementById('gender').value,
                 age: document.getElementById('age').value,
                 height: getMetricVal('height'),
-                weight: getMetricVal('weight'),
+                weight: newWeight,
+                weightUpdatedAt: weightUpdatedAt,
+                paramsUpdatedAt: nowIso,
                 waist: getMetricVal('waist'),
                 neck: getMetricVal('neck'),
                 hip: getMetricVal('hip'),
@@ -1865,7 +1886,16 @@
             
             if (oldParamsStr !== newParamsStr) {
                 localStorage.setItem('metabolic_v20_userParams', newParamsStr);
-                localStorage.setItem('metabolic_v20_lastUpdate', new Date().toISOString());
+                localStorage.setItem('metabolic_v20_lastUpdate', nowIso);
+
+                if (activeDateStr && historyDB[activeDateStr] && newWeight > 0) {
+                    if (!historyDB[activeDateStr].calculated) historyDB[activeDateStr].calculated = {};
+                    historyDB[activeDateStr].calculated.weight = newWeight;
+                    historyDB[activeDateStr].calculated.weightUpdatedAt = weightUpdatedAt;
+                    historyDB[activeDateStr].updatedAt = nowIso;
+                    localStorage.setItem('metabolic_v20_historyDB', JSON.stringify(historyDB));
+                }
+
                 if (triggerSync && window.triggerAutoSyncToDrive) window.triggerAutoSyncToDrive();
             }
         }
@@ -2011,14 +2041,29 @@
                 historyDB[activeDateStr] = { macros: { carbs: 0, protein: 0, fat: 0 }, meals: [], calculated: null };
             }
 
-            if (historyDB[activeDateStr].calculated && historyDB[activeDateStr].calculated.weight) {
-                setMetricValToInput('weight', historyDB[activeDateStr].calculated.weight);
-            } else {
-                const savedParams = localStorage.getItem('metabolic_v20_userParams');
-                if (savedParams) {
-                    const p = JSON.parse(savedParams);
-                    if (p.weight) setMetricValToInput('weight', p.weight);
+            const savedParamsRaw = localStorage.getItem('metabolic_v20_userParams');
+            const savedParams = savedParamsRaw ? JSON.parse(savedParamsRaw) : {};
+            const paramWeight = Number(savedParams.weight) || 0;
+            const paramWeightTime = savedParams.weightUpdatedAt || "";
+
+            const dayWeight = Number(historyDB[activeDateStr].calculated?.weight) || 0;
+            const dayWeightTime = historyDB[activeDateStr].calculated?.weightUpdatedAt || historyDB[activeDateStr].updatedAt || "";
+
+            let resolvedWeight = 0;
+            if (activeDateStr === getTodayStr()) {
+                if (paramWeight > 0 && dayWeight > 0) {
+                    resolvedWeight = (paramWeightTime >= dayWeightTime) ? paramWeight : dayWeight;
+                } else {
+                    resolvedWeight = paramWeight > 0 ? paramWeight : dayWeight;
                 }
+            } else {
+                resolvedWeight = dayWeight > 0 ? dayWeight : paramWeight;
+            }
+
+            if (resolvedWeight > 0) {
+                setMetricValToInput('weight', resolvedWeight);
+                if (!historyDB[activeDateStr].calculated) historyDB[activeDateStr].calculated = {};
+                historyDB[activeDateStr].calculated.weight = resolvedWeight;
             }
 
             paivitaLogiNaytto();
@@ -2329,7 +2374,15 @@
                         timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
                     }
 
-                    historyDB[activeDateStr].meals[editingMealIndex] = { c: c, p: p, f: f, time: timeStr };
+                    const existingMeal = historyDB[activeDateStr].meals[editingMealIndex] || {};
+                    const nowIso = new Date().toISOString();
+                    historyDB[activeDateStr].meals[editingMealIndex] = {
+                        id: existingMeal.id || `m_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+                        c: c, p: p, f: f,
+                        time: timeStr,
+                        createdAt: existingMeal.createdAt || nowIso,
+                        updatedAt: nowIso
+                    };
 
                     let totC = 0, totP = 0, totF = 0;
                     historyDB[activeDateStr].meals.forEach(m => {
@@ -2337,7 +2390,7 @@
                         totP += (m.p || 0);
                         totF += (m.f || 0);
                     });
-                    historyDB[activeDateStr].macros = { carbs: totC, protein: totP, fat: totF };
+                    historyDB[activeDateStr].macros = { carbs: Math.round(totC * 10) / 10, protein: Math.round(totP * 10) / 10, fat: Math.round(totF * 10) / 10 };
 
                     document.getElementById('carbs').value = ""; 
                     document.getElementById('protein').value = ""; 
@@ -2346,7 +2399,7 @@
 
                     editingMealIndex = null;
                     paivitaMuokkausUI();
-            updateLabelsForUnits();
+                    updateLabelsForUnits();
                     sailytaPaivaDB();
                     if (window.triggerAutoSyncToDrive) window.triggerAutoSyncToDrive();
                 } else if (c > 0 || p > 0 || f > 0) {
@@ -2357,10 +2410,23 @@
                         timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
                     }
 
-                    historyDB[activeDateStr].macros.carbs += c;
-                    historyDB[activeDateStr].macros.protein += p;
-                    historyDB[activeDateStr].macros.fat += f;
-                    historyDB[activeDateStr].meals.push({ c: c, p: p, f: f, time: timeStr });
+                    const nowIso = new Date().toISOString();
+                    const newMealId = `m_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+                    historyDB[activeDateStr].meals.push({
+                        id: newMealId,
+                        c: c, p: p, f: f,
+                        time: timeStr,
+                        createdAt: nowIso,
+                        updatedAt: nowIso
+                    });
+
+                    let totC = 0, totP = 0, totF = 0;
+                    historyDB[activeDateStr].meals.forEach(m => {
+                        totC += (m.c || 0);
+                        totP += (m.p || 0);
+                        totF += (m.f || 0);
+                    });
+                    historyDB[activeDateStr].macros = { carbs: Math.round(totC * 10) / 10, protein: Math.round(totP * 10) / 10, fat: Math.round(totF * 10) / 10 };
 
                     document.getElementById('carbs').value = ""; document.getElementById('protein').value = ""; document.getElementById('fat').value = ""; document.getElementById('mealTime').value = "";
 
@@ -2547,7 +2613,18 @@
                 }
             }
 
-            historyDB[activeDateStr].calculated = { weight: w, tdee: tdee, consumedKcal: kCals, lbm: rMoor, age: age };
+            const prevCalcWeight = historyDB[activeDateStr].calculated?.weight;
+            const prevCalcWeightTime = historyDB[activeDateStr].calculated?.weightUpdatedAt;
+            const isWChanged = (prevCalcWeight !== undefined && prevCalcWeight !== null && prevCalcWeight !== w);
+
+            historyDB[activeDateStr].calculated = {
+                weight: w,
+                weightUpdatedAt: (isWChanged || !prevCalcWeightTime) ? new Date().toISOString() : prevCalcWeightTime,
+                tdee: tdee,
+                consumedKcal: kCals,
+                lbm: rMoor,
+                age: age
+            };
             sailytaPaivaDB();
             paivitaLogiNaytto();
             document.getElementById('outputBox').style.display = "block";
@@ -2604,6 +2681,22 @@
 
         function poistaAnnos(idx) {
             if (!historyDB[activeDateStr] || !historyDB[activeDateStr].meals) return;
+            const removed = historyDB[activeDateStr].meals[idx];
+            if (removed) {
+                if (!Array.isArray(historyDB[activeDateStr].deletedMealIds)) {
+                    historyDB[activeDateStr].deletedMealIds = [];
+                }
+                const mealId = removed.id || `m_${removed.time}_${removed.c}_${removed.p}_${removed.f}`;
+                historyDB[activeDateStr].deletedMealIds.push({
+                    id: mealId,
+                    time: removed.time,
+                    c: removed.c,
+                    p: removed.p,
+                    f: removed.f,
+                    deletedAt: new Date().toISOString()
+                });
+            }
+
             historyDB[activeDateStr].meals.splice(idx, 1);
 
             if (editingMealIndex === idx) {
@@ -2613,7 +2706,7 @@
                 if (document.getElementById('fat')) document.getElementById('fat').value = "";
                 if (document.getElementById('mealTime')) document.getElementById('mealTime').value = "";
                 paivitaMuokkausUI();
-            updateLabelsForUnits();
+                updateLabelsForUnits();
             } else if (editingMealIndex !== null && editingMealIndex > idx) {
                 editingMealIndex--;
             }
@@ -2624,7 +2717,7 @@
                 totP += (m.p || 0);
                 totF += (m.f || 0);
             });
-            historyDB[activeDateStr].macros = { carbs: totC, protein: totP, fat: totF };
+            historyDB[activeDateStr].macros = { carbs: Math.round(totC * 10) / 10, protein: Math.round(totP * 10) / 10, fat: Math.round(totF * 10) / 10 };
 
             sailytaPaivaDB();
             paivitaLogiNaytto();
@@ -2900,7 +2993,14 @@
 
         function nollaaValittuPaiva() {
             if (editingMealIndex !== null) peruutaMuokkaus();
-            historyDB[activeDateStr] = { macros: { carbs: 0, protein: 0, fat: 0 }, meals: [], calculated: null };
+            const nowIso = new Date().toISOString();
+            historyDB[activeDateStr] = {
+                macros: { carbs: 0, protein: 0, fat: 0 },
+                meals: [],
+                calculated: null,
+                clearedAt: nowIso,
+                updatedAt: nowIso
+            };
             sailytaPaivaDB();
             paivitaLogiNaytto();
             document.getElementById('outputBox').style.display = "none";
@@ -2915,14 +3015,20 @@
                 ? (JSON.parse(localStorage.getItem('metabolic_v20_userParams')) || {})
                 : JSON.parse(localStorage.getItem('metabolic_v20_userParams') || '{}');
 
-            return {
+            const payload = {
                 app: "metabolic_calculator_v20",
                 version: "1.0",
-                exportedAt: localStorage.getItem('metabolic_v20_lastUpdate') || "", 
+                exportedAt: localStorage.getItem('metabolic_v20_lastUpdate') || new Date().toISOString(), 
                 lang: localStorage.getItem('metabolic_v20_lang') || 'fi',
                 userParams: realUserParams,
                 historyDB: realHistoryDB
             };
+
+            if (typeof window.validoiJaKorjaaDatanKoherenssi === 'function') {
+                const checked = window.validoiJaKorjaaDatanKoherenssi(payload, 'local');
+                return checked.sanitizedPayload;
+            }
+            return payload;
         }
 
         function palautaVarmuuskopioPayload(imported) {
@@ -3334,13 +3440,23 @@
             }
         }
 
-        function setDriveStatusUI(type, message) {
+        function setDriveStatusUI(type, message, coherenceReport = null) {
             const statusEl = document.getElementById('driveSyncStatus');
             const headerText = document.getElementById('headerDriveStatusText');
             const headerBadge = document.getElementById('headerDriveBadge');
             const lang = document.getElementById('langSelect')?.value || 'fi';
             
-            if (statusEl) statusEl.textContent = message;
+            let coherenceText = '';
+            if (coherenceReport && coherenceReport.daysCount !== undefined) {
+                const wStr = coherenceReport.latestWeight ? `${coherenceReport.latestWeight} kg` : '-';
+                coherenceText = (lang === 'en')
+                    ? `Data coherent: ${coherenceReport.daysCount} days, ${coherenceReport.mealsCount} meals, latest wt: ${wStr}`
+                    : `Data koherentti: ${coherenceReport.daysCount} pv, ${coherenceReport.mealsCount} ateriaa, uusin paino: ${wStr}`;
+            }
+
+            if (statusEl) {
+                statusEl.textContent = message + (coherenceText ? ` • ${coherenceText}` : '');
+            }
             
             if (type === 'success') {
                 lastDriveSyncTime = new Date();
@@ -3350,7 +3466,8 @@
                 if (headerBadge) {
                     headerBadge.style.borderColor = '#00ff00';
                     headerBadge.style.color = '#00ff00';
-                    headerBadge.title = lang === 'en' ? `Google Drive synced at ${nowStr}` : `Google Drive synkronoitu klo ${nowStr}`;
+                    const tooltipBase = lang === 'en' ? `Google Drive synced at ${nowStr}` : `Google Drive synkronoitu klo ${nowStr}`;
+                    headerBadge.title = tooltipBase + (coherenceText ? `\n${coherenceText}` : '');
                 }
             } else if (type === 'loading') {
                 if (statusEl) statusEl.style.color = '#ffff00';
@@ -3439,61 +3556,342 @@
             return null;
         }
 
-        function mergeMealsArrays(mealsA = [], mealsB = []) {
-            const merged = [];
-            const usedIndicesB = new Set();
-
-            function isSameMeal(m1, m2) {
-                if (!m1 || !m2) return false;
-                const time1 = m1.time || "";
-                const time2 = m2.time || "";
-                const c1 = Number(m1.c) || 0;
-                const c2 = Number(m2.c) || 0;
-                const p1 = Number(m1.p) || 0;
-                const p2 = Number(m2.p) || 0;
-                const f1 = Number(m1.f) || 0;
-                const f2 = Number(m2.f) || 0;
-                return time1 === time2 && c1 === c2 && p1 === p2 && f1 === f2;
-            }
-
-            mealsA.forEach(m1 => {
-                merged.push({ ...m1 });
-                for (let i = 0; i < mealsB.length; i++) {
-                    if (!usedIndicesB.has(i) && isSameMeal(m1, mealsB[i])) {
-                        usedIndicesB.add(i);
-                        break;
+        function haeUusinPainoHistoriasta(historyDb) {
+            if (!historyDb || typeof historyDb !== 'object') return null;
+            let latest = null;
+            const dateKeys = Object.keys(historyDb).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort();
+            for (const d of dateKeys) {
+                const day = historyDb[d];
+                if (!day) continue;
+                const calc = day.calculated;
+                const w = calc && Number(calc.weight);
+                if (w && !isNaN(w) && w >= 25 && w <= 350) {
+                    const time = calc.weightUpdatedAt || day.updatedAt || `${d}T12:00:00.000Z`;
+                    if (!latest || time > latest.time) {
+                        latest = { weight: Math.round(w * 10) / 10, date: d, time: time };
                     }
                 }
-            });
+            }
+            return latest;
+        }
 
-            let addedFromB = 0;
-            mealsB.forEach((m2, i) => {
-                if (!usedIndicesB.has(i)) {
-                    merged.push({ ...m2 });
-                    addedFromB++;
+        function validoiJaKorjaaDatanKoherenssi(payload, source = 'data') {
+            if (!payload || typeof payload !== 'object') {
+                return {
+                    ok: false,
+                    sanitizedPayload: {
+                        app: "metabolic_calculator_v20",
+                        version: "1.0",
+                        exportedAt: new Date().toISOString(),
+                        lang: "fi",
+                        userParams: {},
+                        historyDB: {}
+                    },
+                    fixedIssuesCount: 1,
+                    daysCount: 0,
+                    mealsCount: 0,
+                    latestWeight: null,
+                    summary: "Payload was not an object, initialized fresh structure"
+                };
+            }
+
+            let fixedIssuesCount = 0;
+            const sanitized = {
+                app: payload.app || "metabolic_calculator_v20",
+                version: payload.version || "1.0",
+                exportedAt: payload.exportedAt || new Date().toISOString(),
+                lang: payload.lang || "fi",
+                userParams: (payload.userParams && typeof payload.userParams === 'object') ? { ...payload.userParams } : {},
+                historyDB: {}
+            };
+
+            const rawDB = (payload.historyDB && typeof payload.historyDB === 'object') ? payload.historyDB : {};
+            let daysCount = 0;
+            let mealsCount = 0;
+
+            const dateKeys = Object.keys(rawDB);
+            for (const dStr of dateKeys) {
+                if (!/^\d{4}-\d{2}-\d{2}$/.test(dStr)) {
+                    fixedIssuesCount++;
+                    continue;
+                }
+                const rawDay = rawDB[dStr];
+                if (!rawDay || typeof rawDay !== 'object') {
+                    fixedIssuesCount++;
+                    continue;
+                }
+
+                daysCount++;
+                const sanitizedDay = {
+                    updatedAt: rawDay.updatedAt || rawDay.clearedAt || `${dStr}T00:00:00.000Z`,
+                    meals: [],
+                    macros: { carbs: 0, protein: 0, fat: 0 },
+                    calculated: null,
+                    deletedMealIds: Array.isArray(rawDay.deletedMealIds) ? [...rawDay.deletedMealIds] : []
+                };
+
+                if (rawDay.clearedAt) {
+                    sanitizedDay.clearedAt = rawDay.clearedAt;
+                }
+
+                const rawMeals = Array.isArray(rawDay.meals) ? rawDay.meals : [];
+                const seenMealSignatures = new Map();
+
+                for (let i = 0; i < rawMeals.length; i++) {
+                    const m = rawMeals[i];
+                    if (!m || typeof m !== 'object') {
+                        fixedIssuesCount++;
+                        continue;
+                    }
+
+                    let c = parseFloat(m.c);
+                    let p = parseFloat(m.p);
+                    let f = parseFloat(m.f);
+                    if (isNaN(c) || c < 0) { c = 0; fixedIssuesCount++; }
+                    if (isNaN(p) || p < 0) { p = 0; fixedIssuesCount++; }
+                    if (isNaN(f) || f < 0) { f = 0; fixedIssuesCount++; }
+                    c = Math.round(c * 10) / 10;
+                    p = Math.round(p * 10) / 10;
+                    f = Math.round(f * 10) / 10;
+
+                    let time = typeof m.time === 'string' ? m.time.trim() : '12:00';
+                    if (!/^\d{1,2}:\d{2}$/.test(time)) {
+                        time = '12:00';
+                        fixedIssuesCount++;
+                    } else {
+                        const parts = time.split(':');
+                        const hh = parts[0].padStart(2, '0');
+                        const mm = parts[1].padStart(2, '0');
+                        time = `${hh}:${mm}`;
+                    }
+
+                    const mealId = (m.id && typeof m.id === 'string' && m.id.trim().length > 0)
+                        ? m.id.trim()
+                        : `m_${dStr}_${time}_${c}_${p}_${f}`;
+
+                    const createdAt = m.createdAt || sanitizedDay.updatedAt;
+                    const updatedAt = m.updatedAt || createdAt;
+
+                    const cleanedMeal = {
+                        id: mealId,
+                        time: time,
+                        c: c,
+                        p: p,
+                        f: f,
+                        createdAt: createdAt,
+                        updatedAt: updatedAt
+                    };
+
+                    const dedupeKey = m.id ? `id:${mealId}` : `sig:${time}_${c}_${p}_${f}`;
+                    if (seenMealSignatures.has(dedupeKey)) {
+                        const existingIdx = seenMealSignatures.get(dedupeKey);
+                        const existingMeal = sanitizedDay.meals[existingIdx];
+                        if (cleanedMeal.updatedAt > existingMeal.updatedAt) {
+                            sanitizedDay.meals[existingIdx] = cleanedMeal;
+                        }
+                        fixedIssuesCount++;
+                    } else {
+                        seenMealSignatures.set(dedupeKey, sanitizedDay.meals.length);
+                        sanitizedDay.meals.push(cleanedMeal);
+                        mealsCount++;
+                    }
+                }
+
+                sanitizedDay.meals.sort((a, b) => (a.time || "00:00").localeCompare(b.time || "00:00"));
+
+                let totC = 0, totP = 0, totF = 0;
+                sanitizedDay.meals.forEach(m => {
+                    totC += m.c;
+                    totP += m.p;
+                    totF += m.f;
+                });
+                sanitizedDay.macros = {
+                    carbs: Math.round(totC * 10) / 10,
+                    protein: Math.round(totP * 10) / 10,
+                    fat: Math.round(totF * 10) / 10
+                };
+
+                if (rawDay.calculated && typeof rawDay.calculated === 'object') {
+                    const calcWeight = parseFloat(rawDay.calculated.weight);
+                    const validW = (!isNaN(calcWeight) && calcWeight >= 25 && calcWeight <= 350) ? Math.round(calcWeight * 10) / 10 : null;
+                    const computedKcal = Math.round((sanitizedDay.macros.carbs * 4) + (sanitizedDay.macros.protein * 4) + (sanitizedDay.macros.fat * 9));
+                    
+                    sanitizedDay.calculated = {
+                        ...rawDay.calculated,
+                        weight: validW,
+                        weightUpdatedAt: rawDay.calculated.weightUpdatedAt || sanitizedDay.updatedAt,
+                        consumedKcal: computedKcal
+                    };
+                }
+
+                sanitized.historyDB[dStr] = sanitizedDay;
+            }
+
+            let latestWeight = null;
+            const historyWeight = haeUusinPainoHistoriasta(sanitized.historyDB);
+            const userW = parseFloat(sanitized.userParams.weight);
+            const validUserW = (!isNaN(userW) && userW >= 25 && userW <= 350) ? Math.round(userW * 10) / 10 : null;
+            const userWTime = sanitized.userParams.weightUpdatedAt || sanitized.userParams.paramsUpdatedAt || sanitized.exportedAt;
+
+            if (historyWeight && validUserW) {
+                if (historyWeight.time > userWTime) {
+                    latestWeight = historyWeight.weight;
+                    sanitized.userParams.weight = historyWeight.weight;
+                    sanitized.userParams.weightUpdatedAt = historyWeight.time;
+                    fixedIssuesCount++;
+                } else {
+                    latestWeight = validUserW;
+                    sanitized.userParams.weight = validUserW;
+                }
+            } else if (historyWeight) {
+                latestWeight = historyWeight.weight;
+                sanitized.userParams.weight = historyWeight.weight;
+                sanitized.userParams.weightUpdatedAt = historyWeight.time;
+                fixedIssuesCount++;
+            } else if (validUserW) {
+                latestWeight = validUserW;
+                sanitized.userParams.weight = validUserW;
+            }
+
+            return {
+                ok: true,
+                sanitizedPayload: sanitized,
+                fixedIssuesCount,
+                daysCount,
+                mealsCount,
+                latestWeight,
+                summary: `Koherenssitarkistus (${source}): ${daysCount} päivää, ${mealsCount} ateriaa, uusin paino ${latestWeight || '-'} kg (${fixedIssuesCount} korjausta)`
+            };
+        }
+
+        window.haeUusinPainoHistoriasta = haeUusinPainoHistoriasta;
+        window.validoiJaKorjaaDatanKoherenssi = validoiJaKorjaaDatanKoherenssi;
+
+        function yhdistaPoistetutAteriat(delA = [], delB = []) {
+            const map = new Map();
+            const processItem = item => {
+                if (!item) return;
+                const id = typeof item === 'string' ? item : item.id;
+                const deletedAt = (typeof item === 'object' && item.deletedAt) ? item.deletedAt : new Date().toISOString();
+                const time = typeof item === 'object' ? item.time : undefined;
+                const c = typeof item === 'object' ? item.c : undefined;
+                const p = typeof item === 'object' ? item.p : undefined;
+                const f = typeof item === 'object' ? item.f : undefined;
+
+                const existing = map.get(id);
+                if (!existing || deletedAt > existing.deletedAt) {
+                    map.set(id, { id, deletedAt, time, c, p, f });
+                }
+                if (time !== undefined && c !== undefined) {
+                    const sig = `sig:${time}_${c}_${p}_${f}`;
+                    const exSig = map.get(sig);
+                    if (!exSig || deletedAt > exSig.deletedAt) {
+                        map.set(sig, { id, deletedAt, time, c, p, f });
+                    }
+                }
+            };
+            delA.forEach(processItem);
+            delB.forEach(processItem);
+            return Array.from(map.values());
+        }
+
+        function yhdistaPaivanAteriat(mealsLocal = [], mealsDrive = [], delLocal = [], delDrive = []) {
+            const mergedDeletions = yhdistaPoistetutAteriat(delLocal, delDrive);
+            const deletedMap = new Map();
+            mergedDeletions.forEach(d => {
+                deletedMap.set(d.id, d.deletedAt);
+                if (d.time !== undefined) {
+                    deletedMap.set(`sig:${d.time}_${d.c}_${d.p}_${d.f}`, d.deletedAt);
                 }
             });
 
-            merged.sort((a, b) => (a.time || "00:00").localeCompare(b.time || "00:00"));
+            const mergedMealsMap = new Map();
+            let localAddedOrChanged = false;
+            let driveAddedOrChanged = false;
 
-            return { mergedMeals: merged, addedFromB };
+            function mealSig(m) {
+                return `sig:${m.time || ''}_${m.c || 0}_${m.p || 0}_${m.f || 0}`;
+            }
+
+            function isTombstoned(m) {
+                if (m.id && deletedMap.has(m.id)) {
+                    const delTime = deletedMap.get(m.id);
+                    const mealTime = m.updatedAt || m.createdAt || "";
+                    if (delTime >= mealTime) return true;
+                }
+                const sig = mealSig(m);
+                if (deletedMap.has(sig)) {
+                    const delTime = deletedMap.get(sig);
+                    const mealTime = m.updatedAt || m.createdAt || "";
+                    if (delTime >= mealTime) return true;
+                }
+                return false;
+            }
+
+            mealsLocal.forEach(m => {
+                if (isTombstoned(m)) {
+                    localAddedOrChanged = true;
+                    return;
+                }
+                const key = m.id || mealSig(m);
+                mergedMealsMap.set(key, { meal: { ...m }, source: 'local' });
+            });
+
+            mealsDrive.forEach(m => {
+                if (isTombstoned(m)) {
+                    driveAddedOrChanged = true;
+                    return;
+                }
+                const key = m.id || mealSig(m);
+                if (mergedMealsMap.has(key)) {
+                    const existing = mergedMealsMap.get(key);
+                    const timeLocal = existing.meal.updatedAt || existing.meal.createdAt || "";
+                    const timeDrive = m.updatedAt || m.createdAt || "";
+                    if (timeDrive > timeLocal) {
+                        mergedMealsMap.set(key, { meal: { ...m }, source: 'drive' });
+                        localAddedOrChanged = true;
+                    } else if (timeLocal > timeDrive) {
+                        driveAddedOrChanged = true;
+                    }
+                } else {
+                    mergedMealsMap.set(key, { meal: { ...m }, source: 'drive' });
+                    localAddedOrChanged = true;
+                }
+            });
+
+            mealsLocal.forEach(m => {
+                const key = m.id || mealSig(m);
+                const hasInDrive = mealsDrive.some(dm => (dm.id && dm.id === m.id) || mealSig(dm) === mealSig(m));
+                if (!hasInDrive) {
+                    driveAddedOrChanged = true;
+                }
+            });
+
+            const mergedMeals = Array.from(mergedMealsMap.values()).map(x => x.meal);
+            mergedMeals.sort((a, b) => (a.time || "00:00").localeCompare(b.time || "00:00"));
+
+            return {
+                mergedMeals,
+                mergedDeletions,
+                localAddedOrChanged,
+                driveAddedOrChanged
+            };
         }
 
         function yhdistaVarmuuskopioData(localPayload, drivePayload) {
-            if (!drivePayload || typeof drivePayload !== 'object') {
-                return { mergedPayload: localPayload, localUpdated: false, driveUpdated: true };
-            }
-            if (!localPayload || typeof localPayload !== 'object') {
-                return { mergedPayload: drivePayload, localUpdated: true, driveUpdated: false };
-            }
+            const reportLocal = validoiJaKorjaaDatanKoherenssi(localPayload, 'local');
+            const reportDrive = validoiJaKorjaaDatanKoherenssi(drivePayload, 'drive');
 
-            const localDB = localPayload.historyDB || {};
-            const driveDB = drivePayload.historyDB || {};
+            const validLocal = reportLocal.sanitizedPayload;
+            const validDrive = reportDrive.sanitizedPayload;
 
-            const localExportedAt = localPayload.exportedAt || "";
-            const driveExportedAt = drivePayload.exportedAt || "";
+            const localDB = validLocal.historyDB;
+            const driveDB = validDrive.historyDB;
 
-            const allDateKeys = new Set([...Object.keys(localDB), ...Object.keys(driveDB)]);
+            const localExportedAt = validLocal.exportedAt || "";
+            const driveExportedAt = validDrive.exportedAt || "";
+
+            const allDateKeys = Array.from(new Set([...Object.keys(localDB), ...Object.keys(driveDB)])).sort();
 
             const mergedDB = {};
             let localUpdated = false;
@@ -3510,84 +3908,157 @@
                     mergedDB[dateStr] = JSON.parse(JSON.stringify(driveDay));
                     localUpdated = true;
                 } else {
-                    const timeLocal = localDay.updatedAt || localExportedAt || "";
-                    const timeDrive = driveDay.updatedAt || driveExportedAt || "";
+                    const localClearedAt = localDay.clearedAt || "";
+                    const driveClearedAt = driveDay.clearedAt || "";
+                    const localUpdatedAt = localDay.updatedAt || "";
+                    const driveUpdatedAt = driveDay.updatedAt || "";
 
-                    if (timeLocal > timeDrive) {
+                    if (localClearedAt && localClearedAt > driveUpdatedAt) {
                         mergedDB[dateStr] = JSON.parse(JSON.stringify(localDay));
                         driveUpdated = true;
-                    } else if (timeDrive > timeLocal) {
+                        return;
+                    }
+                    if (driveClearedAt && driveClearedAt > localUpdatedAt) {
                         mergedDB[dateStr] = JSON.parse(JSON.stringify(driveDay));
                         localUpdated = true;
-                    } else {
-                        const strLocal = JSON.stringify(localDay.meals || []);
-                        const strDrive = JSON.stringify(driveDay.meals || []);
-                        if (strLocal === strDrive) {
-                            mergedDB[dateStr] = JSON.parse(JSON.stringify(localDay));
-                        } else {
-                            const mealsA = localDay.meals || [];
-                            const mealsB = driveDay.meals || [];
-
-                            const mergeAtoB = mergeMealsArrays(mealsA, mealsB);
-                            const mergeBtoA = mergeMealsArrays(mealsB, mealsA);
-
-                            if (mergeAtoB.addedFromB > 0) localUpdated = true;
-                            if (mergeBtoA.addedFromB > 0) driveUpdated = true;
-
-                            const finalMeals = mergeAtoB.mergedMeals;
-                            let totalC = 0, totalP = 0, totalF = 0;
-                            finalMeals.forEach(m => {
-                                totalC += Number(m.c) || 0;
-                                totalP += Number(m.p) || 0;
-                                totalF += Number(m.f) || 0;
-                            });
-
-                            const mergedCalc = { ...(driveDay.calculated || {}), ...(localDay.calculated || {}) };
-
-                            mergedDB[dateStr] = {
-                                macros: { carbs: totalC, protein: totalP, fat: totalF },
-                                meals: finalMeals,
-                                calculated: Object.keys(mergedCalc).length > 0 ? mergedCalc : null,
-                                updatedAt: localDay.updatedAt || driveDay.updatedAt || new Date().toISOString()
-                            };
-                        }
+                        return;
                     }
+
+                    const mealRes = yhdistaPaivanAteriat(
+                        localDay.meals || [],
+                        driveDay.meals || [],
+                        localDay.deletedMealIds || [],
+                        driveDay.deletedMealIds || []
+                    );
+
+                    if (mealRes.localAddedOrChanged) localUpdated = true;
+                    if (mealRes.driveAddedOrChanged) driveUpdated = true;
+
+                    const finalMeals = mealRes.mergedMeals;
+                    let totC = 0, totP = 0, totF = 0;
+                    finalMeals.forEach(m => {
+                        totC += m.c;
+                        totP += m.p;
+                        totF += m.f;
+                    });
+
+                    const localCalc = localDay.calculated || {};
+                    const driveCalc = driveDay.calculated || {};
+
+                    let chosenWeight = null;
+                    let chosenWeightUpdatedAt = null;
+
+                    const localW = parseFloat(localCalc.weight);
+                    const driveW = parseFloat(driveCalc.weight);
+                    const localWTime = localCalc.weightUpdatedAt || localDay.updatedAt || "";
+                    const driveWTime = driveCalc.weightUpdatedAt || driveDay.updatedAt || "";
+
+                    const validLW = (!isNaN(localW) && localW >= 25 && localW <= 350) ? localW : null;
+                    const validDW = (!isNaN(driveW) && driveW >= 25 && driveW <= 350) ? driveW : null;
+
+                    if (validLW && validDW) {
+                        if (localWTime >= driveWTime) {
+                            chosenWeight = validLW;
+                            chosenWeightUpdatedAt = localWTime;
+                            if (localW !== driveW) driveUpdated = true;
+                        } else {
+                            chosenWeight = validDW;
+                            chosenWeightUpdatedAt = driveWTime;
+                            if (localW !== driveW) localUpdated = true;
+                        }
+                    } else if (validLW) {
+                        chosenWeight = validLW;
+                        chosenWeightUpdatedAt = localWTime;
+                        driveUpdated = true;
+                    } else if (validDW) {
+                        chosenWeight = validDW;
+                        chosenWeightUpdatedAt = driveWTime;
+                        localUpdated = true;
+                    }
+
+                    const computedKcal = Math.round((totC * 4) + (totP * 4) + (totF * 9));
+                    const baseCalc = (localWTime >= driveWTime) ? { ...driveCalc, ...localCalc } : { ...localCalc, ...driveCalc };
+
+                    const finalCalc = {
+                        ...baseCalc,
+                        weight: chosenWeight,
+                        weightUpdatedAt: chosenWeightUpdatedAt || new Date().toISOString(),
+                        consumedKcal: computedKcal
+                    };
+
+                    const newestDayTime = [localUpdatedAt, driveUpdatedAt, new Date().toISOString()].sort().pop();
+
+                    mergedDB[dateStr] = {
+                        macros: { carbs: Math.round(totC * 10) / 10, protein: Math.round(totP * 10) / 10, fat: Math.round(totF * 10) / 10 },
+                        meals: finalMeals,
+                        calculated: finalCalc,
+                        deletedMealIds: mealRes.mergedDeletions,
+                        updatedAt: newestDayTime
+                    };
                 }
             });
 
-            const localParams = localPayload.userParams || {};
-            const driveParams = drivePayload.userParams || {};
-            const strLocalParams = JSON.stringify(localParams);
-            const strDriveParams = JSON.stringify(driveParams);
+            const localParams = validLocal.userParams || {};
+            const driveParams = validDrive.userParams || {};
+
+            const localPW = parseFloat(localParams.weight);
+            const drivePW = parseFloat(driveParams.weight);
+            const validLPW = (!isNaN(localPW) && localPW >= 25 && localPW <= 350) ? localPW : null;
+            const validDPW = (!isNaN(drivePW) && drivePW >= 25 && drivePW <= 350) ? drivePW : null;
+
+            const localPWTime = localParams.weightUpdatedAt || localParams.paramsUpdatedAt || localExportedAt || "";
+            const drivePWTime = driveParams.weightUpdatedAt || driveParams.paramsUpdatedAt || driveExportedAt || "";
+
+            const historyWeightCandidate = haeUusinPainoHistoriasta(mergedDB);
+
+            const weightCandidates = [];
+            if (validLPW) weightCandidates.push({ weight: validLPW, time: localPWTime, source: 'localParams' });
+            if (validDPW) weightCandidates.push({ weight: validDPW, time: drivePWTime, source: 'driveParams' });
+            if (historyWeightCandidate) weightCandidates.push({ weight: historyWeightCandidate.weight, time: historyWeightCandidate.time, source: 'history' });
+
+            weightCandidates.sort((a, b) => (b.time || "").localeCompare(a.time || ""));
+            const bestWeight = weightCandidates.length > 0 ? weightCandidates[0] : null;
+
             let mergedParams;
-            
-            if (strLocalParams !== strDriveParams) {
-                if (localExportedAt > driveExportedAt) {
-                    mergedParams = { ...driveParams, ...localParams };
-                    driveUpdated = true;
-                } else {
-                    mergedParams = { ...localParams, ...driveParams };
-                    localUpdated = true;
-                }
+            if (localExportedAt >= driveExportedAt) {
+                mergedParams = { ...driveParams, ...localParams };
+                if (JSON.stringify(localParams) !== JSON.stringify(driveParams)) driveUpdated = true;
             } else {
-                mergedParams = { ...localParams };
+                mergedParams = { ...localParams, ...driveParams };
+                if (JSON.stringify(localParams) !== JSON.stringify(driveParams)) localUpdated = true;
             }
 
-            const mergedPayload = {
+            if (bestWeight) {
+                if (mergedParams.weight !== bestWeight.weight) {
+                    mergedParams.weight = bestWeight.weight;
+                    mergedParams.weightUpdatedAt = bestWeight.time;
+                    if (bestWeight.source === 'localParams' || bestWeight.source === 'history') driveUpdated = true;
+                    if (bestWeight.source === 'driveParams') localUpdated = true;
+                }
+            }
+
+            const newestExported = [localExportedAt, driveExportedAt, new Date().toISOString()].sort().pop();
+
+            const mergedPayloadCandidate = {
                 app: "metabolic_calculator_v20",
                 version: "1.0",
-                exportedAt: (localExportedAt >= driveExportedAt ? localExportedAt : driveExportedAt) || new Date().toISOString(),
-                lang: localPayload.lang || drivePayload.lang || 'fi',
+                exportedAt: newestExported,
+                lang: validLocal.lang || validDrive.lang || 'fi',
                 userParams: mergedParams,
                 historyDB: mergedDB
             };
 
+            const finalCheck = validoiJaKorjaaDatanKoherenssi(mergedPayloadCandidate, 'merged');
+
             return {
-                mergedPayload,
+                mergedPayload: finalCheck.sanitizedPayload,
                 localUpdated,
-                driveUpdated
+                driveUpdated,
+                coherenceReport: finalCheck
             };
         }
+
+        window.yhdistaVarmuuskopioData = yhdistaVarmuuskopioData;
 
         async function kirjoitaPayloadDriveen(payload, token, folderId, existing) {
             const jsonStr = JSON.stringify(payload, null, 2);
@@ -3647,6 +4118,7 @@
 
                 const localPayload = window.haeVarmuuskopioPayload ? window.haeVarmuuskopioPayload() : {};
                 let payloadToSave = localPayload;
+                let lastCoherenceReport = null;
 
                 if (existing) {
                     try {
@@ -3655,8 +4127,9 @@
                         });
                         if (fetchRes.ok) {
                             const driveData = await fetchRes.json();
-                            const { mergedPayload, localUpdated } = yhdistaVarmuuskopioData(localPayload, driveData);
+                            const { mergedPayload, localUpdated, coherenceReport } = yhdistaVarmuuskopioData(localPayload, driveData);
                             payloadToSave = mergedPayload;
+                            lastCoherenceReport = coherenceReport;
                             if (localUpdated && window.palautaVarmuuskopioPayload) {
                                 window.palautaVarmuuskopioPayload(mergedPayload);
                             }
@@ -3664,13 +4137,17 @@
                     } catch (mergeErr) {
                         console.warn('Drive read before save notice:', mergeErr);
                     }
+                } else {
+                    const check = validoiJaKorjaaDatanKoherenssi(localPayload, 'local');
+                    payloadToSave = check.sanitizedPayload;
+                    lastCoherenceReport = check;
                 }
 
                 const res = await kirjoitaPayloadDriveen(payloadToSave, token, folderId, existing);
                 if (!res.ok) throw new Error(`Drive save status ${res.status}`);
 
                 const nowStr = new Date().toLocaleTimeString(lang === 'en' ? 'en-US' : 'fi-FI', { hour: '2-digit', minute: '2-digit' });
-                setDriveStatusUI('success', lang === 'en' ? `🟢 Synced to Google Drive (${nowStr})` : `🟢 Synkronoitu Google Driveen (${nowStr})`);
+                setDriveStatusUI('success', lang === 'en' ? `🟢 Synced to Google Drive (${nowStr})` : `🟢 Synkronoitu Google Driveen (${nowStr})`, lastCoherenceReport);
                 return true;
             } catch (err) {
                 if (err?.message === 'NON_INTERACTIVE_EXPIRED') {
@@ -3712,7 +4189,7 @@
                 const driveData = await res.json();
 
                 const localPayload = window.haeVarmuuskopioPayload ? window.haeVarmuuskopioPayload() : {};
-                const { mergedPayload, localUpdated, driveUpdated } = yhdistaVarmuuskopioData(localPayload, driveData);
+                const { mergedPayload, localUpdated, driveUpdated, coherenceReport } = yhdistaVarmuuskopioData(localPayload, driveData);
 
                 if (window.palautaVarmuuskopioPayload) {
                     window.palautaVarmuuskopioPayload(mergedPayload);
@@ -3723,8 +4200,11 @@
                 }
 
                 const nowStr = new Date().toLocaleTimeString(lang === 'en' ? 'en-US' : 'fi-FI', { hour: '2-digit', minute: '2-digit' });
-                setDriveStatusUI('success', lang === 'en' ? `🟢 Synced with Google Drive (${nowStr})` : `🟢 Synkronoitu Google Driven kanssa (${nowStr})`);
-                alert(lang === 'en' ? 'Data merged and synchronized successfully with Google Drive!' : 'Tiedot yhdistetty ja synkronoitu onnistuneesti Google Driven kanssa!');
+                setDriveStatusUI('success', lang === 'en' ? `🟢 Synced with Google Drive (${nowStr})` : `🟢 Synkronoitu Google Driven kanssa (${nowStr})`, coherenceReport);
+                const infoMsg = (lang === 'en')
+                    ? `Data synchronized with Google Drive!\n${coherenceReport.summary}`
+                    : `Tiedot synkronoitu Google Driven kanssa!\n${coherenceReport.summary}`;
+                alert(infoMsg);
             } catch (err) {
                 console.error('Drive fetch error:', err);
                 setDriveStatusUI('error', lang === 'en' ? '❌ Drive load failed: ' + err.message : '❌ Lataus Drivestä epäonnistui: ' + err.message);
@@ -3754,7 +4234,7 @@
                     });
                     if (res.ok) {
                         const driveData = await res.json();
-                        const { mergedPayload, localUpdated, driveUpdated } = yhdistaVarmuuskopioData(localPayload, driveData);
+                        const { mergedPayload, localUpdated, driveUpdated, coherenceReport } = yhdistaVarmuuskopioData(localPayload, driveData);
 
                         if (localUpdated && window.palautaVarmuuskopioPayload) {
                             window.palautaVarmuuskopioPayload(mergedPayload);
@@ -3766,7 +4246,7 @@
 
                         const lang = document.getElementById('langSelect')?.value || 'fi';
                         const nowStr = new Date().toLocaleTimeString(lang === 'en' ? 'en-US' : 'fi-FI', { hour: '2-digit', minute: '2-digit' });
-                        setDriveStatusUI('success', lang === 'en' ? `🟢 Synced with Google Drive (${nowStr})` : `🟢 Synkronoitu Google Driven kanssa (${nowStr})`);
+                        setDriveStatusUI('success', lang === 'en' ? `🟢 Synced with Google Drive (${nowStr})` : `🟢 Synkronoitu Google Driven kanssa (${nowStr})`, coherenceReport);
                     }
                 } else {
                     isSyncingToDrive = false;
