@@ -166,7 +166,7 @@
     <div class="top-controls-box" style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;">
         <div></div>
         <div style="display: flex; justify-content: center;">
-            <div id="headerDriveBadge" style="font-size: 11px; color: #888; background: #000; border: 1px solid #333; padding: 5px 10px; border-radius: 4px; display: flex; align-items: center; gap: 6px; cursor: pointer;" onclick="toggleOptionsPanel();">
+            <div id="headerDriveBadge" style="font-size: 11px; color: #888; background: #000; border: 1px solid #333; padding: 5px 10px; border-radius: 4px; display: flex; align-items: center; gap: 6px; cursor: pointer;" onclick="handleHeaderDriveBadgeClick();">
                 ☁️ Drive: <span id="headerDriveStatusText">Ei kirjauduttu</span>
             </div>
         </div>
@@ -254,6 +254,7 @@
                 <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px;">
                     <button class="btn-backup" style="background:#004488; border-color:#00aaff; color:#fff;" onclick="synkkaaGoogleDriveManuaalisesti()" data-i18n="syncNowBtn">🔄 SYNKRONOI NYT</button>
                     <button class="btn-backup" style="background:#003344; border-color:#00ffff; color:#00ffff;" onclick="lataaGoogleDrivesta()" data-i18n="loadFromDriveBtn">📥 LATAA DRIVESTÄ</button>
+                    <button class="btn-backup" style="background:#222233; border-color:#8888aa; color:#ddddff;" onclick="vaihdaGoogleTilia()" data-i18n="switchAccountBtn">🔄 VAIHDA TILIÄ</button>
                     <button class="btn-backup" style="background:#440000; border-color:#ff4444; color:#ffaaaa;" onclick="kirjauduUlosGoogle()" data-i18n="logoutBtn">🚪 KIRJAUDU ULOS</button>
                 </div>
             </div>
@@ -537,6 +538,7 @@
                 signInWithGoogle: "Kirjaudu sisään Googlella",
                 syncNowBtn: "🔄 SYNKRONOI NYT",
                 loadFromDriveBtn: "📥 LATAA DRIVESTÄ",
+                switchAccountBtn: "🔄 VAIHDA TILIÄ",
                 logoutBtn: "🚪 KIRJAUDU ULOS",
                 masterResetDesc: "Tyhjennä laskurin koko muisti (kaikki tallennetut päivät ja profiilitiedot).",
                 masterResetBtn: "⚠️ NOLLAA KAIKKI TIEDOT (MASTER RESET)",
@@ -704,6 +706,7 @@
                 signInWithGoogle: "Sign in with Google",
                 syncNowBtn: "🔄 SYNC NOW",
                 loadFromDriveBtn: "📥 FETCH FROM DRIVE",
+                switchAccountBtn: "🔄 SWITCH ACCOUNT",
                 logoutBtn: "🚪 LOG OUT",
                 masterResetDesc: "Clear all calculator memory (all saved days and profile data).",
                 masterResetBtn: "⚠️ MASTER RESET (CLEAR ALL DATA)",
@@ -1172,22 +1175,26 @@
 
             const actSelect = document.getElementById('activityLevel');
             if (actSelect) {
+                const prevAct = actSelect.value;
                 actSelect.options[0].text = t.act1;
                 actSelect.options[1].text = t.act2;
                 actSelect.options[2].text = t.act3;
                 actSelect.options[3].text = t.act4;
                 actSelect.options[4].text = t.act5;
                 actSelect.options[5].text = t.act6;
+                if (prevAct) actSelect.value = prevAct;
             }
 
             const stratSelect = document.getElementById('strategyGoal');
             if (stratSelect) {
+                const prevStrat = stratSelect.value;
                 stratSelect.options[0].text = t.strat1;
                 stratSelect.options[1].text = t.strat2;
                 stratSelect.options[2].text = t.strat3;
                 stratSelect.options[3].text = t.strat4;
                 stratSelect.options[4].text = t.strat5;
                 stratSelect.options[5].text = t.strat6;
+                if (prevStrat) stratSelect.value = prevStrat;
             }
 
             if (isDemoMode) {
@@ -1863,28 +1870,64 @@
             const weightChanged = (oldParams.weight !== undefined && oldParams.weight !== null && oldParams.weight !== newWeight);
             const weightUpdatedAt = (weightChanged || !oldParams.weightUpdatedAt) ? nowIso : oldParams.weightUpdatedAt;
 
+            const newAct = document.getElementById('activityLevel')?.value || "1.25";
+            const actChanged = (oldParams.activityLevel !== undefined && oldParams.activityLevel !== null && String(oldParams.activityLevel) !== String(newAct));
+            const activityLevelUpdatedAt = (actChanged || !oldParams.activityLevelUpdatedAt) ? nowIso : oldParams.activityLevelUpdatedAt;
+
+            const newStrat = document.getElementById('strategyGoal')?.value || "lose_1pct";
+            const newDelta = document.getElementById('customCalorieDelta')?.value || "-500";
+            const stratChanged = (oldParams.strategyGoal !== undefined && oldParams.strategyGoal !== null && oldParams.strategyGoal !== newStrat) ||
+                                 (oldParams.customCalorieDelta !== undefined && oldParams.customCalorieDelta !== null && String(oldParams.customCalorieDelta) !== String(newDelta));
+            const strategyGoalUpdatedAt = (stratChanged || !oldParams.strategyGoalUpdatedAt) ? nowIso : oldParams.strategyGoalUpdatedAt;
+
+            const genderVal = document.getElementById('gender')?.value || 'male';
+            const ageVal = document.getElementById('age')?.value || '45';
+            const heightVal = getMetricVal('height');
+            const waistVal = getMetricVal('waist');
+            const neckVal = getMetricVal('neck');
+            const hipVal = getMetricVal('hip');
+            const bfMethodVal = document.getElementById('bfMethod')?.value || 'army2023';
+            const bodyFatVal = bfInput?.value || '';
+            const manualOverrideVal = bfInput?.dataset.manualOverride === 'true' ? 'true' : '';
+
+            const anyChanged = weightChanged || actChanged || stratChanged ||
+                (oldParams.gender !== genderVal) ||
+                (oldParams.age !== ageVal) ||
+                (oldParams.height !== heightVal) ||
+                (oldParams.waist !== waistVal) ||
+                (oldParams.neck !== neckVal) ||
+                (oldParams.hip !== hipVal) ||
+                (oldParams.bfMethod !== bfMethodVal) ||
+                (oldParams.bodyFat !== bodyFatVal) ||
+                (oldParams.bodyFatManualOverride !== manualOverrideVal);
+
+            const paramsUpdatedAt = (anyChanged || !oldParams.paramsUpdatedAt) ? nowIso : oldParams.paramsUpdatedAt;
+
             const params = {
                 _v: 2,
-                gender: document.getElementById('gender').value,
-                age: document.getElementById('age').value,
-                height: getMetricVal('height'),
+                gender: genderVal,
+                age: ageVal,
+                height: heightVal,
                 weight: newWeight,
                 weightUpdatedAt: weightUpdatedAt,
-                paramsUpdatedAt: nowIso,
-                waist: getMetricVal('waist'),
-                neck: getMetricVal('neck'),
-                hip: getMetricVal('hip'),
-                bfMethod: document.getElementById('bfMethod')?.value || 'army2023',
-                bodyFat: bfInput?.value || '',
-                bodyFatManualOverride: bfInput?.dataset.manualOverride === 'true' ? 'true' : '',
-                activityLevel: document.getElementById('activityLevel').value,
-                strategyGoal: document.getElementById('strategyGoal').value,
-                customCalorieDelta: document.getElementById('customCalorieDelta').value
+                paramsUpdatedAt: paramsUpdatedAt,
+                waist: waistVal,
+                neck: neckVal,
+                hip: hipVal,
+                bfMethod: bfMethodVal,
+                bodyFat: bodyFatVal,
+                bodyFatManualOverride: manualOverrideVal,
+                activityLevel: newAct,
+                activityLevelUpdatedAt: activityLevelUpdatedAt,
+                strategyGoal: newStrat,
+                strategyGoalUpdatedAt: strategyGoalUpdatedAt,
+                customCalorieDelta: newDelta
             };
-            const oldParamsStr = localStorage.getItem('metabolic_v20_userParams');
+
             const newParamsStr = JSON.stringify(params);
+            const isInitialSave = !oldParamsRaw;
             
-            if (oldParamsStr !== newParamsStr) {
+            if (anyChanged || isInitialSave) {
                 localStorage.setItem('metabolic_v20_userParams', newParamsStr);
                 localStorage.setItem('metabolic_v20_lastUpdate', nowIso);
 
@@ -1903,31 +1946,45 @@
         function lataaKayttajaParametrit() {
             const saved = localStorage.getItem('metabolic_v20_userParams');
             if (saved) {
-                const p = JSON.parse(saved);
-                ['gender','age','bfMethod','activityLevel','strategyGoal','customCalorieDelta'].forEach(k => {
-                    if (p[k] !== undefined && document.getElementById(k)) {
-                        if (k === 'bfMethod' && (p[k] === 'deurenberg' || p[k] === 'navy')) {
-                            document.getElementById(k).value = 'army2023';
-                        } else {
-                            document.getElementById(k).value = p[k];
+                try {
+                    const p = JSON.parse(saved);
+                    ['gender','age','bfMethod','strategyGoal','customCalorieDelta'].forEach(k => {
+                        if (p[k] !== undefined && document.getElementById(k)) {
+                            if (k === 'bfMethod' && (p[k] === 'deurenberg' || p[k] === 'navy')) {
+                                document.getElementById(k).value = 'army2023';
+                            } else {
+                                document.getElementById(k).value = p[k];
+                            }
                         }
+                    });
+
+                    if (p.activityLevel !== undefined && document.getElementById('activityLevel')) {
+                        let actStr = String(p.activityLevel).trim();
+                        if (actStr === "1.20") actStr = "1.2";
+                        if (actStr === "1.90") actStr = "1.9";
+                        document.getElementById('activityLevel').value = actStr;
                     }
-                });
-                ['height','weight','waist','neck','hip'].forEach(k => {
-                    if (p[k] !== undefined && document.getElementById(k)) {
-                        setMetricValToInput(k, p[k]);
+
+                    ['height','weight','waist','neck','hip'].forEach(k => {
+                        if (p[k] !== undefined && document.getElementById(k)) {
+                            setMetricValToInput(k, p[k]);
+                        }
+                    });
+
+                    const bfInput = document.getElementById('bodyFat');
+                    const isStaleFlawedValue = (p.bodyFat === '36.7' && !p.bfMethod);
+                    if (bfInput && (p.bfMethod === 'manual' || p.bodyFatManualOverride === 'true') && !isStaleFlawedValue) {
+                        bfInput.dataset.manualOverride = 'true';
+                        bfInput.value = p.bodyFat || '';
+                    } else if (bfInput && isStaleFlawedValue) {
+                        bfInput.dataset.manualOverride = '';
+                        bfInput.value = '';
                     }
-                });
-                const bfInput = document.getElementById('bodyFat');
-                const isStaleFlawedValue = (p.bodyFat === '36.7' && !p.bfMethod);
-                if (bfInput && (p.bfMethod === 'manual' || p.bodyFatManualOverride === 'true') && !isStaleFlawedValue) {
-                    bfInput.dataset.manualOverride = 'true';
-                    bfInput.value = p.bodyFat || '';
-                } else if (bfInput && isStaleFlawedValue) {
-                    bfInput.dataset.manualOverride = '';
-                    bfInput.value = '';
+                } catch (e) {
+                    console.warn('Virhe käyttäjäparametrien latauksessa:', e);
                 }
             }
+            tarkistaCustomTavoite();
             paivitaLaskettuRasvaprosenttiKenttaan();
         }
 
@@ -3015,6 +3072,16 @@
                 ? (JSON.parse(localStorage.getItem('metabolic_v20_userParams')) || {})
                 : JSON.parse(localStorage.getItem('metabolic_v20_userParams') || '{}');
 
+            if (!realUserParams.activityLevel && document.getElementById('activityLevel')) {
+                realUserParams.activityLevel = document.getElementById('activityLevel').value || "1.25";
+            }
+            if (!realUserParams.strategyGoal && document.getElementById('strategyGoal')) {
+                realUserParams.strategyGoal = document.getElementById('strategyGoal').value || "lose_1pct";
+            }
+            if (!realUserParams.customCalorieDelta && document.getElementById('customCalorieDelta')) {
+                realUserParams.customCalorieDelta = document.getElementById('customCalorieDelta').value || "-500";
+            }
+
             const payload = {
                 app: "metabolic_calculator_v20",
                 version: "1.0",
@@ -3138,10 +3205,30 @@
         let cachedAccessToken = null;
         let currentUser = null;
         let driveFileSyncTimeout = null;
+        let tokenRenewalTimeout = null;
 
         const DRIVE_FOLDER_NAME = 'Metabolic Calculator Backups';
         const DRIVE_FILE_NAME = 'metabolic_calculator_backup.json';
         const DEFAULT_CLIENT_ID = '859528638907-30p83takq9j1a1k44urmd5oq9jbbuep8.apps.googleusercontent.com';
+
+        function scheduleTokenRenewal(expiresInSeconds) {
+            if (tokenRenewalTimeout) {
+                clearTimeout(tokenRenewalTimeout);
+                tokenRenewalTimeout = null;
+            }
+            // Renew ~5 minutes before expiration, or after 30s if expiring very soon
+            const delayMs = Math.max(30000, (expiresInSeconds - 300) * 1000);
+            tokenRenewalTimeout = setTimeout(async () => {
+                const isLoggedIn = localStorage.getItem('metabolic_drive_logged_in') === 'true';
+                if (!isLoggedIn) return;
+                const email = (currentUser && currentUser.email) || localStorage.getItem('metabolic_drive_user_email') || '';
+                try {
+                    await requestGisToken({ prompt: 'none', hint: email, silent: true });
+                } catch (e) {
+                    console.log('Silent token renewal paused (gesture required):', e?.message || e);
+                }
+            }, delayMs);
+        }
 
         function saveDriveSession(token, userObj, expiresInSeconds = 3599) {
             if (token) cachedAccessToken = token;
@@ -3157,19 +3244,31 @@
                     email: currentUser.email || '',
                     photoURL: currentUser.photoURL || ''
                 }));
+                if (currentUser.email) {
+                    localStorage.setItem('metabolic_drive_user_email', currentUser.email);
+                }
                 localStorage.setItem('metabolic_drive_logged_in', 'true');
             } catch (e) {
                 console.warn('Storage save notice:', e);
+            }
+
+            if (expiresInSeconds > 0) {
+                scheduleTokenRenewal(expiresInSeconds);
             }
         }
 
         function clearDriveSession() {
             cachedAccessToken = null;
             currentUser = null;
+            if (tokenRenewalTimeout) {
+                clearTimeout(tokenRenewalTimeout);
+                tokenRenewalTimeout = null;
+            }
             try {
                 localStorage.removeItem('metabolic_drive_token');
                 localStorage.removeItem('metabolic_drive_token_expires');
                 localStorage.removeItem('metabolic_drive_user');
+                localStorage.removeItem('metabolic_drive_user_email');
                 localStorage.removeItem('metabolic_drive_logged_in');
             } catch (e) {}
         }
@@ -3182,19 +3281,84 @@
                 const token = localStorage.getItem('metabolic_drive_token');
                 const expiresAt = parseInt(localStorage.getItem('metabolic_drive_token_expires') || '0', 10);
                 const savedUserStr = localStorage.getItem('metabolic_drive_user');
-                const savedUser = savedUserStr ? JSON.parse(savedUserStr) : { displayName: 'Google Drive User', email: '' };
+                const savedEmail = localStorage.getItem('metabolic_drive_user_email') || '';
+
+                let savedUser = null;
+                if (savedUserStr) {
+                    try { savedUser = JSON.parse(savedUserStr); } catch (e) {}
+                }
+                if (!savedUser) {
+                    savedUser = { displayName: savedEmail || 'Google Drive User', email: savedEmail, photoURL: '' };
+                }
 
                 currentUser = savedUser;
                 updateUIForUser(currentUser);
 
                 if (token && expiresAt > (Date.now() + 60000)) {
                     cachedAccessToken = token;
+                    const remainingSec = Math.round((expiresAt - Date.now()) / 1000);
+                    scheduleTokenRenewal(remainingSec);
                     return true;
                 }
             } catch (e) {
                 console.warn('Session load notice:', e);
             }
             return false;
+        }
+
+        async function fetchGoogleUserProfile(token) {
+            if (!token) return null;
+            try {
+                const res = await fetch('https://www.googleapis.com/drive/v3/about?fields=user', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.user && (data.user.emailAddress || data.user.displayName)) {
+                        return {
+                            displayName: data.user.displayName || data.user.emailAddress || 'Google Drive User',
+                            email: data.user.emailAddress || '',
+                            photoURL: data.user.photoLink || ''
+                        };
+                    }
+                }
+            } catch (e) {}
+
+            try {
+                const res2 = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res2.ok) {
+                    const data2 = await res2.json();
+                    if (data2 && (data2.email || data2.name)) {
+                        return {
+                            displayName: data2.name || data2.email || 'Google Drive User',
+                            email: data2.email || '',
+                            photoURL: data2.picture || ''
+                        };
+                    }
+                }
+            } catch (e) {}
+
+            return null;
+        }
+
+        async function applyGoogleTokenAndFetchProfile(token, expiresInSec = 3599) {
+            const savedEmail = (currentUser && currentUser.email) || localStorage.getItem('metabolic_drive_user_email') || '';
+            const tempUser = currentUser || { displayName: savedEmail || 'Google Drive User', email: savedEmail, photoURL: '' };
+            saveDriveSession(token, tempUser, expiresInSec);
+            updateUIForUser(tempUser);
+
+            const profile = await fetchGoogleUserProfile(token);
+            if (profile && (profile.email || profile.displayName)) {
+                currentUser = {
+                    displayName: profile.displayName || profile.email || 'Google Drive User',
+                    email: profile.email || savedEmail,
+                    photoURL: profile.photoURL || ''
+                };
+                saveDriveSession(token, currentUser, expiresInSec);
+                updateUIForUser(currentUser);
+            }
         }
 
         function showPopupBlockedNotice() {
@@ -3221,27 +3385,44 @@
             }
         }
 
-        function requestGisToken(promptMode = 'select_account') {
+        function requestGisToken(options = {}) {
             return new Promise((resolve, reject) => {
                 if (!gisTokenClient) {
                     return reject(new Error('Google Identity Services client not initialized'));
                 }
+
+                const opts = (typeof options === 'string') ? { prompt: options } : (options || {});
+                const isSilent = !!opts.silent;
+                const userEmail = opts.hint || (currentUser && currentUser.email) || localStorage.getItem('metabolic_drive_user_email') || '';
+                const promptMode = opts.prompt !== undefined ? opts.prompt : '';
+
                 let settled = false;
+                let timeoutId = null;
                 const prevCallback = gisTokenClient.callback;
                 const prevErrorCallback = gisTokenClient.error_callback;
 
                 const cleanup = () => {
+                    if (timeoutId) clearTimeout(timeoutId);
                     gisTokenClient.callback = prevCallback;
                     gisTokenClient.error_callback = prevErrorCallback;
                 };
 
-                gisTokenClient.callback = (res) => {
+                if (isSilent) {
+                    timeoutId = setTimeout(() => {
+                        if (settled) return;
+                        settled = true;
+                        cleanup();
+                        reject(new Error('SILENT_REFRESH_TIMEOUT'));
+                    }, 8000);
+                }
+
+                gisTokenClient.callback = async (res) => {
                     if (settled) return;
                     settled = true;
                     cleanup();
                     if (res && res.access_token) {
                         const expiresSec = res.expires_in ? parseInt(res.expires_in, 10) : 3599;
-                        saveDriveSession(res.access_token, currentUser || { displayName: 'Google Drive User', email: '' }, expiresSec);
+                        await applyGoogleTokenAndFetchProfile(res.access_token, expiresSec);
                         resolve(res.access_token);
                     } else {
                         reject(new Error(res?.error_description || res?.error || 'Kirjautuminen peruutettiin'));
@@ -3252,6 +3433,10 @@
                     if (settled) return;
                     settled = true;
                     cleanup();
+                    if (isSilent) {
+                        reject(new Error('SILENT_REQUEST_FAILED'));
+                        return;
+                    }
                     console.warn('GIS request error_callback:', err);
                     const isBlocked = (err && (err.type === 'popup_failed_to_open' || (err.message && err.message.includes('popup'))));
                     if (isBlocked) {
@@ -3265,7 +3450,14 @@
                 };
 
                 try {
-                    gisTokenClient.requestAccessToken({ prompt: promptMode });
+                    const reqConfig = {};
+                    if (promptMode !== undefined) {
+                        reqConfig.prompt = promptMode;
+                    }
+                    if (userEmail) {
+                        reqConfig.hint = userEmail;
+                    }
+                    gisTokenClient.requestAccessToken(reqConfig);
                 } catch (e) {
                     settled = true;
                     cleanup();
@@ -3290,8 +3482,7 @@
                         }
                         if (tokenResponse.access_token) {
                             const expiresSec = tokenResponse.expires_in ? parseInt(tokenResponse.expires_in, 10) : 3599;
-                            saveDriveSession(tokenResponse.access_token, currentUser || { displayName: 'Google Drive User', email: '' }, expiresSec);
-                            updateUIForUser(currentUser);
+                            await applyGoogleTokenAndFetchProfile(tokenResponse.access_token, expiresSec);
                             hidePopupBlockedNotice();
                             await synkkaaOnSignIn();
                         }
@@ -3345,13 +3536,40 @@
 
             // Restore saved session on page load
             const hasValidToken = loadSavedDriveSession();
+            const isLoggedIn = localStorage.getItem('metabolic_drive_logged_in') === 'true';
+
             if (hasValidToken) {
-                synkkaaOnSignIn();
-            } else if (localStorage.getItem('metabolic_drive_logged_in') === 'true') {
-                // Was logged in previously, but session expired.
-                // Do NOT call unprompted popup requests on page load!
+                await synkkaaOnSignIn();
+            } else if (isLoggedIn) {
                 const lang = document.getElementById('langSelect')?.value || 'fi';
-                setDriveStatusUI('warning', lang === 'en' ? '⚠️ Session expired. Click "Sync Now" to renew.' : '⚠️ Yhteys vanhentunut. Napsauta "Synkronoi nyt" uudistaaksesi.');
+                const savedEmail = (currentUser && currentUser.email) || localStorage.getItem('metabolic_drive_user_email') || '';
+                
+                setDriveStatusUI('loading', lang === 'en' ? '🔄 Connecting to Google Drive...' : '🔄 Yhdistetään Google Driveen...');
+
+                let silentSuccess = false;
+                try {
+                    let retries = 0;
+                    while (!gisTokenClient && retries < 10) {
+                        await new Promise(r => setTimeout(r, 200));
+                        retries++;
+                    }
+                    if (gisTokenClient) {
+                        const token = await requestGisToken({ prompt: 'none', hint: savedEmail, silent: true });
+                        if (token) {
+                            silentSuccess = true;
+                            await synkkaaOnSignIn();
+                            return;
+                        }
+                    }
+                } catch (silentErr) {
+                    console.log('Silent reconnection on startup notice:', silentErr?.message || silentErr);
+                }
+
+                if (!silentSuccess) {
+                    setDriveStatusUI('warning', lang === 'en' 
+                        ? '⚠️ Session paused. Click "Sync Now" to reconnect.' 
+                        : '⚠️ Istunto tauolla. Napsauta "Synkronoi nyt" jatkaaksesi.');
+                }
             }
 
             // Show new tab button and Brave notice if in an iframe or if Brave is detected
@@ -3372,9 +3590,9 @@
 
                     if (gisTokenClient) {
                         try {
-                            const token = await requestGisToken('select_account');
+                            const savedEmail = (currentUser && currentUser.email) || localStorage.getItem('metabolic_drive_user_email') || '';
+                            const token = await requestGisToken({ prompt: '', hint: savedEmail });
                             if (token) {
-                                updateUIForUser(currentUser);
                                 hidePopupBlockedNotice();
                                 await synkkaaOnSignIn();
                                 return;
@@ -3417,6 +3635,18 @@
                     avatar.style.display = 'none';
                 }
             }
+
+            const headerText = document.getElementById('headerDriveStatusText');
+            const headerBadge = document.getElementById('headerDriveBadge');
+            const lang = document.getElementById('langSelect')?.value || 'fi';
+            if (headerText && (!lastDriveSyncTime || headerText.textContent === 'Ei kirjauduttu' || headerText.textContent === 'Not connected')) {
+                headerText.textContent = lang === 'en' ? 'Connected' : 'Yhdistetty';
+                if (headerBadge) {
+                    headerBadge.style.borderColor = '#0088ff';
+                    headerBadge.style.color = '#00ffff';
+                    headerBadge.title = user.email ? `${user.displayName || 'Google'} (${user.email})` : '';
+                }
+            }
         }
 
         let lastDriveSyncTime = null;
@@ -3449,9 +3679,34 @@
             let coherenceText = '';
             if (coherenceReport && coherenceReport.daysCount !== undefined) {
                 const wStr = coherenceReport.latestWeight ? `${coherenceReport.latestWeight} kg` : '-';
+                const actStr = coherenceReport.actLevel ? `${coherenceReport.actLevel}` : '';
+                const stratMap = {
+                    'lose_1pct': '1%/vko',
+                    'lose_075pct': '0.75%/vko',
+                    'lose_05pct': '0.5%/vko',
+                    'lose_025pct': '0.25%/vko',
+                    'maintain': 'ylläpito',
+                    'custom': 'mukautettu'
+                };
+                const stratMapEn = {
+                    'lose_1pct': '1%/wk',
+                    'lose_075pct': '0.75%/wk',
+                    'lose_05pct': '0.5%/wk',
+                    'lose_025pct': '0.25%/wk',
+                    'maintain': 'maintain',
+                    'custom': 'custom'
+                };
+                const stratStr = (lang === 'en')
+                    ? (stratMapEn[coherenceReport.stratGoal] || coherenceReport.stratGoal || '')
+                    : (stratMap[coherenceReport.stratGoal] || coherenceReport.stratGoal || '');
+
+                const extraInfo = (actStr || stratStr) 
+                    ? ` • ${lang === 'en' ? 'Act' : 'Akt'}: ${actStr || '-'}, ${lang === 'en' ? 'Goal' : 'Tavoite'}: ${stratStr || '-'}`
+                    : '';
+
                 coherenceText = (lang === 'en')
-                    ? `Data coherent: ${coherenceReport.daysCount} days, ${coherenceReport.mealsCount} meals, latest wt: ${wStr}`
-                    : `Data koherentti: ${coherenceReport.daysCount} pv, ${coherenceReport.mealsCount} ateriaa, uusin paino: ${wStr}`;
+                    ? `Data coherent: ${coherenceReport.daysCount} days, ${coherenceReport.mealsCount} meals, latest wt: ${wStr}${extraInfo}`
+                    : `Data koherentti: ${coherenceReport.daysCount} pv, ${coherenceReport.mealsCount} ateriaa, uusin paino: ${wStr}${extraInfo}`;
             }
 
             if (statusEl) {
@@ -3485,11 +3740,16 @@
                 }
             } else if (type === 'warning') {
                 if (statusEl) statusEl.style.color = '#ffaa00';
-                if (headerText) headerText.textContent = lang === 'en' ? '⚠️ Connect Drive' : '⚠️ Yhdistä Drive';
+                const isLoggedIn = localStorage.getItem('metabolic_drive_logged_in') === 'true';
+                if (headerText) {
+                    headerText.textContent = isLoggedIn 
+                        ? (lang === 'en' ? '⚠️ Reconnect' : '⚠️ Jatka istuntoa')
+                        : (lang === 'en' ? '⚠️ Connect Drive' : '⚠️ Yhdistä Drive');
+                }
                 if (headerBadge) {
                     headerBadge.style.borderColor = '#ffaa00';
                     headerBadge.style.color = '#ffaa00';
-                    headerBadge.title = '';
+                    headerBadge.title = lang === 'en' ? 'Session paused. Click to reconnect.' : 'Istunto tauolla. Napsauta jatkaaksesi yhteyttä.';
                 }
             } else {
                 if (statusEl) statusEl.style.color = '#ff4444';
@@ -3508,18 +3768,29 @@
                 return cachedAccessToken;
             }
 
-            // If non-interactive (timer / auto-sync), NEVER trigger an automatic popup window
+            const savedEmail = (currentUser && currentUser.email) || localStorage.getItem('metabolic_drive_user_email') || '';
+
+            // If non-interactive (timer / auto-sync), first attempt silent refresh
             if (!interactive) {
+                if (gisTokenClient && savedEmail) {
+                    try {
+                        const token = await requestGisToken({ prompt: 'none', hint: savedEmail, silent: true });
+                        if (token) return token;
+                    } catch (silentErr) {
+                        // Silent refresh requires interactive gesture
+                    }
+                }
                 const lang = document.getElementById('langSelect')?.value || 'fi';
                 setDriveStatusUI('warning', lang === 'en' 
-                    ? '⚠️ Session expired. Click "Sync Now" to renew.' 
-                    : '⚠️ Yhteys vanhentunut. Napsauta "Synkronoi nyt" uudistaaksesi.');
+                    ? '⚠️ Session paused. Click "Sync Now" to renew.' 
+                    : '⚠️ Istunto tauolla. Napsauta "Synkronoi nyt" jatkaaksesi.');
                 throw new Error('NON_INTERACTIVE_EXPIRED');
             }
 
-            // Interactive request: triggered by user click (Sync Now, Load From Drive)
+            // Interactive request: triggered by user click (Sync Now, Load From Drive, etc.)
+            // Passing prompt: '' and hint: savedEmail preserves user's account without asking to choose again
             try {
-                const token = await requestGisToken('select_account');
+                const token = await requestGisToken({ prompt: '', hint: savedEmail });
                 return token;
             } catch (err) {
                 if (err.message === 'POPUP_BLOCKED') {
@@ -3753,6 +4024,59 @@
                 sanitized.userParams.weight = validUserW;
             }
 
+            // Sanitize & validate activityLevel
+            const validActLevels = ["1.2", "1.25", "1.375", "1.55", "1.725", "1.9"];
+            const rawAct = sanitized.userParams.activityLevel;
+            if (rawAct !== undefined && rawAct !== null && String(rawAct).trim() !== "") {
+                let strAct = String(rawAct).trim();
+                if (strAct === "1.20") strAct = "1.2";
+                if (strAct === "1.90") strAct = "1.9";
+                if (validActLevels.includes(strAct)) {
+                    sanitized.userParams.activityLevel = strAct;
+                } else {
+                    const numAct = parseFloat(strAct);
+                    if (!isNaN(numAct) && numAct >= 1.0 && numAct <= 2.5) {
+                        sanitized.userParams.activityLevel = String(numAct);
+                    } else {
+                        sanitized.userParams.activityLevel = "1.25";
+                        fixedIssuesCount++;
+                    }
+                }
+            } else if (source === 'local' && document.getElementById('activityLevel')) {
+                sanitized.userParams.activityLevel = document.getElementById('activityLevel').value || "1.25";
+            } else {
+                sanitized.userParams.activityLevel = "1.25";
+            }
+
+            // Sanitize & validate strategyGoal
+            const validGoals = ["lose_1pct", "lose_075pct", "lose_05pct", "lose_025pct", "maintain", "custom"];
+            const rawStrat = sanitized.userParams.strategyGoal;
+            if (rawStrat !== undefined && rawStrat !== null && String(rawStrat).trim() !== "") {
+                const strStrat = String(rawStrat).trim();
+                if (validGoals.includes(strStrat)) {
+                    sanitized.userParams.strategyGoal = strStrat;
+                } else {
+                    sanitized.userParams.strategyGoal = "lose_1pct";
+                    fixedIssuesCount++;
+                }
+            } else if (source === 'local' && document.getElementById('strategyGoal')) {
+                sanitized.userParams.strategyGoal = document.getElementById('strategyGoal').value || "lose_1pct";
+            } else {
+                sanitized.userParams.strategyGoal = "lose_1pct";
+            }
+
+            // Sanitize & validate customCalorieDelta
+            if (sanitized.userParams.customCalorieDelta !== undefined && sanitized.userParams.customCalorieDelta !== null) {
+                const deltaNum = parseFloat(sanitized.userParams.customCalorieDelta);
+                sanitized.userParams.customCalorieDelta = (!isNaN(deltaNum) && deltaNum >= -3000 && deltaNum <= 3000)
+                    ? String(Math.round(deltaNum))
+                    : "-500";
+            } else if (source === 'local' && document.getElementById('customCalorieDelta')) {
+                sanitized.userParams.customCalorieDelta = document.getElementById('customCalorieDelta').value || "-500";
+            } else {
+                sanitized.userParams.customCalorieDelta = "-500";
+            }
+
             return {
                 ok: true,
                 sanitizedPayload: sanitized,
@@ -3760,7 +4084,9 @@
                 daysCount,
                 mealsCount,
                 latestWeight,
-                summary: `Koherenssitarkistus (${source}): ${daysCount} päivää, ${mealsCount} ateriaa, uusin paino ${latestWeight || '-'} kg (${fixedIssuesCount} korjausta)`
+                actLevel: sanitized.userParams.activityLevel,
+                stratGoal: sanitized.userParams.strategyGoal,
+                summary: `Koherenssitarkistus (${source}): ${daysCount} päivää, ${mealsCount} ateriaa, uusin paino ${latestWeight || '-'} kg, akt: ${sanitized.userParams.activityLevel}, tav: ${sanitized.userParams.strategyGoal} (${fixedIssuesCount} korjausta)`
             };
         }
 
@@ -3876,6 +4202,107 @@
                 localAddedOrChanged,
                 driveAddedOrChanged
             };
+        }
+
+        function sovitaAktiivisuustaso(localParams, driveParams, localExportedAt, driveExportedAt) {
+            const validLevels = ["1.2", "1.25", "1.375", "1.55", "1.725", "1.9"];
+            const norm = v => {
+                if (v === undefined || v === null) return null;
+                let s = String(v).trim();
+                if (s === "1.20") s = "1.2";
+                if (s === "1.90") s = "1.9";
+                if (validLevels.includes(s)) return s;
+                const f = parseFloat(s);
+                return (!isNaN(f) && f >= 1.0 && f <= 2.5) ? String(f) : null;
+            };
+
+            const lVal = norm(localParams.activityLevel);
+            const dVal = norm(driveParams.activityLevel);
+
+            const lTime = localParams.activityLevelUpdatedAt || (lVal && lVal !== "1.25" ? (localParams.paramsUpdatedAt || localExportedAt) : "") || "";
+            const dTime = driveParams.activityLevelUpdatedAt || (dVal && dVal !== "1.25" ? (driveParams.paramsUpdatedAt || driveExportedAt) : "") || "";
+
+            if (!lVal && !dVal) return { value: "1.25", time: "", source: 'default' };
+            if (lVal && !dVal) return { value: lVal, time: lTime, source: 'local' };
+            if (!lVal && dVal) return { value: dVal, time: dTime, source: 'drive' };
+
+            if (lVal === dVal) {
+                const newestTime = (lTime >= dTime) ? lTime : dTime;
+                return { value: lVal, time: newestTime, source: 'both' };
+            }
+
+            if (lTime && dTime) {
+                if (lTime > dTime) return { value: lVal, time: lTime, source: 'local' };
+                if (dTime > lTime) return { value: dVal, time: dTime, source: 'drive' };
+            } else if (lTime && !dTime) {
+                return { value: lVal, time: lTime, source: 'local' };
+            } else if (!lTime && dTime) {
+                return { value: dVal, time: dTime, source: 'drive' };
+            }
+
+            const lIsCustom = (lVal !== "1.25");
+            const dIsCustom = (dVal !== "1.25");
+            if (lIsCustom && !dIsCustom) return { value: lVal, time: lTime || localExportedAt, source: 'local' };
+            if (!lIsCustom && dIsCustom) return { value: dVal, time: dTime || driveExportedAt, source: 'drive' };
+
+            if ((localExportedAt || "") >= (driveExportedAt || "")) {
+                return { value: lVal, time: localExportedAt, source: 'local' };
+            } else {
+                return { value: dVal, time: driveExportedAt, source: 'drive' };
+            }
+        }
+
+        function sovitaStrateginenTavoite(localParams, driveParams, localExportedAt, driveExportedAt) {
+            const validGoals = ["lose_1pct", "lose_075pct", "lose_05pct", "lose_025pct", "maintain", "custom"];
+            const normGoal = g => {
+                if (!g) return null;
+                const s = String(g).trim();
+                return validGoals.includes(s) ? s : null;
+            };
+            const normDelta = d => {
+                if (d === undefined || d === null) return "-500";
+                const num = parseFloat(d);
+                return (!isNaN(num) && num >= -3000 && num <= 3000) ? String(Math.round(num)) : "-500";
+            };
+
+            const lGoal = normGoal(localParams.strategyGoal);
+            const dGoal = normGoal(driveParams.strategyGoal);
+            const lDelta = normDelta(localParams.customCalorieDelta);
+            const dDelta = normDelta(driveParams.customCalorieDelta);
+
+            const lTime = localParams.strategyGoalUpdatedAt || (lGoal && lGoal !== "lose_1pct" ? (localParams.paramsUpdatedAt || localExportedAt) : "") || "";
+            const dTime = driveParams.strategyGoalUpdatedAt || (dGoal && dGoal !== "lose_1pct" ? (driveParams.paramsUpdatedAt || driveExportedAt) : "") || "";
+
+            if (!lGoal && !dGoal) return { strategy: "lose_1pct", customDelta: "-500", time: "", source: 'default' };
+            if (lGoal && !dGoal) return { strategy: lGoal, customDelta: lDelta, time: lTime, source: 'local' };
+            if (!lGoal && dGoal) return { strategy: dGoal, customDelta: dDelta, time: dTime, source: 'drive' };
+
+            const sameGoal = (lGoal === dGoal);
+            const sameDelta = (lDelta === dDelta);
+            if (sameGoal && (lGoal !== 'custom' || sameDelta)) {
+                const newestTime = (lTime >= dTime) ? lTime : dTime;
+                return { strategy: lGoal, customDelta: lDelta, time: newestTime, source: 'both' };
+            }
+
+            if (lTime && dTime) {
+                if (lTime > dTime) return { strategy: lGoal, customDelta: lDelta, time: lTime, source: 'local' };
+                if (dTime > lTime) return { strategy: dGoal, customDelta: dDelta, time: dTime, source: 'drive' };
+            } else if (lTime && !dTime) {
+                return { strategy: lGoal, customDelta: lDelta, time: lTime, source: 'local' };
+            } else if (!lTime && dTime) {
+                return { strategy: dGoal, customDelta: dDelta, time: dTime, source: 'drive' };
+            }
+
+            const lIsCustom = (lGoal !== "lose_1pct" || (lGoal === "custom" && lDelta !== "-500"));
+            const dIsCustom = (dGoal !== "lose_1pct" || (dGoal === "custom" && dDelta !== "-500"));
+            if (lIsCustom && !dIsCustom) return { strategy: lGoal, customDelta: lDelta, time: lTime || localExportedAt, source: 'local' };
+            if (!lIsCustom && dIsCustom) return { strategy: dGoal, customDelta: dDelta, time: dTime || driveExportedAt, source: 'drive' };
+
+            if ((localExportedAt || "") >= (driveExportedAt || "")) {
+                return { strategy: lGoal, customDelta: lDelta, time: localExportedAt, source: 'local' };
+            } else {
+                return { strategy: dGoal, customDelta: dDelta, time: driveExportedAt, source: 'drive' };
+            }
         }
 
         function yhdistaVarmuuskopioData(localPayload, drivePayload) {
@@ -4037,6 +4464,32 @@
                 }
             }
 
+            // Sovita aktiivisuustaso ja strateginen tavoite tarkalla kenttäkohtaisella logiikalla
+            const actResult = sovitaAktiivisuustaso(localParams, driveParams, localExportedAt, driveExportedAt);
+            if (mergedParams.activityLevel !== actResult.value) {
+                mergedParams.activityLevel = actResult.value;
+                mergedParams.activityLevelUpdatedAt = actResult.time;
+            } else if (actResult.time && !mergedParams.activityLevelUpdatedAt) {
+                mergedParams.activityLevelUpdatedAt = actResult.time;
+            }
+            if (localParams.activityLevel !== actResult.value) localUpdated = true;
+            if (driveParams.activityLevel !== actResult.value) driveUpdated = true;
+
+            const stratResult = sovitaStrateginenTavoite(localParams, driveParams, localExportedAt, driveExportedAt);
+            if (mergedParams.strategyGoal !== stratResult.strategy || mergedParams.customCalorieDelta !== stratResult.customDelta) {
+                mergedParams.strategyGoal = stratResult.strategy;
+                mergedParams.customCalorieDelta = stratResult.customDelta;
+                mergedParams.strategyGoalUpdatedAt = stratResult.time;
+            } else if (stratResult.time && !mergedParams.strategyGoalUpdatedAt) {
+                mergedParams.strategyGoalUpdatedAt = stratResult.time;
+            }
+            if (localParams.strategyGoal !== stratResult.strategy) localUpdated = true;
+            if (driveParams.strategyGoal !== stratResult.strategy) driveUpdated = true;
+            if (stratResult.strategy === 'custom') {
+                if (localParams.customCalorieDelta !== stratResult.customDelta) localUpdated = true;
+                if (driveParams.customCalorieDelta !== stratResult.customDelta) driveUpdated = true;
+            }
+
             const newestExported = [localExportedAt, driveExportedAt, new Date().toISOString()].sort().pop();
 
             const mergedPayloadCandidate = {
@@ -4058,6 +4511,8 @@
             };
         }
 
+        window.sovitaAktiivisuustaso = sovitaAktiivisuustaso;
+        window.sovitaStrateginenTavoite = sovitaStrateginenTavoite;
         window.yhdistaVarmuuskopioData = yhdistaVarmuuskopioData;
 
         async function kirjoitaPayloadDriveen(payload, token, folderId, existing) {
@@ -4145,6 +4600,13 @@
 
                 const res = await kirjoitaPayloadDriveen(payloadToSave, token, folderId, existing);
                 if (!res.ok) throw new Error(`Drive save status ${res.status}`);
+
+                if (payloadToSave.exportedAt) {
+                    localStorage.setItem('metabolic_v20_lastUpdate', payloadToSave.exportedAt);
+                }
+                if (payloadToSave.userParams) {
+                    localStorage.setItem('metabolic_v20_userParams', JSON.stringify(payloadToSave.userParams));
+                }
 
                 const nowStr = new Date().toLocaleTimeString(lang === 'en' ? 'en-US' : 'fi-FI', { hour: '2-digit', minute: '2-digit' });
                 setDriveStatusUI('success', lang === 'en' ? `🟢 Synced to Google Drive (${nowStr})` : `🟢 Synkronoitu Google Driveen (${nowStr})`, lastCoherenceReport);
@@ -4290,14 +4752,57 @@
             alert(lang === 'en' ? 'Logged out from Google Drive.' : 'Kirjauduttu ulos Google-tililtä.');
         }
 
+        async function vaihdaGoogleTilia() {
+            const lang = document.getElementById('langSelect')?.value || 'fi';
+            setDriveStatusUI('loading', lang === 'en' ? 'Choosing Google account...' : 'Valitaan Google-tiliä...');
+            try {
+                const token = await requestGisToken({ prompt: 'select_account' });
+                if (token) {
+                    hidePopupBlockedNotice();
+                    await synkkaaOnSignIn();
+                }
+            } catch (err) {
+                console.warn('Switch account notice:', err);
+                if (err?.message === 'POPUP_BLOCKED') {
+                    showPopupBlockedNotice();
+                }
+            }
+        }
+
+        async function handleHeaderDriveBadgeClick() {
+            const isLoggedIn = localStorage.getItem('metabolic_drive_logged_in') === 'true';
+            const tokenExpires = parseInt(localStorage.getItem('metabolic_drive_token_expires') || '0', 10);
+            const isTokenExpired = !cachedAccessToken || tokenExpires <= (Date.now() + 60000);
+
+            if (isLoggedIn && isTokenExpired) {
+                // Quick one-click reconnect and sync without opening settings
+                try {
+                    await tallennaGoogleDriveen(true);
+                    return;
+                } catch (e) {
+                    console.warn('Badge quick-sync notice:', e);
+                }
+            }
+
+            if (typeof window.toggleOptionsPanel === 'function') {
+                window.toggleOptionsPanel();
+            }
+        }
+
         window.synkkaaGoogleDriveManuaalisesti = function() {
             tallennaGoogleDriveen(true);
         };
         window.lataaGoogleDrivesta = lataaGoogleDrivesta;
         window.kirjauduUlosGoogle = kirjauduUlosGoogle;
+        window.vaihdaGoogleTilia = vaihdaGoogleTilia;
+        window.handleHeaderDriveBadgeClick = handleHeaderDriveBadgeClick;
         window.triggerAutoSyncToDrive = debouncedAutoSyncToDrive;
 
-        window.addEventListener('DOMContentLoaded', initGoogleDriveSync);
+        if (document.readyState === 'loading') {
+            window.addEventListener('DOMContentLoaded', initGoogleDriveSync);
+        } else {
+            initGoogleDriveSync();
+        }
 
         window.forceAppRefresh = function forceAppRefresh() {
             window.location.href = window.location.href.split('?')[0] + '?t=' + new Date().getTime();
