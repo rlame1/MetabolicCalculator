@@ -1,0 +1,6 @@
+{
+  "summary":  "Toteutussuunnitelma valittujen virheiden korjaamiseksi (toggleInfoPopup, autofagia- ja proteiini-infoelementit, kuvaajan kirjoitusvirhe ja käännösduplikaatit) sekä uuden valinnaisen tavoitepainon ja jäljellä olevan kaloritavoitteen lisäämiseksi kumulatiiviseen seurantaan ja synkronointiin.",
+  "updatedAt":  "2026-10-21T10:51:56.161915970Z",
+  "requestFeedback":  true,
+  "userFacing":  true
+}

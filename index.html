@@ -78,6 +78,9 @@
             line-height: 1.4;
             border-radius: 4px;
         }
+        .info-popup-panel.active {
+            display: block;
+        }
         
         /* Official Google Sign-in Button Styles */
         .gsi-material-button {
@@ -338,6 +341,11 @@
             <p><span class="result-title" data-i18n="cumEnergy">Nautittu kokonaisenergia:</span> <span id="cumEnergyTotal" class="alert-orange">0</span> kcal</p>
             <p><span id="cumDeficitTitle" class="result-title" data-i18n="cumDeficit">Kertynyt kalorisaldo:</span> <span id="cumDeficitTotal" style="font-weight:bold;">0</span> kcal (<span id="cumFatBurnedKg">0.00</span> <span id="cumFatBurnedUnit">kg</span> / <span id="cumFatBurnedLiters">0.00</span> <span id="cumFatBurnedLitersUnit">litraa rasvaa</span>)</p>
             <p style="font-size: 11px; color: #888; margin-top: -6px; margin-bottom: 10px;" data-i18n="cumSaldoExpl">(Plussalla [+] = Syöty yli kulutuksen, painoa tullut lisää | Negatiivinen [-] = Syöty alle kulutuksen, laihduttu)</p>
+            <div id="cumTargetWeightRow" style="display:none; margin: 10px 0 12px 0; padding: 10px 12px; background: rgba(0, 255, 0, 0.06); border: 1px dashed #00ff00; border-radius: 4px;">
+                <p style="margin: 0 0 4px 0;"><span class="result-title" data-i18n="cumTargetWeightTitle">🎯 Tavoitepaino:</span> <span id="cumTargetWeightVal" class="alert-green" style="font-weight:bold;">-</span> <span id="cumTargetWeightDiff" style="font-size: 12px; color: #ccc;"></span></p>
+                <p style="margin: 0;"><span id="cumCaloriesToBurnLabel" class="result-title" data-i18n="cumCaloriesToBurn">🔥 Kaloreita poltettavana tavoitepainoon:</span> <span id="cumCaloriesToBurnVal" class="alert-yellow" style="font-size: 15px; font-weight: bold;">0 kcal</span></p>
+                <p id="cumTargetWeightEst" style="font-size: 11px; color: #88cc88; margin: 4px 0 0 0; line-height: 1.4;"></p>
+            </div>
             <p><span class="result-title" data-i18n="cumMtor">Lihassuoja (mTOR) aktivoitu:</span> <span id="cumMtorDays" class="alert-yellow">0</span> päiviä</p>
             <p><span class="result-title" data-i18n="cumAutophagy">Aktiivinen autofagia (≥14 h paasto):</span> <span id="cumAutophagyDays" class="alert-green">0</span> päiviä</p>
             <p><span class="result-title" data-i18n="cumFatBurnAvg">Keskimääräinen rasvanpolttoaika (≤35 µIU/ml):</span> <span id="cumFatBurnAvgVal" class="alert-green" style="font-weight:bold;">00:00 / 0.0% vuorokaudesta</span></p>
@@ -403,7 +411,7 @@
             </select>
             
             <label data-i18n="strategyLabel">Strateginen tavoite / Viikkovauhti:</label>
-            <select id="strategyGoal" onchange="tarkistaCustomTavoite(); tallennaKayttajaParametrit(); paivitaLaskelmat();">
+            <select id="strategyGoal" onchange="tarkistaCustomTavoite(); tallennaKayttajaParametrit(); paivitaKumulatiivinenYhteenveto(); paivitaLaskelmat();">
                 <option value="lose_1pct" selected>Maksimaalinen 1% / viikko (Dynaaminen)</option>
                 <option value="lose_075pct">Kova 0,75% / viikko (Dynaaminen)</option>
                 <option value="lose_05pct">Ikääntyneet max 0,5% / viikko (Dynaaminen)</option>
@@ -414,8 +422,11 @@
 
             <div id="customGoalContainer" style="display:none;">
                 <label data-i18n="customDeltaLabel">Oma mukautettu kalorimuutos (kcal/pvä):</label>
-                <input type="number" id="customCalorieDelta" inputmode="decimal" value="-500" step="50"  placeholder="👉 SYÖTÄ VAJE (-) TAI YLITYS (+)" oninput="tallennaKayttajaParametrit(); paivitaLaskelmat();">
+                <input type="number" id="customCalorieDelta" inputmode="decimal" value="-500" step="50"  placeholder="👉 SYÖTÄ VAJE (-) TAI YLITYS (+)" oninput="tallennaKayttajaParametrit(); paivitaKumulatiivinenYhteenveto(); paivitaLaskelmat();">
             </div>
+
+            <label id="lblTargetWeight" data-i18n="targetWeightLabel">Tavoitepaino (kg) [Vapaaehtoinen]:</label>
+            <input type="number" id="targetWeight" inputmode="decimal" step="any" placeholder="👉 SYÖTÄ TAVOITEPAINO (KG) [VAPAAEHTOINEN]" oninput="paivitaMittaKentta(this); tallennaKayttajaParametrit(); paivitaKumulatiivinenYhteenveto(); paivitaLaskelmat();">
 
             <div style="margin-top: 15px; padding: 12px; background: rgba(0, 255, 0, 0.08); border: 1px solid #00ff00; border-radius: 6px;">
                 <p style="margin: 0;"><span class="result-title" style="color: #00ff00; font-weight: bold;" data-i18n="estExpenditureLabel">Arvioitu päivittäinen kulutus (TDEE):</span> <span id="estExpenditureVal" class="alert-green" style="font-size: 18px; font-weight: bold;">0</span> kcal/pvä</p>
@@ -478,11 +489,14 @@
             <h3 style="margin-top:20px;" data-i18n="mtorTitle">🛡️ PROTEIINI JA LIHASSUOJA (mTOR)</h3>
             <p><span class="result-title" data-i18n="mtorThresholdLabel">Kerta-aterian mTOR-kynnys:</span> <span id="resMtorG" class="alert-green" style="font-weight:bold;"></span></p>
             <p><span class="result-title" data-i18n="dailyProtLabel">Päivittäinen kokonaisproteiini:</span> <span id="resDailyProt" class="alert-green"></span></p>
-            <p><span class="result-title" data-i18n="protProtectionLabel">Lihasmassan suojaus:</span> <span id="resProtProtection" style="font-weight:bold;"></span></p>
+            <p><span class="result-title" data-i18n="protProtectionLabel">Lihasmassan suojaus:</span> <span id="resProtProtection" style="font-weight:bold;"></span> <span class="info-icon" onclick="toggleInfoPopup('proteinInfoBox')" title="Info">?</span></p>
+            <div id="proteinInfoBox" class="info-popup-panel" data-i18n="proteinInfoText">Riittävä proteiininsaanti ja maltillinen kalorivaje suojaavat lihaskudosta rasvanpudotuksen aikana.</div>
 
             <h3 style="margin-top:20px;" data-i18n="fastingTitle">🛡️ PAASTOIKKUNA</h3>
             <p><span class="result-title" data-i18n="eatingWindowLabel">Syömisikkunan kesto (tuntia):</span> <span id="resEatingWindow" style="font-weight:bold;"></span></p>
             <p><span class="result-title" data-i18n="fastingWindowLabel">Syömätön paastoikkuna (tuntia):</span> <span id="resFastingWindow" class="alert-green" style="font-weight:bold;"></span></p>
+            <p><span class="result-title" data-i18n="autophagyStatusLabel">Autofagian statusvaste:</span> <span id="resAutophagyStatus" style="font-weight:bold;"></span> <span class="info-icon" onclick="toggleInfoPopup('fastingInfoBox')" title="Info">?</span></p>
+            <div id="fastingInfoBox" class="info-popup-panel" data-i18n="fastingInfoText">Autofagia on elimistön luonnollinen solujen siivousmekanismi, joka käynnistyy tehostetusti yli 14 tunnin syömättömän paaston jälkeen.</div>
 
             <h3 style="margin-top:20px;" data-i18n="insulinTitle">🧬 PÄIVÄN INSULIINI- JA GLYKEEMINEN KUORMA</h3>
             <p><span class="result-title" data-i18n="fatBurnWindowLabel">Rasvanpolttoikkuna (≤35 µIU/ml):</span> <span id="resFatBurnWindow" style="font-size:15px; font-weight:bold;"></span> <span class="info-icon" onclick="toggleInfoPopup('insulinInfoBox')" title="Info">?</span></p>
@@ -525,10 +539,6 @@
                 privacyPolicyLink: "🔒 Tietosuojaseloste / Privacy Policy ↗",
                 demoBtnOn: "🎭 KÄYNNISTÄ ESITTELYTILA (DEMO)",
                 demoBtnOff: "❌ SULJE ESITTELYTILA (PALAA OMIIN)",
-                demoSelectLabel: "VALITSE DEMO-PÄIVÄ:",
-                demoDay1: "1: ARKI",
-                demoDay2: "2: PE (TV)",
-                demoDay3: "3: LA (HERKKU)",
                 backupTitle: "💾 DATAN VARMUUSKOPIOINTI JA TUONTI",
                 backupDesc: "Lataa kaikki tallennetut päivä- ja profiilitiedot talteen JSON-tiedostona tai palauta aiemmin varmuuskopioitu data.",
                 exportBackupBtn: "💾 LATAA VARMUUSKOPIO (EXPORT)",
@@ -598,6 +608,10 @@
                 strat5: "Pidä nykyinen paino",
                 strat6: "Mukautettu kalorimuutos (Vaje/Ylitys)",
                 customDeltaLabel: "Oma mukautettu kalorimuutos (kcal/pvä):",
+                targetWeightLabel: "Tavoitepaino (kg) [Vapaaehtoinen]:",
+                phTargetWeight: "👉 SYÖTÄ TAVOITEPAINO (KG) [VAPAAEHTOINEN]",
+                cumTargetWeightTitle: "🎯 Tavoitepaino:",
+                cumCaloriesToBurn: "🔥 Kaloreita poltettavana tavoitepainoon:",
                 secGoalTitle: "2. TAVOITE / KULUTUS",
                 estExpenditureLabel: "Arvioitu päivittäinen kulutus (TDEE):",
                 estExpenditureExpl: "(Perustuu rasvattomaan kehonmassaan ja valittuun aktiivisuuskertoimeen)",
@@ -766,6 +780,10 @@
                 strat5: "Maintain current weight",
                 strat6: "Custom calorie delta (Deficit/Surplus)",
                 customDeltaLabel: "Custom calorie change (kcal/day):",
+                targetWeightLabel: "Target Weight (kg) [Optional]:",
+                phTargetWeight: "👉 ENTER TARGET WEIGHT (KG) [OPTIONAL]",
+                cumTargetWeightTitle: "🎯 Target weight:",
+                cumCaloriesToBurn: "🔥 Calories left to burn to target weight:",
                 secGoalTitle: "2. GOAL / EXPENDITURE",
                 estExpenditureLabel: "Estimated daily expenditure (TDEE):",
                 estExpenditureExpl: "(Based on lean body mass and selected activity multiplier)",
@@ -883,7 +901,8 @@
             if (!el) return;
             const val = parseFloat(el.value);
             const id = el.id;
-            if (isNaN(val) || el.value.trim() === "" || val <= 0) {
+            const isWeightField = (id === 'weight' || id === 'targetWeight');
+            if (isNaN(val) || String(el.value).trim() === "" || val <= 0) {
                 delete el.dataset.exactMetric;
                 delete el.dataset.exactImperial;
                 return;
@@ -891,10 +910,10 @@
             const unit = document.getElementById('unitSelect')?.value || currentUnit || 'metric';
             if (unit === 'imperial') {
                 el.dataset.exactImperial = val;
-                el.dataset.exactMetric = (id === 'weight') ? (val / 2.20462) : (val * 2.54);
+                el.dataset.exactMetric = isWeightField ? (val / 2.20462) : (val * 2.54);
             } else {
                 el.dataset.exactMetric = val;
-                const rawImp = (id === 'weight') ? val * 2.20462 : val / 2.54;
+                const rawImp = isWeightField ? val * 2.20462 : val / 2.54;
                 el.dataset.exactImperial = Number(rawImp.toFixed(1));
             }
         }
@@ -904,6 +923,7 @@
             if (!el) return 0;
             const val = parseFloat(el.value);
             if (isNaN(val) || val <= 0) return 0;
+            const isWeightField = (id === 'weight' || id === 'targetWeight');
             
             const unit = document.getElementById('unitSelect')?.value || currentUnit || 'metric';
             if (unit === 'imperial') {
@@ -912,7 +932,7 @@
                 if (!isNaN(storedImp) && !isNaN(storedMet) && Math.abs(val - storedImp) < 0.001) {
                     return storedMet;
                 }
-                if (id === 'weight') return val / 2.20462;
+                if (isWeightField) return val / 2.20462;
                 if (['height', 'waist', 'neck', 'hip'].includes(id)) return val * 2.54;
             } else {
                 const storedMet = parseFloat(el.dataset.exactMetric);
@@ -926,6 +946,7 @@
         function setMetricValToInput(id, metricVal) {
             const el = document.getElementById(id);
             if (!el) return;
+            const isWeightField = (id === 'weight' || id === 'targetWeight');
             if (metricVal === null || metricVal === undefined || metricVal === "" || isNaN(metricVal) || metricVal <= 0) { 
                 el.value = ""; 
                 delete el.dataset.exactMetric;
@@ -935,7 +956,7 @@
             
             const unit = document.getElementById('unitSelect')?.value || currentUnit || 'metric';
             let finalVal;
-            const rawImp = (id === 'weight') ? metricVal * 2.20462 : metricVal / 2.54;
+            const rawImp = isWeightField ? metricVal * 2.20462 : metricVal / 2.54;
             if (unit === 'imperial') {
                 finalVal = Number(rawImp.toFixed(1));
             } else {
@@ -944,20 +965,21 @@
             
             el.dataset.exactMetric = metricVal;
             el.dataset.exactImperial = Number(rawImp.toFixed(1));
-            el.value = finalVal;
+            el.value = String(finalVal);
         }
 
         function switchUnits(newUnit) {
             if (!newUnit) return;
             const oldUnit = currentUnit || localStorage.getItem('metabolic_v20_units') || 'metric';
             
-            const ids = ['weight', 'height', 'waist', 'neck', 'hip'];
+            const ids = ['weight', 'targetWeight', 'height', 'waist', 'neck', 'hip'];
             
             ids.forEach(id => {
                 const el = document.getElementById(id);
                 if (!el) return;
+                const isWeightField = (id === 'weight' || id === 'targetWeight');
                 const val = parseFloat(el.value);
-                if (isNaN(val) || el.value.trim() === '') {
+                if (isNaN(val) || String(el.value).trim() === '') {
                     el.value = '';
                     delete el.dataset.exactMetric;
                     delete el.dataset.exactImperial;
@@ -971,7 +993,7 @@
                     if (!isNaN(storedImp) && !isNaN(storedMet) && Math.abs(val - storedImp) < 0.001) {
                         m = storedMet;
                     } else {
-                        m = (id === 'weight') ? val / 2.20462 : val * 2.54;
+                        m = isWeightField ? val / 2.20462 : val * 2.54;
                     }
                 } else {
                     const storedMet = parseFloat(el.dataset.exactMetric);
@@ -983,7 +1005,7 @@
                 }
 
                 if (newUnit === 'imperial') {
-                    const rawImp = (id === 'weight') ? m * 2.20462 : m / 2.54;
+                    const rawImp = isWeightField ? m * 2.20462 : m / 2.54;
                     const finalVal = Number(rawImp.toFixed(1));
                     el.dataset.exactMetric = m;
                     el.dataset.exactImperial = finalVal;
@@ -991,7 +1013,7 @@
                 } else {
                     const finalVal = Number.isInteger(m) ? m : Number(m.toFixed(1));
                     el.dataset.exactMetric = m;
-                    el.dataset.exactImperial = Number(((id === 'weight') ? m * 2.20462 : m / 2.54).toFixed(1));
+                    el.dataset.exactImperial = Number((isWeightField ? m * 2.20462 : m / 2.54).toFixed(1));
                     el.value = finalVal;
                 }
             });
@@ -1023,6 +1045,11 @@
             if(wL) wL.innerText = isEn ? (isImperial ? "Current Weight (lbs):" : "Current Weight (kg):") : (isImperial ? "Nykyinen Paino (lbs):" : "Nykyinen Paino (kg):");
             const wI = document.getElementById('weight');
             if(wI) wI.placeholder = isEn ? (isImperial ? "👉 ENTER DATA (WEIGHT LBS)" : "👉 ENTER DATA (WEIGHT KG)") : (isImperial ? "👉 SYÖTÄ TIETO (PAINO LBS)" : "👉 SYÖTÄ TIETO (PAINO KG)");
+
+            const twL = document.getElementById('lblTargetWeight');
+            if(twL) twL.innerText = isEn ? (isImperial ? "Target Weight (lbs) [Optional]:" : "Target Weight (kg) [Optional]:") : (isImperial ? "Tavoitepaino (lbs) [Vapaaehtoinen]:" : "Tavoitepaino (kg) [Vapaaehtoinen]:");
+            const twI = document.getElementById('targetWeight');
+            if(twI) twI.placeholder = isEn ? (isImperial ? "👉 ENTER TARGET WEIGHT (LBS) [OPTIONAL]" : "👉 ENTER TARGET WEIGHT (KG) [OPTIONAL]") : (isImperial ? "👉 SYÖTÄ TAVOITEPAINO (LBS) [VAPAAEHTOINEN]" : "👉 SYÖTÄ TAVOITEPAINO (KG) [VAPAAEHTOINEN]");
 
             const waistL = document.getElementById('lblWaist');
             if(waistL) waistL.innerText = isEn ? (isImperial ? "Waist circumference (in) [Optional]:" : "Waist circumference (cm) [Optional]:") : (isImperial ? "Vyötärön ympärys (in) [Vapaaehtoinen]:" : "Vyötärön ympärys (cm) [Vapaaehtoinen]:");
@@ -1213,6 +1240,14 @@
             panel.style.display = (panel.style.display === 'block') ? 'none' : 'block';
         }
 
+        function toggleInfoPopup(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.classList.toggle('active');
+            el.style.display = el.classList.contains('active') ? 'block' : 'none';
+        }
+        window.toggleInfoPopup = toggleInfoPopup;
+
         function getTodayStr() {
             const now = new Date();
             const y = now.getFullYear(), m = String(now.getMonth() + 1).padStart(2, '0'), d = String(now.getDate()).padStart(2, '0');
@@ -1373,6 +1408,7 @@
                 document.getElementById('age').value = "45";
                 setMetricValToInput('height', 180);
                 setMetricValToInput('weight', 110);
+                setMetricValToInput('targetWeight', 95);
                 setMetricValToInput('waist', 112);
                 setMetricValToInput('neck', 43);
                 setMetricValToInput('hip', 118); 
@@ -1507,12 +1543,14 @@
                 if (g === "female") {
                     setMetricValToInput('height', 170);
                     setMetricValToInput('weight', 100);
+                    setMetricValToInput('targetWeight', 85);
                     setMetricValToInput('waist', 104);
                     setMetricValToInput('neck', 38);
                     setMetricValToInput('hip', 118);
                 } else if (g === "male") {
                     setMetricValToInput('height', 180);
                     setMetricValToInput('weight', 110);
+                    setMetricValToInput('targetWeight', 95);
                     setMetricValToInput('waist', 112);
                     setMetricValToInput('neck', 43);
                     setMetricValToInput('hip', null);
@@ -1880,6 +1918,14 @@
                                  (oldParams.customCalorieDelta !== undefined && oldParams.customCalorieDelta !== null && String(oldParams.customCalorieDelta) !== String(newDelta));
             const strategyGoalUpdatedAt = (stratChanged || !oldParams.strategyGoalUpdatedAt) ? nowIso : oldParams.strategyGoalUpdatedAt;
 
+            const rawTargetWeight = getMetricVal('targetWeight');
+            const newTargetWeight = (rawTargetWeight && rawTargetWeight > 0) ? Math.round(rawTargetWeight * 10) / 10 : "";
+            const oldTargetWeight = (oldParams.targetWeight !== undefined && oldParams.targetWeight !== null && oldParams.targetWeight !== "" && Number(oldParams.targetWeight) > 0)
+                ? Math.round(Number(oldParams.targetWeight) * 10) / 10
+                : "";
+            const targetWeightChanged = String(oldTargetWeight) !== String(newTargetWeight);
+            const targetWeightUpdatedAt = (targetWeightChanged || (!oldParams.targetWeightUpdatedAt && newTargetWeight !== "")) ? nowIso : (oldParams.targetWeightUpdatedAt || "");
+
             const genderVal = document.getElementById('gender')?.value || 'male';
             const ageVal = document.getElementById('age')?.value || '45';
             const heightVal = getMetricVal('height');
@@ -1890,7 +1936,7 @@
             const bodyFatVal = bfInput?.value || '';
             const manualOverrideVal = bfInput?.dataset.manualOverride === 'true' ? 'true' : '';
 
-            const anyChanged = weightChanged || actChanged || stratChanged ||
+            const anyChanged = weightChanged || actChanged || stratChanged || targetWeightChanged ||
                 (oldParams.gender !== genderVal) ||
                 (oldParams.age !== ageVal) ||
                 (oldParams.height !== heightVal) ||
@@ -1910,6 +1956,8 @@
                 height: heightVal,
                 weight: newWeight,
                 weightUpdatedAt: weightUpdatedAt,
+                targetWeight: newTargetWeight,
+                targetWeightUpdatedAt: targetWeightUpdatedAt,
                 paramsUpdatedAt: paramsUpdatedAt,
                 waist: waistVal,
                 neck: neckVal,
@@ -1965,8 +2013,8 @@
                         document.getElementById('activityLevel').value = actStr;
                     }
 
-                    ['height','weight','waist','neck','hip'].forEach(k => {
-                        if (p[k] !== undefined && document.getElementById(k)) {
+                    ['height','weight','targetWeight','waist','neck','hip'].forEach(k => {
+                        if (document.getElementById(k)) {
                             setMetricValToInput(k, p[k]);
                         }
                     });
@@ -1983,6 +2031,8 @@
                 } catch (e) {
                     console.warn('Virhe käyttäjäparametrien latauksessa:', e);
                 }
+            } else {
+                setMetricValToInput('targetWeight', '');
             }
             tarkistaCustomTavoite();
             paivitaLaskettuRasvaprosenttiKenttaan();
@@ -2388,6 +2438,130 @@
                     cumFatBurnEl.innerText = lang === 'en' ? "00:00 / 0.0% of day" : "00:00 / 0.0% vuorokaudesta";
                 }
             }
+
+            // Tavoitepainon ja poltettavien kalorien seuranta
+            const targetRow = document.getElementById('cumTargetWeightRow');
+            if (targetRow) {
+                const targetW = getMetricVal('targetWeight') || 0;
+                let currentW = getMetricVal('weight') || 0;
+                if (!currentW && activeDateStr && historyDB[activeDateStr]?.calculated?.weight) {
+                    currentW = Number(historyDB[activeDateStr].calculated.weight) || 0;
+                }
+                if (!currentW && typeof window.haeUusinPainoHistoriasta === 'function') {
+                    const latestHistW = window.haeUusinPainoHistoriasta(historyDB);
+                    if (latestHistW && latestHistW.weight > 0) currentW = latestHistW.weight;
+                }
+
+                if (targetW > 0 && currentW > 0) {
+                    targetRow.style.display = 'block';
+                    const wUnitStr = isImperial ? 'lbs' : 'kg';
+                    const volUnitStr = isImperial ? (lang === 'en' ? 'quarts of fat' : 'kvartsia rasvaa') : (lang === 'en' ? 'liters of fat' : 'litraa rasvaa');
+                    const dispTargetW = isImperial ? (targetW * 2.20462).toFixed(1) : targetW.toFixed(1);
+                    const dispCurrentW = isImperial ? (currentW * 2.20462).toFixed(1) : currentW.toFixed(1);
+
+                    const diffKg = currentW - targetW;
+                    const absDiffKg = Math.abs(diffKg);
+                    const dispDiffW = isImperial ? (absDiffKg * 2.20462).toFixed(2) : absDiffKg.toFixed(2);
+                    const diffLiters = absDiffKg / 0.90;
+                    const dispDiffVol = (isImperial ? (diffLiters * 1.05669) : diffLiters).toFixed(2);
+
+                    const targetValEl = document.getElementById('cumTargetWeightVal');
+                    const targetDiffEl = document.getElementById('cumTargetWeightDiff');
+                    const burnLabelEl = document.getElementById('cumCaloriesToBurnLabel');
+                    const burnValEl = document.getElementById('cumCaloriesToBurnVal');
+                    const estEl = document.getElementById('cumTargetWeightEst');
+
+                    if (targetValEl) {
+                        targetValEl.innerText = `${dispTargetW} ${wUnitStr}`;
+                    }
+
+                    if (diffKg > 0.05) {
+                        const kcalToBurn = Math.round(diffKg * 7700);
+                        if (targetDiffEl) {
+                            targetDiffEl.innerText = lang === 'en'
+                                ? `(Current: ${dispCurrentW} ${wUnitStr} • To lose: -${dispDiffW} ${wUnitStr} / -${dispDiffVol} ${volUnitStr})`
+                                : `(Nykyinen: ${dispCurrentW} ${wUnitStr} • Pudotettavaa: -${dispDiffW} ${wUnitStr} / -${dispDiffVol} ${volUnitStr})`;
+                        }
+                        if (burnLabelEl) {
+                            burnLabelEl.innerText = lang === 'en'
+                                ? "🔥 Calories left to burn to target weight:"
+                                : "🔥 Kaloreita poltettavana tavoitepainoon:";
+                        }
+                        if (burnValEl) {
+                            burnValEl.innerText = `${kcalToBurn.toLocaleString(lang === 'en' ? 'en-US' : 'fi-FI')} kcal`;
+                            burnValEl.className = "alert-yellow";
+                        }
+
+                        if (estEl) {
+                            const strat = document.getElementById('strategyGoal')?.value || 'lose_1pct';
+                            let dailyDeficit = 0;
+                            if (strat === 'lose_1pct') dailyDeficit = (currentW * 0.01 * 7700) / 7;
+                            else if (strat === 'lose_075pct') dailyDeficit = (currentW * 0.0075 * 7700) / 7;
+                            else if (strat === 'lose_05pct') dailyDeficit = (currentW * 0.005 * 7700) / 7;
+                            else if (strat === 'lose_025pct') dailyDeficit = (currentW * 0.0025 * 7700) / 7;
+                            else if (strat === 'custom') {
+                                const d = parseFloat(document.getElementById('customCalorieDelta')?.value) || 0;
+                                dailyDeficit = -d;
+                            }
+
+                            const parts = [];
+                            if (totalCalorieSaldo < 0) {
+                                const netRemainingKcal = Math.max(0, Math.round(kcalToBurn + totalCalorieSaldo));
+                                const netRemainingKg = netRemainingKcal / 7700;
+                                const dispNetW = isImperial ? (netRemainingKg * 2.20462).toFixed(2) : netRemainingKg.toFixed(2);
+                                parts.push(lang === 'en'
+                                    ? `With accumulated period deficit (${Math.round(totalCalorieSaldo)} kcal): ${netRemainingKcal.toLocaleString('en-US')} kcal (${dispNetW} ${wUnitStr}) left`
+                                    : `Jakson kertynyt kalorisaldo (${Math.round(totalCalorieSaldo)} kcal) huomioiden: ${netRemainingKcal.toLocaleString('fi-FI')} kcal (${dispNetW} ${wUnitStr}) jäljellä`);
+                            }
+                            if (dailyDeficit > 0) {
+                                const estDays = Math.ceil(kcalToBurn / dailyDeficit);
+                                const estWeeks = (estDays / 7).toFixed(1);
+                                parts.push(lang === 'en'
+                                    ? `Est. time at selected pace (-${Math.round(dailyDeficit)} kcal/d): ~${estDays} days (${estWeeks} wk)`
+                                    : `Arvioitu kesto valitulla tavoitevauhdilla (-${Math.round(dailyDeficit)} kcal/pv): ~${estDays} pv (${estWeeks} vko)`);
+                            }
+                            estEl.innerText = parts.join(' • ');
+                        }
+                    } else if (diffKg < -0.05) {
+                        const kcalSurplusNeeded = Math.round(absDiffKg * 7700);
+                        if (targetDiffEl) {
+                            targetDiffEl.innerText = lang === 'en'
+                                ? `(Current: ${dispCurrentW} ${wUnitStr} • Difference to target: +${dispDiffW} ${wUnitStr})`
+                                : `(Nykyinen: ${dispCurrentW} ${wUnitStr} • Erotus tavoitepainoon: +${dispDiffW} ${wUnitStr})`;
+                        }
+                        if (burnLabelEl) {
+                            burnLabelEl.innerText = lang === 'en'
+                                ? "🔥 Calories left to burn to target weight:"
+                                : "🔥 Kaloreita poltettavana tavoitepainoon:";
+                        }
+                        if (burnValEl) {
+                            burnValEl.innerText = lang === 'en'
+                                ? `0 kcal (Below target weight by ${dispDiffW} ${wUnitStr} / +${kcalSurplusNeeded.toLocaleString('en-US')} kcal)`
+                                : `0 kcal (Tavoitepainon alapuolella ${dispDiffW} ${wUnitStr} / +${kcalSurplusNeeded.toLocaleString('fi-FI')} kcal)`;
+                            burnValEl.className = "alert-green";
+                        }
+                        if (estEl) estEl.innerText = "";
+                    } else {
+                        if (targetDiffEl) {
+                            targetDiffEl.innerText = lang === 'en'
+                                ? `(Current: ${dispCurrentW} ${wUnitStr} — Target weight achieved!)`
+                                : `(Nykyinen: ${dispCurrentW} ${wUnitStr} — Tavoitepaino saavutettu!)`;
+                        }
+                        if (burnLabelEl) {
+                            burnLabelEl.innerText = lang === 'en'
+                                ? "🔥 Calories left to burn to target weight:"
+                                : "🔥 Kaloreita poltettavana tavoitepainoon:";
+                        }
+                        if (burnValEl) {
+                            burnValEl.innerText = lang === 'en' ? "0 kcal (Target achieved! 🎉)" : "0 kcal (Tavoite saavutettu! 🎉)";
+                            burnValEl.className = "alert-green";
+                        }
+                        if (estEl) estEl.innerText = "";
+                    }
+                } else {
+                    targetRow.style.display = 'none';
+                }
+            }
         }
 
         function log10(val) { return Math.log(val) / Math.LN10; }
@@ -2600,11 +2774,15 @@
             const targetText = lang === 'en' ? 'Target' : 'Tavoite';
             const protEl = document.getElementById('resProtProtection');
             if (protEl) {
-                protEl.innerText = `${totalProt.toFixed(1)} g / ${proteinTarget.toFixed(1)} g (${targetText})`;
+                const tObj = translations[lang] || translations.fi;
+                const protMsg = (totalProt >= proteinTarget)
+                    ? ` — 🟢 ${tObj.protProtectedMsg || (lang === 'en' ? 'Muscle mass protected' : 'Lihasmassa suojattu')}`
+                    : ` — ⚠️ ${tObj.protIncreaseMsg || (lang === 'en' ? 'Increase protein intake' : 'Lisää proteiininsaantia')}`;
+                protEl.innerText = `${totalProt.toFixed(1)} g / ${proteinTarget.toFixed(1)} g (${targetText})${protMsg}`;
                 if (totalProt >= proteinTarget) {
                     protEl.style.color = '#00ff00';
                 } else {
-                    protEl.style.color = ''; // Neutraali jos ei pääse
+                    protEl.style.color = '#ffaa00';
                 }
             }
 
@@ -2995,7 +3173,7 @@
             ctx.stroke();
             ctx.setLineDash([]); 
             ctx.fillStyle = '#ff5555';
-            ctx.fillText(lang === 'en' ? 'THRESHOLD (35 uIU/ml)' : 'KYNNSYSTASO (35 uIU/ml)', W - 180, thresholdY - 4);
+            ctx.fillText(lang === 'en' ? 'THRESHOLD (35 uIU/ml)' : 'KYNNYSTASO (35 uIU/ml)', W - 180, thresholdY - 4);
 
             if (activeDateStr === getTodayStr()) {
                 const now = new Date();
@@ -3080,6 +3258,14 @@
             }
             if (!realUserParams.customCalorieDelta && document.getElementById('customCalorieDelta')) {
                 realUserParams.customCalorieDelta = document.getElementById('customCalorieDelta').value || "-500";
+            }
+            if (realUserParams.targetWeight === undefined) {
+                if (!isDemoMode && document.getElementById('targetWeight')) {
+                    const tw = getMetricVal('targetWeight');
+                    realUserParams.targetWeight = (tw && tw > 0) ? Math.round(tw * 10) / 10 : "";
+                } else {
+                    realUserParams.targetWeight = "";
+                }
             }
 
             const payload = {
@@ -4077,6 +4263,16 @@
                 sanitized.userParams.customCalorieDelta = "-500";
             }
 
+            // Sanitize & validate optional targetWeight
+            if (sanitized.userParams.targetWeight !== undefined && sanitized.userParams.targetWeight !== null && String(sanitized.userParams.targetWeight).trim() !== "") {
+                const twNum = parseFloat(sanitized.userParams.targetWeight);
+                sanitized.userParams.targetWeight = (!isNaN(twNum) && twNum >= 25 && twNum <= 350)
+                    ? Math.round(twNum * 10) / 10
+                    : "";
+            } else {
+                sanitized.userParams.targetWeight = "";
+            }
+
             return {
                 ok: true,
                 sanitizedPayload: sanitized,
@@ -4305,6 +4501,35 @@
             }
         }
 
+        function sovitaTavoitepaino(localParams, driveParams, localExportedAt, driveExportedAt) {
+            const normTW = v => {
+                if (v === undefined || v === null || String(v).trim() === "") return "";
+                const n = parseFloat(v);
+                return (!isNaN(n) && n >= 25 && n <= 350) ? Math.round(n * 10) / 10 : "";
+            };
+            const lTW = normTW(localParams.targetWeight);
+            const dTW = normTW(driveParams.targetWeight);
+            const lTime = localParams.targetWeightUpdatedAt || (lTW !== "" ? (localParams.paramsUpdatedAt || localExportedAt) : "") || "";
+            const dTime = driveParams.targetWeightUpdatedAt || (dTW !== "" ? (driveParams.paramsUpdatedAt || driveExportedAt) : "") || "";
+
+            if (lTW === "" && dTW === "") return { value: "", time: lTime >= dTime ? lTime : dTime, source: 'both' };
+            if (lTW === dTW) return { value: lTW, time: lTime >= dTime ? lTime : dTime, source: 'both' };
+
+            if (lTime && dTime) {
+                if (lTime >= dTime) return { value: lTW, time: lTime, source: 'local' };
+                return { value: dTW, time: dTime, source: 'drive' };
+            }
+            if (lTime && !dTime) return { value: lTW, time: lTime, source: 'local' };
+            if (!lTime && dTime) return { value: dTW, time: dTime, source: 'drive' };
+
+            if (lTW !== "" && dTW === "") return { value: lTW, time: localExportedAt, source: 'local' };
+            if (dTW !== "" && lTW === "") return { value: dTW, time: driveExportedAt, source: 'drive' };
+
+            return ((localExportedAt || "") >= (driveExportedAt || ""))
+                ? { value: lTW, time: localExportedAt, source: 'local' }
+                : { value: dTW, time: driveExportedAt, source: 'drive' };
+        }
+
         function yhdistaVarmuuskopioData(localPayload, drivePayload) {
             const reportLocal = validoiJaKorjaaDatanKoherenssi(localPayload, 'local');
             const reportDrive = validoiJaKorjaaDatanKoherenssi(drivePayload, 'drive');
@@ -4490,6 +4715,14 @@
                 if (driveParams.customCalorieDelta !== stratResult.customDelta) driveUpdated = true;
             }
 
+            const twResult = sovitaTavoitepaino(localParams, driveParams, localExportedAt, driveExportedAt);
+            mergedParams.targetWeight = twResult.value;
+            if (twResult.time) {
+                mergedParams.targetWeightUpdatedAt = twResult.time;
+            }
+            if (String(localParams.targetWeight || "") !== String(twResult.value || "")) localUpdated = true;
+            if (String(driveParams.targetWeight || "") !== String(twResult.value || "")) driveUpdated = true;
+
             const newestExported = [localExportedAt, driveExportedAt, new Date().toISOString()].sort().pop();
 
             const mergedPayloadCandidate = {
@@ -4513,6 +4746,7 @@
 
         window.sovitaAktiivisuustaso = sovitaAktiivisuustaso;
         window.sovitaStrateginenTavoite = sovitaStrateginenTavoite;
+        window.sovitaTavoitepaino = sovitaTavoitepaino;
         window.yhdistaVarmuuskopioData = yhdistaVarmuuskopioData;
 
         async function kirjoitaPayloadDriveen(payload, token, folderId, existing) {
