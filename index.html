@@ -385,7 +385,7 @@
                 <label id="lblBfMethod" style="color: #00ff00; font-weight: bold; font-size: 13px;" data-i18n="bfMethodLabel">Rasvaprosentin laskentamenetelmä:</label>
                 <select id="bfMethod" onchange="vaihdaRasvaprosenttiMenetelma(this.value); tallennaKayttajaParametrit(); paivitaKaikkienPaivienLaskelmat();" style="width: 100%; font-size: 13px; padding: 8px; background: #000; color: #00ff00; border: 1px solid #00ff00; margin-top: 4px; border-radius: 4px;">
                     <option value="army2023" selected data-i18n="bfOptArmy">🪖 U.S. Army / DoD (Vyötärö & paino)</option>
-                    <option value="navy_adjusted" data-i18n="bfOptNavyAdj">⚓ U.S. Navy - Niskakorjattu (Pituus, vyötärö & niska)</option>
+                    <option value="navy_adjusted" data-i18n="bfOptNavyAdj">⚓ U.S. Navy (Pituus, vyötärö & niska)</option>
                     <option value="cun_bae" data-i18n="bfOptCunBae">🔬 Kliininen CUN-BAE (Paino, pituus & ikä / BMI)</option>
                     <option value="manual" data-i18n="bfOptManual">✍️ Syötän arvon itse (Oma mittaus / InBody / DEXA)</option>
                 </select>
@@ -589,7 +589,7 @@
                 hipLabel: "Lantion ympärys (cm) [Naisilla vapaaehtoinen]:",
                 bfMethodLabel: "Rasvaprosentin laskentamenetelmä:",
                 bfOptArmy: "🪖 U.S. Army / DoD (Vyötärö & paino)",
-                bfOptNavyAdj: "⚓ U.S. Navy - Niskakorjattu (Pituus, vyötärö & niska)",
+                bfOptNavyAdj: "⚓ U.S. Navy (Pituus, vyötärö & niska)",
                 bfOptCunBae: "🔬 Kliininen CUN-BAE (Paino, pituus & ikä / BMI)",
                 bfOptManual: "✍️ Syötän arvon itse (Oma mittaus / InBody / DEXA)",
                 bodyFatLabel: "Oma rasvaprosentti (%):",
@@ -761,7 +761,7 @@
                 hipLabel: "Hip circumference (cm) [Female optional]:",
                 bfMethodLabel: "Body fat calculation method:",
                 bfOptArmy: "🪖 U.S. Army / DoD (Waist & Weight)",
-                bfOptNavyAdj: "⚓ U.S. Navy - Neck Adjusted (Height, Waist & Neck)",
+                bfOptNavyAdj: "⚓ U.S. Navy (Height, Waist & Neck)",
                 bfOptCunBae: "🔬 Clinical CUN-BAE (Weight, Height & Age / BMI)",
                 bfOptManual: "✍️ Enter value manually (Self-measurement / InBody / DEXA)",
                 bodyFatLabel: "Body fat percentage (%):",
@@ -1559,8 +1559,6 @@
         }
 
         function laskeRasvaprosentti(method, gender, h, w, waist, neck, hip, age) {
-            if (!h || h <= 0 || !w || w <= 0) return 0;
-            const bmi = w / Math.pow(h / 100, 2);
             const sexCun = (gender === 'female') ? 1 : 0;
             age = parseInt(age) || 45;
             method = method || 'army2023';
@@ -1568,7 +1566,7 @@
             // 1. U.S. Army / DoD (Department of Defense Standard) - Oletus
             // Calculated from waist and weight
             if (method === 'army2023') {
-                if (!waist || waist <= 0) return 0;
+                if (!w || w <= 0 || !waist || waist <= 0) return 0;
                 const w_lbs = w * 2.20462262;
                 const waist_in = waist / 2.54;
                 const army = (gender === 'male')
@@ -1578,23 +1576,23 @@
                 return Math.max(3, Math.min(65, army));
             }
 
-            // 2. U.S. Navy - Niskakorjattu (Hodgdon & Beckett with neck fat compensation)
+            // 2. U.S. Navy (Hodgdon & Beckett)
             // Calculated from height, waist, and neck (and hip for females)
-            if (method === 'navy_adjusted') {
-                if (!waist || waist <= 0 || !neck || neck <= 0) return 0;
-                const leanNeck = (gender === 'male') ? (h * 0.21) : (h * 0.185);
-                const effNeck = Math.min(neck, leanNeck);
+            if (method === 'navy_adjusted' || method === 'navy') {
+                if (!h || h <= 0 || !waist || waist <= 0 || !neck || neck <= 0) return 0;
                 if (gender === 'male') {
-                    if (waist <= effNeck) return 0;
-                    const D = 1.0324 - 0.19077 * Math.log10(waist - effNeck) + 0.15456 * Math.log10(h);
+                    if (waist <= neck) return 0;
+                    const D = 1.0324 - 0.19077 * Math.log10(waist - neck) + 0.15456 * Math.log10(h);
                     if (D <= 0) return 0;
                     const rPct = (495 / D) - 450;
+                    if (isNaN(rPct) || !isFinite(rPct)) return 0;
                     return Math.max(3, Math.min(65, rPct));
                 } else {
-                    if (!hip || hip <= 0 || (waist + hip) <= effNeck) return 0;
-                    const D = 1.29579 - 0.35004 * Math.log10(waist + hip - effNeck) + 0.22100 * Math.log10(h);
+                    if (!hip || hip <= 0 || (waist + hip) <= neck) return 0;
+                    const D = 1.29579 - 0.35004 * Math.log10(waist + hip - neck) + 0.22100 * Math.log10(h);
                     if (D <= 0) return 0;
                     const rPct = (495 / D) - 450;
+                    if (isNaN(rPct) || !isFinite(rPct)) return 0;
                     return Math.max(3, Math.min(65, rPct));
                 }
             }
@@ -1602,16 +1600,13 @@
             // 3. Clinica Universidad de Navarra - Body Adiposity Estimator (CUN-BAE)
             // Calculated from weight, height (BMI), and age
             if (method === 'cun_bae') {
+                if (!h || h <= 0 || !w || w <= 0) return 0;
+                const bmi = w / Math.pow(h / 100, 2);
                 const cun = -44.988 + (0.503 * age) + (10.689 * sexCun) + (3.172 * bmi) 
                     - (0.026 * Math.pow(bmi, 2)) + (0.181 * bmi * sexCun) - (0.02 * bmi * age) 
                     - (0.005 * Math.pow(bmi, 2) * sexCun) + (0.00021 * Math.pow(bmi, 2) * age);
                 if (isNaN(cun) || !isFinite(cun)) return 0;
                 return Math.max(3, Math.min(65, cun));
-            }
-
-            // Legacy fallback if 'navy' is provided: map to neck-adjusted Navy
-            if (method === 'navy') {
-                return laskeRasvaprosentti('navy_adjusted', gender, h, w, waist, neck, hip, age);
             }
 
             return 0;
@@ -1846,7 +1841,8 @@
 
             const methodNames = {
                 army2023: (lang === 'en') ? "U.S. Army DoD" : "U.S. Army DoD",
-                navy_adjusted: (lang === 'en') ? "U.S. Navy (Neck-Adjusted)" : "U.S. Navy (Niskakorjattu)",
+                navy_adjusted: "U.S. Navy",
+                navy: "U.S. Navy",
                 cun_bae: (lang === 'en') ? "Clinical CUN-BAE" : "Kliininen CUN-BAE"
             };
             const currentMethodName = methodNames[method] || method;
@@ -1868,10 +1864,14 @@
                             ? `⭐ <strong>Default standard (U.S. Army DoD):</strong> Calculated from waist circumference and body weight (${bfStr}).`
                             : `⭐ <strong>Oletusmenetelmä (U.S. Army DoD):</strong> Lasketaan vyötärön ympäryksestä ja kehonpainosta (${bfStr}).`;
                         noticeEl.style.color = "#00ff00";
-                    } else if (method === 'navy_adjusted') {
+                    } else if (method === 'navy_adjusted' || method === 'navy') {
                         noticeEl.innerHTML = (lang === 'en')
-                            ? `✅ <strong>Neck-Adjusted U.S. Navy:</strong> Calculated from height, waist circumference, and neck (${bfStr}) with neck fat compensation.`
-                            : `✅ <strong>Niskakorjattu U.S. Navy:</strong> Lasketaan pituudesta, vyötärön ympäryksestä ja niskasta (${bfStr}) huomioiden niskan rasvakudoksen korjaus.`;
+                            ? (gender === 'female'
+                                ? `✅ <strong>U.S. Navy:</strong> Calculated from height, waist, hip, and neck (${bfStr}).`
+                                : `✅ <strong>U.S. Navy:</strong> Calculated from height, waist circumference, and neck (${bfStr}).`)
+                            : (gender === 'female'
+                                ? `✅ <strong>U.S. Navy:</strong> Lasketaan pituudesta, vyötärön ja lantion ympäryksestä sekä niskasta (${bfStr}).`
+                                : `✅ <strong>U.S. Navy:</strong> Lasketaan pituudesta, vyötärön ympäryksestä ja niskasta (${bfStr}).`);
                         noticeEl.style.color = "#00ff00";
                     } else if (method === 'cun_bae') {
                         noticeEl.innerHTML = (lang === 'en')
@@ -1998,8 +1998,10 @@
                     const p = JSON.parse(saved);
                     ['gender','age','bfMethod','strategyGoal','customCalorieDelta'].forEach(k => {
                         if (p[k] !== undefined && document.getElementById(k)) {
-                            if (k === 'bfMethod' && (p[k] === 'deurenberg' || p[k] === 'navy')) {
+                            if (k === 'bfMethod' && p[k] === 'deurenberg') {
                                 document.getElementById(k).value = 'army2023';
+                            } else if (k === 'bfMethod' && p[k] === 'navy') {
+                                document.getElementById(k).value = 'navy_adjusted';
                             } else {
                                 document.getElementById(k).value = p[k];
                             }
@@ -2680,8 +2682,8 @@
                 if (bfResult.method === 'manual') {
                     methodEl.innerText = (lang === 'en') ? "(Manual entry)" : "(Oma syöte)";
                     methodEl.style.color = "#aaa";
-                } else if (bfResult.method === 'navy_adjusted') {
-                    methodEl.innerText = (lang === 'en') ? "(Navy - Neck-Adjusted)" : "(Navy - Niskakorjattu)";
+                } else if (bfResult.method === 'navy_adjusted' || bfResult.method === 'navy') {
+                    methodEl.innerText = "(U.S. Navy)";
                     methodEl.style.color = "#00ff00";
                 } else if (bfResult.method === 'cun_bae') {
                     methodEl.innerText = (lang === 'en') ? "(Clinical CUN-BAE)" : "(Kliininen CUN-BAE)";
